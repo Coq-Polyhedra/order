@@ -1,37 +1,35 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect.
 
-
 Section RelOrder.
 
-Definition axioms {sort: Type} (R : rel sort) :=
+Definition axioms {T: Type} (R : rel T) :=
     [/\ reflexive R, antisymmetric R & transitive R]. 
 
-Record relOrder {sort: Type} := Pack 
+Record relOrder {T: Type} := Pack 
     {   
-        relord :> rel sort;
+        relord :> rel T;
         _ : axioms relord
     }.
 
-Variable (sort:Type).
+Variable (T:Type).
 
-Lemma relorder_refl (R : relOrder) : @reflexive sort R.
+Lemma relorder_refl (R : relOrder) : @reflexive T R.
 Proof.
 by case: R => /= ? [? _ _].
 Qed.
 
-Lemma relorder_anti (R : relOrder) : @antisymmetric sort R.
+Lemma relorder_anti (R : relOrder) : @antisymmetric T R.
 Proof.
 by case: R => /= ? [_ ? _].
 Qed.
 
-Lemma relorder_trans (R : relOrder) : @transitive sort R.
+Lemma relorder_trans (R : relOrder) : @transitive T R.
 Proof.
 by case: R => /= ? [_ _ ?].
 Qed.
 
 End RelOrder.
-
 Section NatRelorder.
 
 Lemma leq_relorder_axioms : axioms leq.
@@ -45,15 +43,19 @@ Qed.
 Canonical nat_relorder :=
     Pack nat leq leq_relorder_axioms.
 
+Lemma refl0 : 0 <= 0.
+Proof.
+exact: relorder_refl.
+Qed.
 
 End NatRelorder.
 
 Section MirrorOrder.
 
-Variable (sort: Type).
+Variable (T: Type).
 
-Definition mirror (R : relOrder) : rel sort := 
-    fun x y : sort => R y x.
+Definition mirror (R : rel T) : rel T := 
+    fun x y : T => R y x.
 
 Lemma mirror_axioms (R: relOrder):
 axioms (mirror R).
@@ -61,18 +63,27 @@ Proof.
 rewrite /mirror; split.
 -   exact: relorder_refl.
 -   move=> x y /andP [R_y_x R_x_y].
-    by apply (relorder_anti sort R); rewrite R_x_y R_y_x.
+    by apply (relorder_anti T R); rewrite R_x_y R_y_x.
 -   rewrite /mirror => y x z R_y_x R_z_y.
-    exact: (relorder_trans sort R y).
+    exact: (relorder_trans T R y).
 Qed.
 
 Canonical rel_mirror (R: relOrder) :=
-    Pack sort (mirror R) (mirror_axioms R).
+    Pack T (mirror R) (mirror_axioms R).
+
 
 End MirrorOrder.
+
+Notation "R %:C" := (mirror _ R) (at level 100).
+
+Lemma refl_mirn: reflexive (leq %:C).
+Proof.
+exact: relorder_refl.
+Qed.
+
 Section SubOrder.
 
-Variable (sort:Type) (P: pred sort) (sT: subType P).
+Variable (T:Type) (P: pred T) (sT: subType P).
 
 Definition suborder (R: relOrder) :=
     fun x y : sT => R (val x) (val y).
@@ -83,7 +94,7 @@ Proof.
 rewrite /suborder.
 split.
 - move=> ?; exact: relorder_refl.
-- move=> x y /(relorder_anti sort); exact: val_inj.
+- move=> x y /(relorder_anti T); exact: val_inj.
 - move=> y x z; exact: relorder_trans.
 Qed.
 
@@ -91,6 +102,33 @@ Canonical rel_suborder (R: relOrder) :=
     Pack sT (suborder R) (suborder_axioms R). 
 
 End SubOrder.
+
+Section PartialOrder.
+
+Variable (T:Type) (p: pred T).
+
+Definition partial_axiom (r: rel T) :=
+    forall x y, ~~ (p x) || ~~ (p y) -> r x y == false.
+
+Record PartOrder {T:Type} := PPack
+    {
+        partord :> relOrder;
+        _ : partial_axiom partord
+    }.
+
+End PartialOrder.
+
+Section NatPartialOrder.
+
+Definition natT := fun (x:nat) => true.
+
+Lemma leq_part_axiom : partial_axiom nat natT leq.
+Proof.
+by rewrite /partial_axiom /=.
+Qed.
+
+Canonical nat_totalorder := PPack nat natT nat nat_relorder leq_part_axiom.
+
 
 
 
