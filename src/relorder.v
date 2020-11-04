@@ -75,17 +75,17 @@ Proof.
 by case: ro.
 Qed. 
 
-Lemma refl_o : reflexive ro.
+Lemma OrderRefl : reflexive ro.
 Proof.
 by case: orderP.
 Qed.
 
-Lemma anti_o : antisymmetric ro.
+Lemma OrderAnti : antisymmetric ro.
 Proof.
 by case: orderP.
 Qed.
 
-Lemma trans_o : transitive ro.
+Lemma OrderTrans : transitive ro.
 Proof.
 by case: orderP.
 Qed.
@@ -124,144 +124,60 @@ Qed.
 Canonical natTotalOrder := TotalOrder nat_total_order.
 End natOrder.
 
-Section Mirror.
-
-
-
-(*Section RelOrder.
-
-Definition axioms {T: Type} (R : rel T) :=
-    [/\ reflexive R, antisymmetric R & transitive R]. 
-
-Record relOrder {T: Type} := Pack 
-    {   
-        relord :> rel T;
-        _ : axioms relord
-    }.
-
-Variable (T:Type).
-
-Lemma relorder_refl (R : relOrder) : @reflexive T R.
-Proof.
-by case: R => /= ? [? _ _].
-Qed.
-
-Lemma relorder_anti (R : relOrder) : @antisymmetric T R.
-Proof.
-by case: R => /= ? [_ ? _].
-Qed.
-
-Lemma relorder_trans (R : relOrder) : @transitive T R.
-Proof.
-by case: R => /= ? [_ _ ?].
-Qed.
-
-End RelOrder.
-(*TODO : Notations*)
-Section NatRelorder.
-
-Lemma leq_relorder_axioms : axioms leq.
-Proof.
-split.
-- by [].
-- exact: anti_leq.
-- exact: leq_trans.
-Qed.
-
-Canonical nat_relorder :=
-    Pack nat leq leq_relorder_axioms.
-
-Lemma refl0 : 0 <= 0.
-Proof.
-exact: relorder_refl.
-Qed.
-
-End NatRelorder.
-
 Section MirrorOrder.
 
-Variable (T: Type).
+Variable (T : Type).
 
-Definition mirror (R : rel T) : rel T := 
-    fun x y : T => R y x.
+Definition mirrorOrder (r: {order T}) := fun x y => r y x.
+Notation "r '^~I'" := (mirrorOrder r) (at level 100).
 
-Lemma mirror_axioms (R: relOrder):
-axioms (mirror R).
+Lemma mirrorOrderP (r:{order T}): (order (r^~I)).
 Proof.
-rewrite /mirror; split.
--   exact: relorder_refl.
--   move=> x y /andP [R_y_x R_x_y].
-    by apply (relorder_anti T R); rewrite R_x_y R_y_x.
--   rewrite /mirror => y x z R_y_x R_z_y.
-    exact: (relorder_trans T R y).
+split; rewrite /mirrorOrder.
+- exact: OrderRefl.
+- by move=>x y r_anti; apply: (OrderAnti _ r); rewrite andbC.
+- by move => y x z r_y_x r_z_y; apply: (OrderTrans _ r y).
 Qed.
 
-Canonical rel_mirror (R: relOrder) :=
-    Pack T (mirror R) (mirror_axioms R).
+Canonical MirrorOrder (r: {order T}):= Order (mirrorOrderP r).
 
+Lemma mirrorTotalOrderP (r : {total_order T}) : (total_order (r^~I)).
+Proof.
+split; first exact: mirrorOrderP; rewrite /mirrorOrder.
+move=> x y; exact: totalMP.
+Qed.
 
+Canonical MirrorTotalOrder (r : {total_order T}) :=
+    TotalOrder (mirrorTotalOrderP r).
 End MirrorOrder.
-
-(*TODO notations with ^*)
-
-Notation "R %:C" := (mirror _ R) (at level 100).
-
-Lemma refl_mirn: reflexive (leq %:C).
-Proof.
-exact: relorder_refl.
-Qed.
 
 Section SubOrder.
 
-(*TODO : Notations*)
 
-Variable (T:Type) (P: pred T) (sT: subType P).
+Variables (T:Type).
+Definition subOrder (P: pred T) (sT: subType P) (r : {order T}) :=
+    fun x y : sT => r (val x) (val y).
+Notation "r '%_(' sT ')'" := (subOrder _ sT r) (at level 100).
 
-Definition suborder (R: relOrder) :=
-    fun x y : sT => R (val x) (val y).
+Variables (P:pred T) (sT : subType P).
 
-Lemma suborder_axioms (R: relOrder) :
-    axioms (suborder R).
+Lemma subOrderP (r: {order T}): order (r%_(sT)).
 Proof.
-rewrite /suborder.
-split.
-- move=> ?; exact: relorder_refl.
-- move=> x y /(relorder_anti T); exact: val_inj.
-- move=> y x z; exact: relorder_trans.
+split; rewrite /subOrder.
+- move => x; exact: OrderRefl.
+- move=> x y /(OrderAnti _ r); exact: val_inj.
+- move => y x z; exact: OrderTrans.
 Qed.
 
-Canonical rel_suborder (R: relOrder) :=
-    Pack sT (suborder R) (suborder_axioms R). 
+Canonical SubOrder (r : {order T}) := Order (subOrderP r).
+
+Lemma subTotalOrderP (r : {total_order T}) : total_order (r %_(sT)).
+Proof.
+split; first exact: subOrderP; rewrite /subOrder.
+move=> x y; exact : totalMP.
+Qed.
+
+Canonical SubTotalOrder (r : {total_order T}) :=
+    TotalOrder (subTotalOrderP r).
 
 End SubOrder.
-
-Section TotalOrder.
-
-Variable (T:Type). 
-
-Record TotalOrder {T:Type} := PPack
-    {
-        ord :> (@relOrder T);
-        _ : forall x y, ord x y || ord y x
-    }.
-
-End TotalOrder.
-
-Section NatTotalOrder.
-
-Definition natT := fun (x:nat) => true.
-
-Lemma leq_part_axiom : partial_axiom nat natT leq.
-Proof.
-by rewrite /partial_axiom /=.
-Qed.
-
-Canonical nat_totalorder := PPack nat natT nat nat_relorder leq_part_axiom.*)
-
-
-
-
-
-
-
-
