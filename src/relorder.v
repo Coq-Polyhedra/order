@@ -12,6 +12,10 @@ Definition axiom (r : rel T) :=
 
 Structure map (phr : phant (rel T)) := Pack {apply; _ : axiom apply}.
 
+Variables (r:rel T) (phr: phant (rel T)) (rF : map phr).
+
+Definition class := let: Pack _ a as rF' := rF
+  return axiom (apply phr rF') in a. 
 
 End ClassDef.
 
@@ -45,6 +49,7 @@ Variables (r: rel T) (phr : phant (rel T)) (cF : map phr).
 
 Definition class := let: Pack _ c as cF' := cF
   return class_of cF' in c.
+
 Canonical order := Order.Pack _ phr _ class.
 
 End ClassDef.
@@ -115,12 +120,12 @@ Qed.
 
 Canonical natOrder := Order nat_order.
 
-Lemma nat_total_order: total_order leq.
+Lemma nat_total: total_order leq.
 Proof.
 split; [exact: nat_order | exact: leq_total].
 Qed.
 
-Canonical natTotalOrder := TotalOrder nat_total_order.
+Canonical natTotalOrder := TotalOrder nat_total.
 End natOrder.
 
 Section MirrorOrder.
