@@ -38,24 +38,23 @@ Definition mixin_of (r : rel T) :=
 Record class_of r := Class {base : order r; mixin : mixin_of r}.
 
 Structure map (phr : phant (rel T)) := Pack {apply; _ : class_of apply}.
-
+Coercion base: class_of >-> order.
+Coercion mixin : class_of >-> mixin_of.
+Coercion apply : map >-> rel.
 Variables (r: rel T) (phr : phant (rel T)) (cF : map phr).
 
 Definition class := let: Pack _ c as cF' := cF
-  return class_of (apply phr cF') in c.
-
-
-Let r_app := (apply phr cF). 
-Canonical order := Order.Pack _ phr r_app (base r_app class).
+  return class_of cF' in c.
+Canonical order := Order.Pack _ phr _ class.
 
 End ClassDef.
 
 Module Exports.
 Notation total_prop r := (mixin_of _ r).
 Notation total_order r := (class_of _ r).
-Coercion base : total_order >-> Order.axiom.
-Coercion mixin : total_order >-> total_prop.
-Coercion apply : map >-> rel.
+(*Coercion base : total_order >-> Order.axiom.*)
+(*Coercion mixin : total_order >-> total_prop.*)
+(*Coercion apply : map >-> rel.*)
 Notation TotalOrder rp := (Pack _ (Phant _) _ rp).
 Notation "{ 'total_order' T }" := (map T (Phant (rel T)))
   (at level 0, format "{ 'total_order' T }").
