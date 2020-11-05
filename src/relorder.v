@@ -5,33 +5,73 @@ Module Order.
 
 Section ClassDef.
 
-Variable (T:Type).
+Variable (T: eqType).
 
 Definition axiom (r : rel T) :=
   [/\ reflexive r, antisymmetric r & transitive r].
 
-Structure map (phr : phant (rel T)) := Pack {apply; _ : axiom apply}.
+Record class (lt : rel T) := Class
+  {
+    class_le : rel T;
+    _ : axiom class_le;
+    _ : forall x y, class_le x y = (x == y) || (lt x y)
+  }.
 
-Variables (r:rel T) (phr: phant (rel T)) (rF : map phr).
+Structure map (phr : phant (rel T)) := Pack {map_lt; map_class : class map_lt}.
+Variables (phr : phant (rel T)).
 
-Definition class := let: Pack _ a as rF' := rF
-  return axiom (apply phr rF') in a. 
+Definition map_le := fun x : map phr => class_le _ (map_class phr x).
+
 
 End ClassDef.
 
 Module Exports.
-Notation order r := (axiom _ r).
-Coercion apply : map >-> rel.
-Notation Order r_prop := (Pack _ (Phant _) _ r_prop).
-Notation "{ 'order' T }" := (map T (Phant (rel T)))
+Coercion map_le: map >-> rel.
+Check map_lt.
+Notation leo r := (@map_le _ _ r).
+Notation lto r:= (@map_lt _ _ r).
+Notation order r :=  (axiom _ r).
+Notation "r '^~s'" := (lto r) (at level 0).
+Notation "{ 'order' T }" := (map T (Phant (_)))
   (at level 0, format "{ 'order' T }").
 
 End Exports.
-
 End Order.
 Include Order.Exports.
 
-Module TotalOrder.
+Section OrderTheory.
+
+
+Variables (T: eqType) (ro: {order T}).
+
+Lemma orderP : order ro.
+Proof.
+rewrite /(order _) /reflexive /antisymmetric /transitive.
+case: ro => lt [] le [refl anti trans] ?; rewrite /(leo _) /=.
+split; [exact : refl | exact: anti | exact: trans].
+Qed. 
+
+Lemma orefl : reflexive ro.
+Proof.
+by case: orderP.
+Qed.
+
+Lemma oanti : antisymmetric ro.
+Proof.
+by case: orderP.
+Qed.
+
+Lemma otrans : transitive ro.
+Proof.
+by case: orderP.
+Qed.
+
+Lemma ostrict: forall x y, (ro x y) = (x == y) || (ro^~s x y).
+Proof.
+by move => x y; case: ro => lt [le] ? ?; rewrite /(leo _) /=.
+Qed.
+
+(*Module TotalOrder.
 Section ClassDef.
 
 Variables (T : Type).
@@ -69,31 +109,6 @@ End Exports.
 
 End TotalOrder.
 Include TotalOrder.Exports.
-
-Section OrderTheory.
-
-Variables (T: Type) (ro : {order T}).
-
-Lemma orderP : order ro.
-Proof.
-by case: ro.
-Qed. 
-
-Lemma OrderRefl : reflexive ro.
-Proof.
-by case: orderP.
-Qed.
-
-Lemma OrderAnti : antisymmetric ro.
-Proof.
-by case: orderP.
-Qed.
-
-Lemma OrderTrans : transitive ro.
-Proof.
-by case: orderP.
-Qed.
-End OrderTheory.
 
 Section TotalOrderTheory.
 
@@ -185,3 +200,10 @@ Canonical SubTotalOrder (r : {total_order T}) :=
     TotalOrder (subTotalOrderP r).
 
 End SubOrder.
+
+Lemma l : forall n : nat, n <= n.
+Proof.
+move=> n.
+apply: (OrderTrans _ _ n) => /=; exact: OrderRefl.
+Qed.
+*)
