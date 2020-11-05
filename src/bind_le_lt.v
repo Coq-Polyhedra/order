@@ -20,6 +20,10 @@ Proof.
 by case: F => the_lt [the_le' ?] /=.
 Qed.
 
+Lemma foo (F : le_lt) (x y : T) :
+  (the_le F x y) && (the_lt F y x) = false.
+Admitted.
+
 End BindLeLt.
 
 Notation "'the_le' x" := (the_le _ _ (the_lt_of_le _ x)) (at level 0).
@@ -78,6 +82,11 @@ Qed.
 Goal forall x y : rat, ((x <= y) = (x == y) || (x < y))%R.
 move => x y.
 by rewrite -le_is_lt_or_eq.
+Qed.
+
+Goal forall x y : rat, (x <= y < x)%R = false.
+move => x y.
+by rewrite foo.
 Qed.
 
 End UseCaseRat.
