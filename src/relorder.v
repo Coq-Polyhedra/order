@@ -10,41 +10,38 @@ Variable (T: eqType).
 Definition axiom (r : rel T) :=
   [/\ reflexive r, antisymmetric r & transitive r].
 
-Definition strict (le lt: rel T) :=
-  forall x y, le x y = (x == y) || (lt x y).
+Definition strict (lt le: rel T) :=
+  forall x y, lt x y = (x != y) && (le x y).
 
-Record class (lt : rel T) := Class
+Record class (le : rel T) := Class
   {
-    class_le : rel T;
-    _ : axiom class_le;
-    _ : strict class_le lt;
-    _ : irreflexive lt
+    class_lt : rel T;
+    _ : axiom le;
+    _ : strict class_lt le;
   }.
 
 (*TODO : Confirm that the phantom is required*)
-Structure map (phr : phant (rel T)) := Pack {map_lt; map_class : class map_lt}.
-
+Structure pack (phr : phant (rel T)) := Pack {pack_le; pack_class : class pack_le}.
 
 End ClassDef.
 
 Module Exports.
-Notation leo r := (class_le _ _ (map_class _ (Phant _) r)).
-Notation lto r:= (@map_lt _ _ r).
+Notation lto r := (class_lt _ _ (pack_class _ (Phant _) r)).
+Notation leo r:= (@pack_le _ _ r).
 Notation order r :=  (axiom _ r).
-Notation strict r := (strict (leo r) (lto r)).
-Notation OrderClass ax st ir:= (Class _ _ _ ax st ir).
-Notation OrderPack cla := (Pack _ (Phant _) _ cla). 
-Notation "{ 'order' T }" := (map T (Phant (_)))
-  (at level 0, format "{ 'order' T }").
-Infix "<=_[ r ]" := (leo r) (at level 0, format "x <=_[ r ] y").
-Infix "<_[ r ]" := (lto r) (at level 0, format "x <_[ r ] y").
+Notation strict r := (strict (lto r) (leo r)).
+Notation OrderClass ax st := (Class _ _ _ ax st).
+Notation OrderPack cla := (Pack _ (Phant _) _ cla).
+Notation "{ 'order' T }" := (pack T (Phant (_)))
+  (at level 0, format "{ 'order'  T }").
+Infix "<=_[ r ]" := (leo r) (at level 0, format "x  <=_[ r ]  y").
+Infix "<_[ r ]" := (lto r) (at level 0, format "x  <_[ r ]  y").
 
 End Exports.
 End Order.
 Include Order.Exports.
 
 Section OrderTheory.
-
 
 Variables ( T: eqType ) (r: {order T}).
 Local Notation "x <= y" := (x <=_[r] y).
@@ -56,7 +53,7 @@ Local Notation "x <= y < z" := ((x <= y) && (y < z)).
 
 Lemma orderP : order (leo r).
 Proof.
-by case: r => lt [] le [refl anti trans] ?.
+by case: r => le [].
 Qed.
 
 Lemma orefl : reflexive (leo r).
@@ -74,31 +71,29 @@ Proof.
 by case: orderP.
 Qed.
 
-Lemma ostrict: forall (x y : T), (x <= y) = (x == y) || (x < y).
+Lemma ostrict: forall (x y : T), (x < y) = (x != y) && (x <= y).
 Proof.
-by move => x y; case: r => lt [le] ? ?.
+by move=> x y; case: r => le [lt /= _ ->].
 Qed.
 
 Lemma ltostrict: forall x, x < x = false.
 Proof.
-by move => x; case : r => /= lt [le _ _] ->.
+by move=>x; rewrite ostrict eq_refl orefl.
 Qed.
 
 Lemma lt_def x y: (x < y) = (y != x) && (x <= y).
 Proof.
-case eqyx: (y == x).
-- by move/eqP: eqyx => ->; rewrite ltostrict orefl.
-- by rewrite /= ostrict eq_sym eqyx orFb.
+rewrite eq_sym; exact: ostrict.
 Qed.
 
-Lemma lt_neqAle x y: (x < y) = (x != y) && (x <= y).
+Lemma le_eqVlt x y: (x <= y) = (x == y) || (x < y).
 Proof.
-by rewrite lt_def eq_sym.
+by rewrite ostrict; case: eqP => //= ->; rewrite orefl.
 Qed.
 
 Lemma lt_eqF x y: x < y -> x == y = false.
 Proof.
-by rewrite lt_neqAle => /andP [/negbTE->].
+by rewrite ostrict => /andP [/negbTE->].
 Qed.
 
 Lemma gt_eqF x y : y < x -> x == y = false.
@@ -113,12 +108,12 @@ Qed.
 
 Lemma ltW x y: x < y -> x <= y.
 Proof.
-by rewrite ostrict orbC => ->.
+by rewrite le_eqVlt orbC => ->.
 Qed.
 
 Lemma lt_le_trans y x z: x < y -> y <= z -> x < z.
 Proof.
-rewrite !lt_neqAle => /andP [nexy lexy leyz];
+rewrite !ostrict => /andP [nexy lexy leyz];
   rewrite (otrans _ _ _ lexy) // andbT.
 by apply: contraNneq nexy => eqxz; rewrite eqxz eq_le leyz andbT in lexy *.
 Qed.
@@ -130,7 +125,7 @@ Qed.
 
 Lemma le_lt_trans y x z: x <= y -> y < z -> x < z.
 Proof.
-by rewrite ostrict => /orP [/eqP ->|/lt_trans t /t].
+by rewrite le_eqVlt => /orP [/eqP ->|/lt_trans t /t].
 Qed.
 
 Lemma lt_nsym x y : x < y -> y < x -> False.
@@ -159,12 +154,12 @@ Definition lt_gtF x y hxy := le_gtF _ _ (@ltW x y hxy).
 Lemma lt_leAnge x y : (x < y) = (x <= y) && ~~ (y <= x).
 Proof.
 apply/idP/idP => [ltxy|/andP[lexy Nleyx]]; first by rewrite ltW // lt_geF.
-rewrite lt_neqAle lexy andbT; apply: contraNneq Nleyx => ->; exact: orefl.
+rewrite ostrict lexy andbT; apply: contraNneq Nleyx => ->; exact: orefl.
 Qed.
 
 Lemma lt_le_asym x y : x < y <= x = false.
 Proof.
-by rewrite lt_neqAle -andbA -eq_le eq_sym andNb.
+by rewrite ostrict -andbA -eq_le eq_sym andNb.
 Qed.
 
 Lemma le_lt_asym x y : x <= y < x = false.
@@ -179,18 +174,15 @@ Section RatOrder.
 Lemma order_rat : order le_rat.
 Admitted.
 
-Lemma strict_rat : forall (x y : rat), (le_rat x y) = (x == y) || lt_rat x y.
+Lemma strict_rat : forall (x y : rat), (lt_rat x y) = (x != y) && le_rat x y.
 Admitted.
 
-Lemma strict_lt_rat : irreflexive lt_rat.
-Admitted.
-
-Canonical class_rat := OrderClass order_rat strict_rat strict_lt_rat.
-Canonical map_rat := OrderPack class_rat.
+Canonical class_rat := OrderClass order_rat strict_rat.
+Canonical pack_rat := OrderPack class_rat.
 
 Lemma lt_rat_def (x y : rat) : (le_rat x y) = (lt_rat x y) || (x == y).
 Proof.
-by rewrite ostrict orbC.
+by rewrite le_eqVlt orbC.
 Qed.
 
 End RatOrder.
@@ -203,22 +195,21 @@ Variables (T : eqType).
 Definition mixin_of (r : rel T) :=
     forall x y, r x y || r y x.
 
-Record class (lt : rel T) := Class
+Record class (le : rel T) := Class
 {
-  base : Order.class _ lt;
-  mixin : mixin_of (Order.class_le _ _ base)
+  base : Order.class _ le;
+  mixin : mixin_of le
 }.
-Structure map (phr : phant (rel T)) := Pack
+Structure pack (phr : phant (rel T)) := Pack
 {
-  map_lt;
-  map_class : class map_lt
+  pack_le;
+  pack_class : class pack_le
 }.
 
-
-Variable (phr : phant (rel T)) (rT : map phr).
+Variable (phr : phant (rel T)) (rT : pack phr).
 
 Definition class_of := let: Pack _ c as rT' := rT
-  return class (map_lt phr rT') in c.    
+  return class (pack_le phr rT') in c.    
 
 Canonical order := OrderPack (base _ class_of).
 
@@ -227,12 +218,11 @@ End ClassDef.
 Module Exports.
 Notation total_prop r := (@mixin_of _ r).
 Notation total_class r := (@class_of _ r).
-Notation total_le r :=
-  (Order.class_le _ _ (base _ _ (map_class _ (Phant _) r))).
-Notation total_lt r := (map_lt _ (Phant _) r).
-Notation "{ 'total_order' T }" := (map T (Phant (_)))
-  (at level 0, format "{ 'total_order' T }").
-Coercion order : map >-> Order.map.
+Notation TotalClass ax st to := (Class _ _ (Order.Class _ _ _ ax st) to).
+Notation TotalPack cla := (Pack _ (Phant _) _ cla).
+Notation "{ 'total_order' T }" := (pack T (Phant _))
+  (at level 0, format "{ 'total_order'  T }").
+Coercion order : pack >-> Order.pack.
 Canonical order.
 End Exports.
 
@@ -243,7 +233,7 @@ Section TotalOrderTheory.
 
 Variables (T:eqType) (r : {total_order T}).
 
-Lemma totalMP : total_prop (total_le r).
+Lemma totalMP : total_prop (leo r).
 Proof.
 by case: r => /= ? [].
 Qed.
@@ -259,16 +249,111 @@ Section RatTotalOrder.
 Lemma total_rat : forall x y, le_rat x y || le_rat y x.
 Admitted.
 
-Check TotalOrder.Class.
-Definition totalclass_rat := TotalOrder.Class _ _ class_rat total_rat.
-Canonical totalorder_rat := TotalOrder.Pack _ (Phant _) _ totalclass_rat.
+Definition totalclass_rat := TotalClass order_rat strict_rat total_rat.
+Canonical totalorder_rat := TotalPack totalclass_rat.
 
 Lemma order_rat_total : order (le_rat).
 Proof.
-exact: totalP.
+apply: totalP.
 Qed.
 
 End RatTotalOrder.
+
+Module Meet.
+Section ClassDef.
+Variable (T: eqType).
+
+Definition lower_bound (r:rel T) (m : T -> T -> T) :=
+  forall x y, r (m x y) x && r (m x y) y.
+
+Definition greatest (r : rel T) (m : T -> T -> T) :=
+  forall x y w, r w x -> r w y -> r w (m x y).
+  
+Record class (r: {order T}) := Class
+{
+  meet : T -> T -> T;
+  _ : lower_bound (leo r) meet;
+  _ : greatest (leo r) meet
+}.
+
+Structure pack (phr : phant (rel T)) := Pack
+{
+  pack_order;
+  pack_class : class pack_order
+}.
+Local Coercion pack_order: pack >-> Order.pack.
+
+Variables (phr : phant (rel T)) (mr : pack phr).
+
+Canonical order :=
+  Order.Pack _ phr (Order.pack_le _ _ mr) (Order.pack_class _ _ mr).
+
+End ClassDef.
+
+Module Exports.
+Notation lower_bound := (lower_bound _).
+Notation greatest := (greatest _).
+Notation meet r := (meet _ _ (pack_class _ (Phant _) r)).
+Coercion order : pack >-> Order.pack.
+Canonical order.
+
+Notation "{ 'meet_order' T }" := (pack T (Phant _))
+  (at level 0, format "{ 'meet_order'  T }").
+
+
+End Exports.
+
+End Meet.
+Include Meet.Exports.
+
+Section MeetTheory.
+
+Variable (T: eqType) (r: {meet_order T}).
+
+(*Order.axiom T
+  (Order.pack_le T (Phant (rel (Equality.sort T)))
+     (Meet.order T (Phant (rel (Equality.sort T))) r))*)
+
+     Lemma meet_order_is_order : order (leo r).
+Proof.
+exact: orderP.
+Qed.
+
+Lemma lower_boundP : lower_bound (leo r) (meet r).
+Proof.
+by case: r => ? [].
+Qed.
+
+Lemma greatestP : greatest (leo r) (meet r).
+Proof.
+by case : r => ? [].
+Qed.
+
+Lemma infl (x y : T): (meet r x y) <=_[r] x.
+Proof.
+by case/andP: (lower_boundP x y).
+Qed.
+
+End MeetTheory.
+
+Section RatMeet.
+
+Variable (min : rat -> rat -> rat).
+
+Lemma rat_min : lower_bound le_rat min.
+Admitted.
+
+Lemma rat_great : greatest le_rat min.
+Admitted.
+
+Definition rat_meet_class := Meet.Class _ pack_rat _ rat_min rat_great.
+Canonical rat_meet_pack := Meet.Pack _ (Phant _) _ rat_meet_class.
+
+Lemma lower_bound_rat (x y : rat) : le_rat (min x y) x.
+Proof.
+apply : infl.
+Qed.
+
 
 (*Section MirrorOrder.
 
