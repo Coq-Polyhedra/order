@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_ssreflect all_algebra.
 
 Module Order.
 
@@ -10,30 +10,34 @@ Variable (T: eqType).
 Definition axiom (r : rel T) :=
   [/\ reflexive r, antisymmetric r & transitive r].
 
+Definition strict (le lt: rel T) :=
+  forall x y, le x y = (x == y) || (lt x y).
+
 Record class (lt : rel T) := Class
   {
     class_le : rel T;
     _ : axiom class_le;
-    _ : forall x y, class_le x y = (x == y) || (lt x y)
+    _ : strict class_le lt;
+    _ : irreflexive lt
   }.
 
+(*TODO : Confirm that the phantom is required*)
 Structure map (phr : phant (rel T)) := Pack {map_lt; map_class : class map_lt}.
-Variables (phr : phant (rel T)).
-
-Definition map_le := fun x : map phr => class_le _ (map_class phr x).
 
 
 End ClassDef.
 
 Module Exports.
-Coercion map_le: map >-> rel.
-Check map_lt.
-Notation leo r := (@map_le _ _ r).
+Notation leo r := (class_le _ _ (map_class _ (Phant _) r)).
 Notation lto r:= (@map_lt _ _ r).
 Notation order r :=  (axiom _ r).
-Notation "r '^~s'" := (lto r) (at level 0).
+Notation strict r := (strict (leo r) (lto r)).
+Notation OrderClass ax st ir:= (Class _ _ _ ax st ir).
+Notation OrderPack cla := (Pack _ (Phant _) _ cla). 
 Notation "{ 'order' T }" := (map T (Phant (_)))
   (at level 0, format "{ 'order' T }").
+Infix "<=_[ r ]" := (leo r) (at level 0, format "x <=_[ r ] y").
+Infix "<_[ r ]" := (lto r) (at level 0, format "x <_[ r ] y").
 
 End Exports.
 End Order.
@@ -42,66 +46,191 @@ Include Order.Exports.
 Section OrderTheory.
 
 
-Variables (T: eqType) (ro: {order T}).
+Variables ( T: eqType ) (r: {order T}).
+Local Notation "x <= y" := (x <=_[r] y).
+Local Notation "x < y" := (x <_[r] y).
+Local Notation "x <= y <= z" := ((x <= y) && (y <= z)).
+Local Notation "x < y < z" := ((x < y) && (y < z)).
+Local Notation "x < y <= z" := ((x < y) && (y <= z)).
+Local Notation "x <= y < z" := ((x <= y) && (y < z)).
 
-Lemma orderP : order ro.
+Lemma orderP : order (leo r).
 Proof.
-rewrite /(order _) /reflexive /antisymmetric /transitive.
-case: ro => lt [] le [refl anti trans] ?; rewrite /(leo _) /=.
-split; [exact : refl | exact: anti | exact: trans].
-Qed. 
+by case: r => lt [] le [refl anti trans] ?.
+Qed.
 
-Lemma orefl : reflexive ro.
+Lemma orefl : reflexive (leo r).
 Proof.
 by case: orderP.
 Qed.
 
-Lemma oanti : antisymmetric ro.
+Lemma oanti : antisymmetric (leo r).
 Proof.
 by case: orderP.
 Qed.
 
-Lemma otrans : transitive ro.
+Lemma otrans : transitive (leo r).
 Proof.
 by case: orderP.
 Qed.
 
-Lemma ostrict: forall x y, (ro x y) = (x == y) || (ro^~s x y).
+Lemma ostrict: forall (x y : T), (x <= y) = (x == y) || (x < y).
 Proof.
-by move => x y; case: ro => lt [le] ? ?; rewrite /(leo _) /=.
+by move => x y; case: r => lt [le] ? ?.
 Qed.
 
-(*Module TotalOrder.
+Lemma ltostrict: forall x, x < x = false.
+Proof.
+by move => x; case : r => /= lt [le _ _] ->.
+Qed.
+
+Lemma lt_def x y: (x < y) = (y != x) && (x <= y).
+Proof.
+case eqyx: (y == x).
+- by move/eqP: eqyx => ->; rewrite ltostrict orefl.
+- by rewrite /= ostrict eq_sym eqyx orFb.
+Qed.
+
+Lemma lt_neqAle x y: (x < y) = (x != y) && (x <= y).
+Proof.
+by rewrite lt_def eq_sym.
+Qed.
+
+Lemma lt_eqF x y: x < y -> x == y = false.
+Proof.
+by rewrite lt_neqAle => /andP [/negbTE->].
+Qed.
+
+Lemma gt_eqF x y : y < x -> x == y = false.
+Proof.
+by apply: contraTF => /eqP ->; rewrite ltostrict. 
+Qed.
+
+Lemma eq_le x y: (x == y) = (x <= y <= x).
+Proof.
+by apply/eqP/idP => [->|/oanti]; rewrite ?orefl.
+Qed.
+
+Lemma ltW x y: x < y -> x <= y.
+Proof.
+by rewrite ostrict orbC => ->.
+Qed.
+
+Lemma lt_le_trans y x z: x < y -> y <= z -> x < z.
+Proof.
+rewrite !lt_neqAle => /andP [nexy lexy leyz];
+  rewrite (otrans _ _ _ lexy) // andbT.
+by apply: contraNneq nexy => eqxz; rewrite eqxz eq_le leyz andbT in lexy *.
+Qed.
+
+Lemma lt_trans: transitive (fun x y => (x < y)).
+Proof.
+by move => y x z ltxy /ltW leyz; apply (lt_le_trans y).
+Qed.
+
+Lemma le_lt_trans y x z: x <= y -> y < z -> x < z.
+Proof.
+by rewrite ostrict => /orP [/eqP ->|/lt_trans t /t].
+Qed.
+
+Lemma lt_nsym x y : x < y -> y < x -> False.
+Proof.
+by move=> xy /(lt_trans _ _ _ xy); rewrite ltostrict.
+Qed.
+
+Lemma lt_asym x y : x < y < x = false.
+Proof.
+by apply/negP => /andP []; apply: lt_nsym.
+Qed.
+
+Lemma le_gtF x y: x <= y -> y < x = false.
+Proof.
+by move=> le_xy; apply/negP => /lt_le_trans /(_ le_xy); rewrite ltostrict.
+Qed.
+
+Lemma lt_geF x y : (x < y) -> y <= x = false.
+Proof.
+by move=> le_xy; apply/negP => /le_lt_trans /(_ le_xy); rewrite ltostrict.
+Qed.
+
+Definition lt_gtF x y hxy := le_gtF _ _ (@ltW x y hxy).
+
+
+Lemma lt_leAnge x y : (x < y) = (x <= y) && ~~ (y <= x).
+Proof.
+apply/idP/idP => [ltxy|/andP[lexy Nleyx]]; first by rewrite ltW // lt_geF.
+rewrite lt_neqAle lexy andbT; apply: contraNneq Nleyx => ->; exact: orefl.
+Qed.
+
+Lemma lt_le_asym x y : x < y <= x = false.
+Proof.
+by rewrite lt_neqAle -andbA -eq_le eq_sym andNb.
+Qed.
+
+Lemma le_lt_asym x y : x <= y < x = false.
+Proof.
+by rewrite andbC lt_le_asym.
+Qed.
+
+End OrderTheory.
+
+Section RatOrder.
+
+Lemma order_rat : order le_rat.
+Admitted.
+
+Lemma strict_rat : forall (x y : rat), (le_rat x y) = (x == y) || lt_rat x y.
+Admitted.
+
+Lemma strict_lt_rat : irreflexive lt_rat.
+Admitted.
+
+Canonical class_rat := OrderClass order_rat strict_rat strict_lt_rat.
+Canonical map_rat := OrderPack class_rat.
+
+Lemma lt_rat_def (x y : rat) : (le_rat x y) = (lt_rat x y) || (x == y).
+Proof.
+by rewrite ostrict orbC.
+Qed.
+
+End RatOrder.
+
+Module TotalOrder.
 Section ClassDef.
 
-Variables (T : Type).
+Variables (T : eqType).
 
 Definition mixin_of (r : rel T) :=
     forall x y, r x y || r y x.
 
-Record class_of r := Class {base : order r; mixin : mixin_of r}.
+Record class (lt : rel T) := Class
+{
+  base : Order.class _ lt;
+  mixin : mixin_of (Order.class_le _ _ base)
+}.
+Structure map (phr : phant (rel T)) := Pack
+{
+  map_lt;
+  map_class : class map_lt
+}.
 
-Structure map (phr : phant (rel T)) := Pack {apply; _ : class_of apply}.
-Coercion base: class_of >-> order.
-Coercion mixin : class_of >-> mixin_of.
-Coercion apply : map >-> rel.
-Variables (r: rel T) (phr : phant (rel T)) (cF : map phr).
 
-Definition class := let: Pack _ c as cF' := cF
-  return class_of cF' in c.
+Variable (phr : phant (rel T)) (rT : map phr).
 
-Canonical order := Order.Pack _ phr _ class.
+Definition class_of := let: Pack _ c as rT' := rT
+  return class (map_lt phr rT') in c.    
+
+Canonical order := OrderPack (base _ class_of).
 
 End ClassDef.
 
 Module Exports.
-Notation total_prop r := (mixin_of _ r).
-Notation total_order r := (class_of _ r).
-(*Coercion base : total_order >-> Order.axiom.*)
-(*Coercion mixin : total_order >-> total_prop.*)
-(*Coercion apply : map >-> rel.*)
-Notation TotalOrder rp := (Pack _ (Phant _) _ rp).
-Notation "{ 'total_order' T }" := (map T (Phant (rel T)))
+Notation total_prop r := (@mixin_of _ r).
+Notation total_class r := (@class_of _ r).
+Notation total_le r :=
+  (Order.class_le _ _ (base _ _ (map_class _ (Phant _) r))).
+Notation total_lt r := (map_lt _ (Phant _) r).
+Notation "{ 'total_order' T }" := (map T (Phant (_)))
   (at level 0, format "{ 'total_order' T }").
 Coercion order : map >-> Order.map.
 Canonical order.
@@ -112,38 +241,36 @@ Include TotalOrder.Exports.
 
 Section TotalOrderTheory.
 
-Variables (T:Type) (ro : {total_order T}).
+Variables (T:eqType) (r : {total_order T}).
 
-Lemma totalMP : total_prop ro.
+Lemma totalMP : total_prop (total_le r).
 Proof.
-by case: ro => /= ? [].
+by case: r => /= ? [].
 Qed.
 
-Lemma totalP : total_order ro.
+Lemma totalP : order (leo r).
 Proof.
-by case: ro.
+by case: r => lt [[le ?]].
 Qed. 
 
 End TotalOrderTheory.
 
-Section natOrder.
+Section RatTotalOrder.
+Lemma total_rat : forall x y, le_rat x y || le_rat y x.
+Admitted.
 
-Lemma nat_order: order leq.
+Check TotalOrder.Class.
+Definition totalclass_rat := TotalOrder.Class _ _ class_rat total_rat.
+Canonical totalorder_rat := TotalOrder.Pack _ (Phant _) _ totalclass_rat.
+
+Lemma order_rat_total : order (le_rat).
 Proof.
-split => //; [exact : anti_leq | exact : leq_trans].
+exact: totalP.
 Qed.
 
-Canonical natOrder := Order nat_order.
+End RatTotalOrder.
 
-Lemma nat_total: total_order leq.
-Proof.
-split; [exact: nat_order | exact: leq_total].
-Qed.
-
-Canonical natTotalOrder := TotalOrder nat_total.
-End natOrder.
-
-Section MirrorOrder.
+(*Section MirrorOrder.
 
 Variable (T : Type).
 
