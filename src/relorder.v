@@ -669,3 +669,56 @@ move=> n.
 apply: (OrderTrans _ _ n) => /=; exact: OrderRefl.
 Qed.
 *)
+
+(* ==================================================================== *)
+Lemma andPP P Q b c :
+  reflect P b -> reflect Q c -> reflect (P /\ Q) (b && c).
+Proof.
+by move=> /rwP Pb /rwP Qc; apply: (iffP andP); intuition.
+Qed.
+
+Notation "'and_[ view1 , view2 ]" := (@andPP _ _ _ _ view1 view2)
+  (at level 4, right associativity, format "''and_[' view1 ,  view2 ]").
+
+Lemma implyPP (P Q : Prop) (b c : bool) :
+  reflect P b -> reflect Q c -> reflect (P -> Q) (b ==> c).
+Proof. by move=> /rwP Pb /rwP Qc; apply: (iffP implyP); intuition. Qed.
+
+Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
+  (at level 4, right associativity, format "''imply_[' view1 ,  view2 ]").
+
+Section SubLattices.
+Context {T : finType} (L : {lattice T}).
+
+Definition stable (r : pred T) :=
+     [forall x : T, [forall y : T, r x ==> r y ==> r (meet L x y)]]
+  && [forall x : T, [forall y : T, r x ==> r y ==> r (join L x y)]].
+
+Lemma stableP (r : pred T) :
+  reflect
+    [/\ forall x y, r x -> r y -> r (meet L x y)
+      & forall x y, r x -> r y -> r (join L x y)]
+    (stable r).
+Proof. by apply/andPP; apply/'forall_'forall_'imply_[idP, implyP]. Qed.
+
+Record subLattice := { elements :> {set T}; _ : stable (mem elements) }.
+
+Canonical subLattice_subType := Eval hnf in [subType for elements].
+
+Definition subLattice_eqMixin := Eval hnf in [eqMixin of subLattice by <:].
+Canonical  subLattice_eqType  := Eval hnf in EqType subLattice subLattice_eqMixin.
+
+Definition subLattice_choiceMixin := [choiceMixin of subLattice by <:].
+Canonical  subLattice_choiceType  := Eval hnf in ChoiceType subLattice subLattice_choiceMixin.
+End SubLattices.
+
+(* ==================================================================== *)
+Section SubLatticesTheory.
+Context {T : finType} (L : {lattice T}) (S : subLattice L).
+
+Lemma stable_join : forall x y, x \in S -> y \in S -> join L x y \in S.
+Proof. by case: S => /= fS /stableP[]. Qed.
+
+Lemma stable_meet : forall x y, x \in S -> y \in S -> meet L x y \in S.
+Proof. by case: S => /= fS /stableP[]. Qed.
+End SubLatticesTheory.
