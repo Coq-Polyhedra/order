@@ -51,14 +51,15 @@ Notation order le :=  (axiom _ le).
 Notation strict lt le := (strict _ lt le).
 Notation OrderClass ax st := (Class _ _ _ ax st).
 Notation OrderPack cla := (Pack _ (Phant _) _ _ cla).
-Notation "{ 'order' T }" := (pack T (Phant (_)))
-  (at level 0, format "{ 'order'  T }").
-Infix "<=_[ r ]" := (leo r) (at level 0, format "x  <=_[ r ]  y").
-Infix "<_[ r ]" := (lto r) (at level 0, format "x  <_[ r ]  y").
-Notation "[ r ]^le" := (pack_of_le _ (Phant _) r _ id)
-  (at level 0, format "[ r ]^le").
-Notation "[ r ]^lt" := (pack_of_lt _ (Phant _) r _ id)
-  (at level 0, format "[ r ]^lt").
+Notation "{ 'porder' T }" := (pack T (Phant (_)))
+  (at level 0, format "{ 'porder'  T }").
+Notation "x <=_ r y" := (leo r x y) (at level 70, r at level 2, format "x  <=_ r   y").
+Notation "x <_ r y" := (lto r x y) (at level 70, r at level 2, format "x  <_ r  y").
+Notation "[ 'leo:' r ]" := (pack_of_le _ (Phant _) r _ id)
+  (at level 0, format "[ 'leo:'  r ]").
+Notation "[ 'lto:' r ]" := (pack_of_lt _ (Phant _) r _ id)
+  (at level 0, format "[ 'lto:'  r ]").
+(*TODO : Notations supplémentaires*)
 
 
 End Exports.
@@ -67,9 +68,9 @@ Include Order.Exports.
 
 Section OrderTheory.
 
-Variables ( T: eqType ) (r: {order T}).
-Local Notation "x <= y" := (x <=_[r] y).
-Local Notation "x < y" := (x <_[r] y).
+Variables ( T: eqType ) (r: {porder T}).
+Local Notation "x <= y" := (x <=_r y).
+Local Notation "x < y" := (x <_r y).
 Local Notation "x <= y <= z" := ((x <= y) && (y <= z)).
 Local Notation "x < y < z" := ((x < y) && (y < z)).
 Local Notation "x < y <= z" := ((x < y) && (y <= z)).
@@ -251,7 +252,7 @@ Variables (T : eqType).
 Definition mixin_of (r : rel T) :=
     forall x y, r x y || r y x.
 
-Record class (le lt: rel T) := Class
+Record class (le lt : rel T) := Class
 {
   base : Order.class _ le lt;
   mixin : mixin_of le
@@ -277,8 +278,8 @@ Module Exports.
 Notation total r := (mixin_of _ r).
 Notation TotalClass ax st to := (Class _ _ _ (Order.Class _ _ _ ax st) to).
 Notation TotalPack cla := (Pack _ (Phant _) _ _ cla).
-Notation "{ 'total_order' T }" := (pack T (Phant _))
-  (at level 0, format "{ 'total_order'  T }").
+Notation "{ 'torder' T }" := (pack T (Phant _))
+  (at level 0, format "{ 'torder'  T }").
 Coercion order : pack >-> Order.pack.
 Canonical order.
 End Exports.
@@ -288,7 +289,7 @@ Include TotalOrder.Exports.
 
 Section TotalOrderTheory.
 
-Variables (T:eqType) (r : {total_order T}).
+Variables (T:eqType) (r : {torder T}).
 
 Lemma totalMP : total (leo r).
 Proof.
@@ -318,16 +319,17 @@ End RatTotalOrder.
 *)
 
 Module Meet.
+(*TODO : Adapter la structure MeetSemilattice de order.v*)
 Section ClassDef.
-Variable (T: eqType).
+Variable (T : eqType).
 
-Definition lower_bound (r:rel T) (m : T -> T -> T) :=
+Definition lower_bound (r : rel T) (m : T -> T -> T) :=
   forall x y, r (m x y) x && r (m x y) y.
 
 Definition greatest (r : rel T) (m : T -> T -> T) :=
   forall x y w, r w x -> r w y -> r w (m x y).
 
-Record class (r: {order T}) := Class
+Record class (r : {porder T}) := Class
 {
   meet : T -> T -> T;
   _ : lower_bound (leo r) meet;
@@ -343,13 +345,13 @@ Local Coercion pack_order: pack >-> Order.pack.
 
 Variables (phr : phant (rel T)) (mr : pack phr).
 
-Canonical order_of :=
+Canonical porder_of :=
   Order.Pack _ phr
     (Order.pack_le _ _ mr) (Order.pack_lt _ _ mr)
     (Order.pack_class _ _ mr).
 
 
-Definition meet_of (r : {order T}) :=
+Definition meet_of (r : {porder T}) :=
   fun (pr : pack phr) & phant_id (pack_order _ pr) r =>
   meet (pack_order _ pr) (pack_class _ pr).
 
@@ -360,11 +362,11 @@ Notation lower_bound := (lower_bound _).
 Notation greatest := (greatest _).
 Notation meet r := (meet_of _ (Phant _) r _ id).
 Coercion pack_order : pack >-> Order.pack.
-Canonical order_of.
+Canonical porder_of.
 Notation "{ 'meet_order' T }" := (pack T (Phant _))
   (at level 0, format "{ 'meet_order'  T }"). 
 Notation MeetClass ro low great := (Class _ ro _ low great).
-Notation MeetPack cla := (Pack _ (Phant _) _ cla).  
+Notation MeetPack cla := (Pack _ (Phant _) _ cla).
 
 
 End Exports.
@@ -395,11 +397,13 @@ Proof.
 by case : r => ? [].
 Qed.
 
-Lemma infl (x y : T): (meet r x y) <=_[r] x.
+Lemma infl (x y : T): (meet r x y) <=_r x.
 Proof.
 by case/andP: (lower_boundP x y).
 Qed.
 
+Lemma meetC : commutative (meet r).
+Admitted.
 End MeetTheory.
 
 Section NumMeet.
@@ -431,7 +435,7 @@ Section Test.
 Context (disp : unit) (R : meetSemilatticeType disp).
 Variables (x y : R).
 
-Goal ((meet [<=%O]^le x y) <= x)%O.
+Goal ((meet [leo: <=%O] x y) <= x)%O.
 Proof.
 rewrite /(meet _) /=.
 apply: infl.
@@ -452,7 +456,7 @@ Definition upper_bound (r:rel T) (m : T -> T -> T) :=
 Definition lowest (r : rel T) (m : T -> T -> T) :=
   forall x y w, r x w -> r y w -> r (m x y) w.
 
-Record class (r: {order T}) := Class
+Record class (r: {porder T}) := Class
 {
   join : T -> T -> T;
   _ : upper_bound (leo r) join;
@@ -473,7 +477,7 @@ Canonical order_of :=
     (Order.pack_le _ _ mr) (Order.pack_lt _ _ mr)
     (Order.pack_class _ _ mr).
 
-Definition join_of (r : {order T}) :=
+Definition join_of (r : {porder T}) :=
   fun (pr : pack phr) & phant_id (pack_order _ pr) r =>
   join (pack_order _ pr) (pack_class _ pr).
 
@@ -513,13 +517,16 @@ Proof.
 by case : r => ? [].
 Qed.
 
-Lemma joinC_ex : forall x y : T, (join r x y) <=_[r] (join r y x).
+Lemma joinC_ex : forall x y : T, (join r x y) <=_r (join r y x).
 Proof.
 move => x y.
 case/andP : (upper_boundP y x) => y_leq_join.
 move/(lowestP x y) => lowestxy.
 by apply: lowestxy.
 Qed.
+
+Lemma joinC : commutative (join r).
+Admitted.
 End JoinTheory.
 
 Section NumJoin.
@@ -536,18 +543,18 @@ Admitted.
 Definition join_class_num := JoinClass (pack_num _ R) num_max num_low.
 Canonical join_pack_num := JoinPack join_class_num.
 
-Lemma neq_join_irr : forall x y, ~~ ((join [<=%O]^le x y) < (join [<=%O]^le y x))%O.
+Lemma neq_join_irr : forall x y, ~~ ((join [leo: <=%O] x y) < (join [leo: <=%O] y x))%O.
 Proof.
 move => x y.
-have ->: (join [<=%O]^le x y) = (join [<=%O]^le y x).
-- apply/(oanti _ [<=%O]^le)/andP; rewrite /=.
+have ->: (join [leo: <=%O] x y) = (join [leo: <=%O] y x).
+- apply/(oanti _ [leo: <=%O])/andP; rewrite /=.
   split; [exact : joinC_ex | exact : joinC_ex].
 by rewrite ltostrict.
 Qed.
 
 End NumJoin.
 
-Module Diamond.
+Module Lattice.
 Section ClassDef.
 
 Variable (T : eqType).
@@ -567,7 +574,7 @@ Variables (phr : phant (rel T)) (mjr : pack phr).
 Local Coercion pack_order : pack >-> Meet.pack.
 Local Coercion pack_class : pack >-> class.
 
-Canonical order_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
+Canonical porder_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
  (Order.class_of _ _ (Meet.pack_order _ _ mjr)).
 
 Canonical join_of := Join.Pack _ (Phant _) _ (join_mixin _ mjr). 
@@ -577,28 +584,25 @@ End ClassDef.
 Module Exports.
 Coercion pack_order : pack >-> Meet.pack.
 Coercion join_of : pack >-> Join.pack.
-Canonical order_of.
+Canonical porder_of.
 Canonical join_of.
-Notation "{ 'diamond' T }" := (pack T (Phant _))
-  (at level 0, format "{ 'diamond'  T }").
+Notation "{ 'lattice' T }" := (pack T (Phant _))
+  (at level 0, format "{ 'lattice'  T }").
 
 End Exports.
-End Diamond.
-Include Diamond.Exports.
+End Lattice.
+Include Lattice.Exports.
 
 Section Test.
-Variable (T : eqType) (r : {diamond T}).
+Variable (T : eqType) (r : {lattice T}).
 Goal order (leo r).
 exact: orderP.
 Qed.
 
 Goal forall x y, meet r x y = join r x y.
+move=> x y; rewrite joinC meetC.
 Admitted.
 End Test.
-
-
-
-
 
 
 (*Section MirrorOrder.
