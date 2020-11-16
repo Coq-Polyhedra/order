@@ -8,3 +8,4 @@
 Makefile.coq
 Makefile.coq.conf
 .Makefile.coq.d
+.DS_Store
