@@ -53,8 +53,10 @@ Notation OrderClass ax st := (Class _ _ _ ax st).
 Notation OrderPack cla := (Pack _ (Phant _) _ _ cla).
 Notation "{ 'porder' T }" := (pack T (Phant (_)))
   (at level 0, format "{ 'porder'  T }").
-Notation "x <=_ r y" := (leo r x y) (at level 70, r at level 2, format "x  <=_ r   y").
-Notation "x <_ r y" := (lto r x y) (at level 70, r at level 2, format "x  <_ r  y").
+Notation "<=: r" := (leo r) (at level 0, format "<=: r").
+Notation "<: r" := (lto r) (at level 0, format "<: r").
+Notation "x <=_ r y" := (<=:r x y) (at level 70, r at level 2, format "x  <=_ r  y").
+Notation "x <_ r y" := (<:r x y) (at level 70, r at level 2, format "x  <_ r  y").
 Notation "[ 'leo:' r ]" := (pack_of_le _ (Phant _) r _ id)
   (at level 0, format "[ 'leo:'  r ]").
 Notation "[ 'lto:' r ]" := (pack_of_lt _ (Phant _) r _ id)
@@ -323,17 +325,13 @@ Module Meet.
 Section ClassDef.
 Variable (T : eqType).
 
-Definition lower_bound (r : rel T) (m : T -> T -> T) :=
-  forall x y, r (m x y) x && r (m x y) y.
-
-Definition greatest (r : rel T) (m : T -> T -> T) :=
-  forall x y w, r w x -> r w y -> r w (m x y).
-
 Record class (r : {porder T}) := Class
 {
   meet : T -> T -> T;
-  _ : lower_bound (leo r) meet;
-  _ : greatest (leo r) meet
+  _ : commutative meet;
+  _ : associative meet;
+  _ : idempotent meet;
+  _ : forall x y, (x <=_r y) = (meet x y == x)
 }.
 
 Structure pack (phr : phant (rel T)) := Pack
@@ -358,15 +356,15 @@ Definition meet_of (r : {porder T}) :=
 End ClassDef.
 
 Module Exports.
-Notation lower_bound := (lower_bound _).
-Notation greatest := (greatest _).
-Notation meet r := (meet_of _ (Phant _) r _ id).
 Coercion pack_order : pack >-> Order.pack.
+Coercion pack_class : pack >-> class.
 Canonical porder_of.
+Notation meet r := (meet_of _ (Phant _) r _ id).
 Notation "{ 'meet_order' T }" := (pack T (Phant _))
   (at level 0, format "{ 'meet_order'  T }"). 
-Notation MeetClass ro low great := (Class _ ro _ low great).
-Notation MeetPack cla := (Pack _ (Phant _) _ cla).
+Notation MeetClass ro meetC meetA meetxx leEmeet :=
+  (Class _ ro _ meetC meetA meetxx leEmeet).
+Notation MeetPack cla := (Pack _ (Phant _) _ cla). 
 
 
 End Exports.
@@ -377,56 +375,171 @@ Include Meet.Exports.
 Section MeetTheory.
 
 Variable (T: eqType) (r: {meet_order T}).
+Local Notation "x `&` y" := (meet r x y).
+Local Notation "x <= y" := (x <=_r y).
 
 (*Order.axiom T
   (Order.pack_le T (Phant (rel (Equality.sort T)))
      (Meet.order T (Phant (rel (Equality.sort T))) r))*)
 
-Lemma meet_order_is_order : order (leo r).
+Lemma meet_order_is_order : order (<=:r).
 Proof.
 exact: orderP.
 Qed.
 
-Lemma lower_boundP : lower_bound (leo r) (meet r).
-Proof.
-by case: r => ? [].
-Qed.
-
-Lemma greatestP : greatest (leo r) (meet r).
-Proof.
-by case : r => ? [].
-Qed.
-
-Lemma infl (x y : T): (meet r x y) <=_r x.
-Proof.
-by case/andP: (lower_boundP x y).
-Qed.
-
 Lemma meetC : commutative (meet r).
-Admitted.
+Proof.
+by case: r => ? [? ?].
+Qed.
+
+Lemma meetA : associative (meet r).
+Proof.
+by case: r => ? [? ? ?].
+Qed.
+
+Lemma meetxx : idempotent (meet r).
+Proof.
+by case: r => ? [? ? ? ?].
+Qed.
+
+Lemma leEmeet x y : (x <= y) = (x `&` y == x).
+Proof.
+by case: r => ? [? ? ? ? ?]. 
+Qed.
+
+Lemma meetAC : right_commutative (meet r).
+Proof.
+by move=> x y z; rewrite -!meetA [X in _ `&` X]meetC.
+Qed.
+Lemma meetCA : left_commutative (meet r).
+Proof.
+by move=> x y z; rewrite !meetA [X in X `&` _]meetC.
+Qed.
+Lemma meetACA : interchange (meet r) (meet r).
+Proof.
+by move=> x y z t; rewrite !meetA [X in X `&` _]meetAC.
+Qed.
+
+Lemma meetKI y x : x `&` (x `&` y) = x `&` y.
+Proof.
+by rewrite meetA meetxx.
+Qed.
+Lemma meetIK y x : (x `&` y) `&` y = x `&` y.
+Proof.
+by rewrite -meetA meetxx.
+Qed.
+Lemma meetKIC y x : x `&` (y `&` x) = x `&` y.
+Proof.
+by rewrite meetC meetIK meetC.
+Qed.
+Lemma meetIKC y x : y `&` x `&` y = x `&` y.
+Proof.
+by rewrite meetAC meetC meetxx.
+Qed.
+
+Lemma lexI x y z : (x <= y `&` z) = (x <= y) && (x <= z).
+Proof.
+rewrite !leEmeet; apply/eqP/andP => [<-|[/eqP<- /eqP<-]].
+  by rewrite meetA meetIK eqxx -meetA meetACA meetxx meetAC eqxx.
+by rewrite -[X in X `&` _]meetA meetIK meetA.
+Qed.
+
+Lemma leIxl x y z : y <= x -> y `&` z <= x.
+Proof.
+by rewrite !leEmeet meetAC => /eqP ->.
+Qed.
+
+Lemma leIxr x y z : z <= x -> y `&` z <= x.
+Proof.
+by rewrite !leEmeet -meetA => /eqP ->.
+Qed.
+
+Lemma leIx2 x y z : (y <= x) || (z <= x) -> y `&` z <= x.
+Proof.
+by case/orP => [/leIxl|/leIxr].
+Qed.
+
+Lemma leIr x y : y `&` x <= x.
+Proof.
+by rewrite leIx2 ?orefl ?orbT.
+Qed.
+
+Lemma leIl x y : x `&` y <= x.
+Proof.
+by rewrite leIx2 ?orefl ?orbT.
+Qed.
+
+Lemma meet_idPl {x y} : reflect (x `&` y = x) (x <= y).
+Proof.
+by rewrite leEmeet; apply/eqP.
+Qed.
+Lemma meet_idPr {x y} : reflect (y `&` x = x) (x <= y).
+Proof.
+by rewrite meetC; apply/meet_idPl.
+Qed.
+
+Lemma meet_l x y : x <= y -> x `&` y = x.
+Proof.
+exact/meet_idPl.
+Qed.
+Lemma meet_r x y : y <= x -> x `&` y = y.
+Proof.
+exact/meet_idPr.
+Qed.
+
+Lemma leIidl x y : (x <= x `&` y) = (x <= y).
+Proof. by rewrite !leEmeet meetKI.
+Qed.
+Lemma leIidr x y : (x <= y `&` x) = (x <= y).
+Proof.
+by rewrite !leEmeet meetKIC.
+Qed.
+
+Lemma eq_meetl x y : (x `&` y == x) = (x <= y).
+Proof.
+by apply/esym/leEmeet.
+Qed.
+
+Lemma eq_meetr x y : (x `&` y == y) = (y <= x).
+Proof.
+by rewrite meetC eq_meetl.
+Qed.
+
+Lemma leI2 x y z t : x <= z -> y <= t -> x `&` y <= z `&` t.
+Proof.
+by move=> xz yt; rewrite lexI !leIx2 ?xz ?yt ?orbT //.
+Qed.
+
 End MeetTheory.
 
 Section NumMeet.
 
 Context (disp : unit) (R : meetSemilatticeType disp).
 
-Lemma num_min : lower_bound (@Order.le _ R) (@Order.meet _ R).
+Lemma num_minC : commutative (@Order.meet _ R).
 Proof.
-move=> x y.
-by rewrite Order.MeetSemilatticeTheory.leIl Order.MeetSemilatticeTheory.leIr.
-Qed.
+Admitted.
 
-Lemma num_great : greatest (@Order.le _ R) (@Order.meet _ R).
-move=> x y w.
-by rewrite Order.MeetSemilatticeTheory.lexI => -> ->.
-Qed.
+Lemma num_minA : associative (@Order.meet _ R).
+Proof.
+Admitted.
 
-Definition meet_class_num := MeetClass (pack_num _ R) num_min num_great.
+Lemma num_minxx : idempotent (@Order.meet _ R).
+Proof.
+Admitted.
+
+Lemma num_leEmin :
+  forall x y, (x <= y)%O = ((@Order.meet _ R) x y == x).
+Proof.
+Admitted.
+
+Definition meet_class_num :=
+  MeetClass (pack_num _ R) num_minC num_minA num_minxx num_leEmin.
 Canonical meet_pack_num := MeetPack meet_class_num.
 
 Lemma lower_bound_rat (x y : R) : (((@Order.meet _ R) x y) <= x)%O.
 Proof.
-apply : infl.
+exact : leIl.
 Qed.
 
 End NumMeet.
@@ -438,13 +551,13 @@ Variables (x y : R).
 Goal ((meet [leo: <=%O] x y) <= x)%O.
 Proof.
 rewrite /(meet _) /=.
-apply: infl.
+apply: leIl.
 Qed.
 
 
 End Test.
 
-Module Join.
+(*Module Join.
 
 Section ClassDef.
 
@@ -527,9 +640,9 @@ Qed.
 
 Lemma joinC : commutative (join r).
 Admitted.
-End JoinTheory.
+End JoinTheory.*)
 
-Section NumJoin.
+(*Section NumJoin.
 
 Context (disp : unit) (R : meetSemilatticeType disp).
 
@@ -552,7 +665,7 @@ have ->: (join [leo: <=%O] x y) = (join [leo: <=%O] y x).
 by rewrite ltostrict.
 Qed.
 
-End NumJoin.
+End NumJoin.*)
 
 Module Lattice.
 Section ClassDef.
@@ -561,7 +674,13 @@ Variable (T : eqType).
 
 Record class (r : {meet_order T}) := Class
 {
-  join_mixin : Join.class _ r
+  join : T -> T -> T;
+  _ : commutative join;
+  _ : associative join;
+  _ : idempotent join;
+  _ : forall y x, meet r x (join x y) = x;
+  _ : forall y x, join x (meet r x y) = x;
+  _ : forall y x, (y <=_r x) = ((join x y) == x) 
 }.
 
 Structure pack (phr : phant (rel T)) := Pack
@@ -577,15 +696,15 @@ Local Coercion pack_class : pack >-> class.
 Canonical porder_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
  (Order.class_of _ _ (Meet.pack_order _ _ mjr)).
 
-Canonical join_of := Join.Pack _ (Phant _) _ (join_mixin _ mjr). 
+
 
 End ClassDef.
 
 Module Exports.
 Coercion pack_order : pack >-> Meet.pack.
-Coercion join_of : pack >-> Join.pack.
+Coercion pack_class : pack >-> class.
 Canonical porder_of.
-Canonical join_of.
+Notation join r := (join _ r r).
 Notation "{ 'lattice' T }" := (pack T (Phant _))
   (at level 0, format "{ 'lattice'  T }").
 
@@ -593,16 +712,69 @@ End Exports.
 End Lattice.
 Include Lattice.Exports.
 
-Section Test.
+Section LatticeTheory.
 Variable (T : eqType) (r : {lattice T}).
-Goal order (leo r).
-exact: orderP.
+
+Local Notation "x `&` y" := (meet r x y).
+Local Notation "x `|` y" := (join r x y).
+Local Notation "x <= y" := (x <=_r y).
+
+Lemma joinC : commutative (join r).
+Proof.
+by case: r => ? [? ?].
+Qed.
+Lemma joinA : associative (join r).
+Proof.
+by case: r => ? [? ? ?].
+Qed.
+Lemma joinxx : idempotent (join r).
+Proof.
+by case: r => ? [? ? ? ?].
+Qed.
+Lemma joinKI y x : x `&` (x `|` y) = x.
+Proof.
+by case: r => ? [? ? ? ? ?].
+Qed.
+Lemma meetKU y x : x `|` (x `&` y) = x.
+Proof.
+by case: r => ? [? ? ? ? ? ?].
 Qed.
 
-Goal forall x y, meet r x y = join r x y.
-move=> x y; rewrite joinC meetC.
-Admitted.
-End Test.
+Lemma joinKIC y x : x `&` (y `|` x) = x.
+Proof.
+by rewrite joinC joinKI.
+Qed.
+Lemma meetKUC y x : x `|` (y `&` x) = x.
+Proof.
+by rewrite meetC meetKU.
+Qed.
+
+Lemma meetUK x y : (x `&` y) `|` y = y.
+Proof.
+by rewrite joinC meetC meetKU.
+Qed.
+Lemma joinIK x y : (x `|` y) `&` y = y.
+Proof.
+by rewrite joinC meetC joinKI.
+Qed.
+
+Lemma meetUKC x y : (y `&` x) `|` y = y.
+Proof.
+by rewrite meetC meetUK.
+Qed.
+Lemma joinIKC x y : (y `|` x) `&` y = y.
+Proof.
+by rewrite joinC joinIK.
+Qed.
+
+Lemma leEjoin x y : (x <= y) = (x `|` y == y).
+Proof.
+by rewrite leEmeet; apply/eqP/eqP => <-; rewrite (joinKI, meetUK).
+Qed.
+
+End LatticeTheory.
+
+
 
 
 (*Section MirrorOrder.
