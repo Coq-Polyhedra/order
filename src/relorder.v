@@ -125,7 +125,7 @@ Qed.
 
 Lemma gt_eqF x y : y < x -> x == y = false.
 Proof.
-by apply: contraTF => /eqP ->; rewrite ltostrict. 
+by apply: contraTF => /eqP ->; rewrite ltostrict.
 Qed.
 
 Lemma eq_le x y: (x == y) = (x <= y <= x).
@@ -270,7 +270,7 @@ Structure pack (phr : phant (rel T)) := Pack
 Variable (phr : phant (rel T)) (rT : pack phr).
 
 Definition class_of := let: Pack _ _ c as rT' := rT
-  return class (pack_le phr rT') (pack_lt phr rT') in c.    
+  return class (pack_le phr rT') (pack_lt phr rT') in c.
 
 Canonical order := OrderPack (base _ _ class_of).
 
@@ -301,7 +301,7 @@ Qed.
 Lemma totalP : order (leo r).
 Proof.
 by case: r => ? ? [[]].
-Qed. 
+Qed.
 
 End TotalOrderTheory.
 
@@ -361,10 +361,10 @@ Coercion pack_class : pack >-> class.
 Canonical porder_of.
 Notation meet r := (meet_of _ (Phant _) r _ id).
 Notation "{ 'meet_order' T }" := (pack T (Phant _))
-  (at level 0, format "{ 'meet_order'  T }"). 
+  (at level 0, format "{ 'meet_order'  T }").
 Notation MeetClass ro meetC meetA meetxx leEmeet :=
   (Class _ ro _ meetC meetA meetxx leEmeet).
-Notation MeetPack cla := (Pack _ (Phant _) _ cla). 
+Notation MeetPack cla := (Pack _ (Phant _) _ cla).
 
 
 End Exports.
@@ -404,7 +404,7 @@ Qed.
 
 Lemma leEmeet x y : (x <= y) = (x `&` y == x).
 Proof.
-by case: r => ? [? ? ? ? ?]. 
+by case: r => ? [? ? ? ? ?].
 Qed.
 
 Lemma meetAC : right_commutative (meet r).
@@ -680,7 +680,7 @@ Record class (r : {meet_order T}) := Class
   _ : idempotent join;
   _ : forall y x, meet r x (join x y) = x;
   _ : forall y x, join x (meet r x y) = x;
-  _ : forall y x, (y <=_r x) = ((join x y) == x) 
+  _ : forall y x, (y <=_r x) = ((join x y) == x)
 }.
 
 Structure pack (phr : phant (rel T)) := Pack
@@ -699,7 +699,7 @@ Canonical porder_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
 Definition join_of (r : {porder T}) :=
   fun mr & phant_id (Meet.pack_order T (Phant _) mr) r =>
   fun lr & phant_id (pack_order (Phant _) lr) mr =>
-  join lr lr.    
+  join lr lr.
 
 
 
@@ -857,7 +857,7 @@ Definition top_of (r: {porder T}) :=
   fun l & phant_id (Lattice.pack_order T phr l) mo =>
   fun bl & phant_id (pack_lattice phr bl) l =>
   top bl bl.
-  
+
 
 End ClassDef.
 Module Exports.
@@ -867,10 +867,10 @@ Coercion pack_class: pack >-> class.
 Canonical porder_of.
 Notation bottom r := (bottom_of _ (Phant _) r _ id _ id _ id).
 Notation top r := (top_of _ (Phant _) r _ id _ id _ id).
-Notation "{ 'tblattice' T }" := (pack T (Phant _)) 
+Notation "{ 'tblattice' T }" := (pack T (Phant _))
   (at level 0, format "{ 'tblattice'  T }").
 Notation TBLatticeClass topEle botEle := (Class _ _ _ _ topEle botEle).
-Notation TBLatticePack cla := (Pack _ (Phant _) _ cla). 
+Notation TBLatticePack cla := (Pack _ (Phant _) _ cla).
 End Exports.
 
 End TBLattice.
@@ -1094,6 +1094,13 @@ Admitted.
 
 
 End SubLatticesTheory.
+
+(* P : subLattice L -> Prop *)
+(* P S0 est vrai            *)
+(* étant donnés x, y \in L, '[< x; y>] est un subLattice S
+(* forall S, forall x, atom S x -> P S -> P '[< x; top S >] *)
+(* forall S, forall x, coatom S x -> P S -> P '[< bot S; x >] *)
+(* Goal forall S, S \subset S0 -> P S *)
 
 (*Treillis gradués*)
 (*Treillis des sous-ensembles*)
