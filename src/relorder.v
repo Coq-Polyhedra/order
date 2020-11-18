@@ -55,8 +55,16 @@ Notation "{ 'porder' T }" := (pack T (Phant (_)))
   (at level 0, format "{ 'porder'  T }").
 Notation "<=: r" := (leo r) (at level 0, format "<=: r").
 Notation "<: r" := (lto r) (at level 0, format "<: r").
-Notation "x <=_ r y" := (<=:r x y) (at level 70, r at level 2, format "x  <=_ r  y").
-Notation "x <_ r y" := (<:r x y) (at level 70, r at level 2, format "x  <_ r  y").
+Notation "x <=_ r y" := (<=:r x y) (at level 65, r at level 2, format "x  <=_ r  y").
+Notation "x <_ r y" := (<:r x y) (at level 65, r at level 2, format "x  <_ r  y").
+Notation "x <=_ r0 y <=_ r1 z" := ((x <=_r0 y) && (y <=_r1 z))
+  (at level 70, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <=_ r1  z").
+Notation "x <_ r0 y <_ r1 z" := ((x <_r0 y) && (y <_r1 z))
+  (at level 70, r0 at level 2, r1 at level 2, format "x  <_ r0  y  <_ r1  z").
+Notation "x <=_ r0 y <_ r1 z" := ((x <=_r0 y) && (y <_r1 z))
+  (at level 70, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <_ r1  z").
+Notation "x <_ r0 y <=_ r1 z" := ((x <_r0 y) && (y <=_r1 z))
+  (at level 70, r0 at level 2, r1 at level 2, format "x  <_ r0  y  <=_ r1  z").
 Notation "[ 'leo:' r ]" := (pack_of_le _ (Phant _) r _ id)
   (at level 0, format "[ 'leo:'  r ]").
 Notation "[ 'lto:' r ]" := (pack_of_lt _ (Phant _) r _ id)
@@ -125,7 +133,7 @@ Qed.
 
 Lemma gt_eqF x y : y < x -> x == y = false.
 Proof.
-by apply: contraTF => /eqP ->; rewrite ltostrict.
+by apply: contraTF => /eqP ->; rewrite ltostrict. 
 Qed.
 
 Lemma eq_le x y: (x == y) = (x <= y <= x).
@@ -270,7 +278,7 @@ Structure pack (phr : phant (rel T)) := Pack
 Variable (phr : phant (rel T)) (rT : pack phr).
 
 Definition class_of := let: Pack _ _ c as rT' := rT
-  return class (pack_le phr rT') (pack_lt phr rT') in c.
+  return class (pack_le phr rT') (pack_lt phr rT') in c.    
 
 Canonical order := OrderPack (base _ _ class_of).
 
@@ -301,7 +309,7 @@ Qed.
 Lemma totalP : order (leo r).
 Proof.
 by case: r => ? ? [[]].
-Qed.
+Qed. 
 
 End TotalOrderTheory.
 
@@ -362,9 +370,10 @@ Canonical porder_of.
 Notation meet r := (meet_of _ (Phant _) r _ id).
 Notation "{ 'meet_order' T }" := (pack T (Phant _))
   (at level 0, format "{ 'meet_order'  T }").
-Notation MeetClass ro meetC meetA meetxx leEmeet :=
-  (Class _ ro _ meetC meetA meetxx leEmeet).
-Notation MeetPack cla := (Pack _ (Phant _) _ cla).
+Check Class.
+Notation MeetClass meetC meetA meetxx leEmeet :=
+  (Class _ _ _ meetC meetA meetxx leEmeet).
+Notation MeetPack cla := (Pack _ (Phant _) _ cla). 
 
 
 End Exports.
@@ -404,7 +413,7 @@ Qed.
 
 Lemma leEmeet x y : (x <= y) = (x `&` y == x).
 Proof.
-by case: r => ? [? ? ? ? ?].
+by case: r => ? [? ? ? ? ?]. 
 Qed.
 
 Lemma meetAC : right_commutative (meet r).
@@ -534,7 +543,7 @@ Proof.
 Admitted.
 
 Definition meet_class_num :=
-  MeetClass (pack_num _ R) num_minC num_minA num_minxx num_leEmin.
+  MeetClass num_minC num_minA num_minxx num_leEmin.
 Canonical meet_pack_num := MeetPack meet_class_num.
 
 Lemma lower_bound_rat (x y : R) : (((@Order.meet _ R) x y) <= x)%O.
@@ -680,7 +689,7 @@ Record class (r : {meet_order T}) := Class
   _ : idempotent join;
   _ : forall y x, meet r x (join x y) = x;
   _ : forall y x, join x (meet r x y) = x;
-  _ : forall y x, (y <=_r x) = ((join x y) == x)
+  _ : forall y x, (y <=_r x) = ((join x y) == x) 
 }.
 
 Structure pack (phr : phant (rel T)) := Pack
@@ -699,7 +708,7 @@ Canonical porder_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
 Definition join_of (r : {porder T}) :=
   fun mr & phant_id (Meet.pack_order T (Phant _) mr) r =>
   fun lr & phant_id (pack_order (Phant _) lr) mr =>
-  join lr lr.
+  join lr lr.    
 
 
 
@@ -857,7 +866,7 @@ Definition top_of (r: {porder T}) :=
   fun l & phant_id (Lattice.pack_order T phr l) mo =>
   fun bl & phant_id (pack_lattice phr bl) l =>
   top bl bl.
-
+  
 
 End ClassDef.
 Module Exports.
@@ -867,10 +876,10 @@ Coercion pack_class: pack >-> class.
 Canonical porder_of.
 Notation bottom r := (bottom_of _ (Phant _) r _ id _ id _ id).
 Notation top r := (top_of _ (Phant _) r _ id _ id _ id).
-Notation "{ 'tblattice' T }" := (pack T (Phant _))
+Notation "{ 'tblattice' T }" := (pack T (Phant _)) 
   (at level 0, format "{ 'tblattice'  T }").
 Notation TBLatticeClass topEle botEle := (Class _ _ _ _ topEle botEle).
-Notation TBLatticePack cla := (Pack _ (Phant _) _ cla).
+Notation TBLatticePack cla := (Pack _ (Phant _) _ cla). 
 End Exports.
 
 End TBLattice.
@@ -1095,6 +1104,114 @@ Admitted.
 
 End SubLatticesTheory.
 
+Module GradedLattice.
+Section ClassDef.
+Variable (T: finType).
+
+
+Record class (L : {tblattice T}) := Class
+{
+  rank : T -> nat;
+  _ : rank (bottom L) = O%N;
+  _ : forall x y, x <_L y -> (rank x < rank y)%N;
+  _ : forall x y, x <=_L y -> ((rank x).+1 < rank y)%N -> exists z, (x <_L z) && (z <_L y)
+}.
+
+Structure pack (phr : phant (rel T)) := Pack
+{
+  pack_lattice;
+  pack_class : class pack_lattice
+}.
+
+Local Coercion pack_lattice : pack >-> TBLattice.pack.
+Local Coercion pack_class : pack >-> class.
+
+Variable (phr : phant (rel T)) (gl : pack phr).
+
+Canonical porder_of := TBLattice.porder_of _ _ gl. 
+
+End ClassDef.
+Module Exports.
+
+Coercion pack_lattice : pack >-> TBLattice.pack.
+Coercion pack_class : pack >-> class.
+Canonical porder_of.
+Notation rank L := (rank _ _ L).
+Notation "{ 'glattice' T }" := (pack T (Phant _))
+  (at level 0, format "{ 'glattice'  T }").
+Notation GLatticeClass rkbot rkinc rkdens := (Class _ _ _ rkbot rkinc rkdens).
+Notation GLatticePack cla := (Pack _ (Phant _) _ cla).
+End Exports.
+End GradedLattice.
+Include GradedLattice.Exports.
+
+Section GLatticeTheory.
+Variable (T : finType) (L : {glattice T}).
+
+Lemma rk_bottom : rank L (bottom L) = 0%N.
+Proof.
+by case: L => ? [].
+Qed.
+
+Lemma rk_increasing : forall x y, x <_L y -> (rank L x < rank L y)%N.
+Proof.
+by case: L => ? [].
+Qed.
+
+Lemma rk_dense : forall x y,
+  x <=_L y -> ((rank L x).+1 < rank L y)%N -> exists z, (x <_L z) && (z <_L y).
+Proof.
+by case: L => ? [].
+Qed.
+End GLatticeTheory.
+
+Section SubsetLattice.
+Variable (T : finType).
+
+Definition subset (A B : {set T}) := A \subset B.
+Definition ssubset (A B : {set T}) := (A != B) && subset A B.
+
+Lemma subset_order : order subset.
+Proof.
+split.
+- exact: subxx.
+- move=> X Y /andP [] /subsetP subXY /subsetP subYX.
+  apply/setP => x.
+  by apply/(sameP idP)/(equivP idP); split; [move/subYX | move/subXY].
+- move=> Y X Z /subsetP subXY /subsetP subYZ.
+  by apply/subsetP => x; move/subXY/subYZ.
+Qed.
+
+Lemma subset_strict : strict ssubset subset.
+Proof.
+by [].
+Qed.
+
+Definition SOrderClass := OrderClass subset_order subset_strict.
+Canonical SOrderPack := OrderPack SOrderClass.
+
+Definition Smeet (A B : {set T}) := A :&: B.
+
+Lemma SmeetC : commutative Smeet.
+Proof.
+exact: setIC.
+Qed.
+
+Lemma SmeetA : associative Smeet.
+Proof.
+exact: setIA.
+Qed.
+
+Lemma Smeetxx : idempotent Smeet.
+Proof.
+exact: setIid.
+Qed.
+
+
+
+
+End SubsetLattice.
+
 (* P : subLattice L -> Prop *)
 (* P S0 est vrai            *)
 (* étant donnés x, y \in L, '[< x; y>] est un subLattice S
@@ -1102,5 +1219,3 @@ End SubLatticesTheory.
 (* forall S, forall x, coatom S x -> P S -> P '[< bot S; x >] *)
 (* Goal forall S, S \subset S0 -> P S *)
 
-(*Treillis gradués*)
-(*Treillis des sous-ensembles*)
