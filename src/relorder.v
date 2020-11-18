@@ -1064,22 +1064,22 @@ Canonical join_comonoid := Monoid.ComLaw (joinC _ L).
 Canonical meet_monoid := Monoid.Law (meetA _ L) (meet0x _ L) (meetx0 _ L).
 Canonical meet_comonoid := Monoid.ComLaw (meetC _ L).
 
-Definition big_join := \big [(join L)/ (bottom L)]_(i in S) i.
-Definition big_meet := \big [(meet L)/ (top L)]_(i in S) i.
+Definition subtop := \big [(join L)/ (bottom L)]_(i in S) i.
+Definition subbot := \big [(meet L)/ (top L)]_(i in S) i.
 
-Lemma big_join_leE : forall x, x \in S -> x <=_L big_join.
+Lemma subtop_leE : forall x, x \in S -> x <=_L subtop.
 Proof.
 move=> x x_in_S.
-by rewrite /big_join (big_setD1 _ x_in_S) /= leEmeet joinKI.
+by rewrite /subtop (big_setD1 _ x_in_S) /= leEmeet joinKI.
 Qed.
 
-Lemma big_meet_leE : forall x, x \in S -> big_meet <=_L x.
+Lemma subbot_leE : forall x, x \in S -> subbot <=_L x.
 Proof.
 move => x x_in_S.
-by rewrite /big_meet (big_setD1 _ x_in_S) /= leIl.
+by rewrite /subbot (big_setD1 _ x_in_S) /= leIl.
 Qed.
 
-Lemma big_join_stable : elements _ S != set0 -> big_join \in S.
+Lemma subtop_stable : elements _ S != set0 -> subtop \in S.
 Proof.
 (*rewrite /big_join; case: S => /= elem /stableP /= [_ stable_join].
 case/set0Pn => x; rewrite -mem_enum => x_in_elem; rewrite -mem_enum.
@@ -1097,7 +1097,7 @@ elim: (enum elem) => /=.
 Qed.*)
 Admitted.
 
-Lemma big_meet_stable : elements _ S != set0 -> big_meet \in S.
+Lemma subbot_stable : elements _ S != set0 -> subbot \in S.
 Admitted.
 
 
@@ -1189,6 +1189,7 @@ Qed.
 
 Definition SOrderClass := OrderClass subset_order subset_strict.
 Canonical SOrderPack := OrderPack SOrderClass.
+Notation C := SOrderPack.
 
 Definition Smeet (A B : {set T}) := A :&: B.
 
@@ -1207,15 +1208,74 @@ Proof.
 exact: setIid.
 Qed.
 
+Lemma leESmeet : forall X Y, (X <=_C Y) = (Smeet X Y == X).
+Proof.
+move=> X Y; apply/(sameP idP)/(iffP idP).
+- by move/eqP/setIidPl.
+- by move/setIidPl/eqP.
+Qed.
 
+Definition SMeetClass := MeetClass SmeetC SmeetA Smeetxx leESmeet.
+Canonical SMeetPack := MeetPack SMeetClass.
 
+Definition Sjoin (X Y : {set T}) := (X :|: Y).
+
+Lemma SjoinC : commutative Sjoin.
+Proof.
+exact : setUC.
+Qed.
+
+Lemma SjoinA : associative Sjoin.
+Proof.
+exact: setUA.
+Qed.
+
+Lemma Sjoinxx : idempotent Sjoin.
+Proof.
+exact: setUid.
+Qed.
+
+Lemma SjoinKI : forall Y X, meet C X (Sjoin X Y) = X.
+Proof.
+move=> X Y; rewrite SjoinC.
+exact:setKU.
+Qed.
+
+Lemma SjoinKU : forall Y X, Sjoin X (meet C X Y) = X.
+Proof.
+move=> X Y; rewrite SjoinC.
+exact: setIK.
+Qed.
+
+Lemma leESjoin : forall Y X, (Y <=_C X) = ((Sjoin X Y) == X).
+Proof.
+move=> Y X; apply/(sameP idP)/(iffP idP).
+- by move/eqP/setUidPl.
+- by move/setUidPl/eqP.
+Qed.
+
+Definition SLatticeClass :=
+  LatticeClass SjoinC SjoinA Sjoinxx SjoinKI SjoinKU leESjoin.
+Canonical SLatticePack := LatticePack SLatticeClass.
+
+Lemma SbotEle : forall A, set0 <=_C A.
+Proof.
+exact: sub0set.
+Qed.
+
+Lemma StopEle : forall A, A <=_C [set: T].
+Proof.
+exact: subsetT.
+Qed.
+
+Definition STBLatticeClass := TBLatticeClass StopEle SbotEle.
+Canonical STBLatticePack := TBLatticePack STBLatticeClass.
 
 End SubsetLattice.
 
 (* P : subLattice L -> Prop *)
 (* P S0 est vrai            *)
-(* étant donnés x, y \in L, '[< x; y>] est un subLattice S
+(* étant donnés x, y \in L, '[< x; y>] est un subLattice S *)
 (* forall S, forall x, atom S x -> P S -> P '[< x; top S >] *)
 (* forall S, forall x, coatom S x -> P S -> P '[< bot S; x >] *)
 (* Goal forall S, S \subset S0 -> P S *)
-
