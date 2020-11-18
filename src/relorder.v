@@ -696,6 +696,11 @@ Local Coercion pack_class : pack >-> class.
 Canonical porder_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
  (Order.class_of _ _ (Meet.pack_order _ _ mjr)).
 
+Definition join_of (r : {porder T}) :=
+  fun mr & phant_id (Meet.pack_order T (Phant _) mr) r =>
+  fun lr & phant_id (pack_order (Phant _) lr) mr =>
+  join lr lr.    
+
 
 
 End ClassDef.
@@ -704,9 +709,12 @@ Module Exports.
 Coercion pack_order : pack >-> Meet.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
-Notation join r := (join _ r r).
 Notation "{ 'lattice' T }" := (pack T (Phant _))
   (at level 0, format "{ 'lattice'  T }").
+Notation LatticeClass joinC joinA joinxx joinKI joinKU leEjoin:=
+  (Class _ _ _ joinC joinA joinxx joinKI joinKU leEjoin).
+Notation LatticePack cla := (Pack _ (Phant _) _ cla).
+Notation join r := (join_of _ r _ id _ id).
 
 End Exports.
 End Lattice.
@@ -773,7 +781,155 @@ by rewrite leEmeet; apply/eqP/eqP => <-; rewrite (joinKI, meetUK).
 Qed.
 
 End LatticeTheory.
+Section NumLattice.
 
+Context (disp : unit) (R : latticeType disp).
+
+Lemma num_joinC : commutative (@Order.join _ R).
+Admitted.
+
+Lemma num_joinA : associative (@Order.join _ R).
+Admitted.
+
+Lemma num_joinxx: idempotent (@Order.join _ R).
+Admitted.
+
+Lemma num_joinKI : forall y x, meet [leo: <=%O] x ((@Order.join _ R) x y) = x.
+Admitted.
+
+Lemma num_joinKU : forall y x, (@Order.join _ R) x (meet [leo: <=%O] x y) = x.
+Admitted.
+
+Lemma num_leEjoin : forall y x, (y <= x)%O = ((@Order.join _ R x y) == x).
+Admitted.
+
+Definition lattice_class_num :=
+  LatticeClass num_joinC num_joinA num_joinxx num_joinKI num_joinKU num_leEjoin.
+Canonical lattice_pack_num := LatticePack lattice_class_num.
+
+
+End NumLattice.
+
+Section Test.
+Context (disp: unit) (R : latticeType disp).
+
+Goal forall x : R, (join [lto: <%O] x x) = x.
+move=> x.
+exact: joinxx.
+Qed.
+End Test.
+
+Module TBLattice.
+Section ClassDef.
+
+Variable (T : eqType).
+
+(*TODO : top element*)
+Record class (L : {lattice T}) := Class
+{
+  bottom : T;
+  top : T;
+  _ : forall x, x <=_L top;
+  _ : forall x, bottom <=_L x
+}.
+
+Structure pack (phr : phant (rel T)) := Pack
+{
+  pack_lattice;
+  pack_class : class pack_lattice
+}.
+
+Local Coercion pack_lattice: pack >-> Lattice.pack.
+Local Coercion pack_class: pack >-> class.
+
+Variable (phr : phant (rel T)) (bl : pack phr).
+
+Canonical porder_of := Lattice.porder_of _ _ bl.
+
+Definition bottom_of (r: {porder T}) :=
+  fun mo & phant_id (Meet.pack_order T phr mo) r =>
+  fun l & phant_id (Lattice.pack_order T phr l) mo =>
+  fun bl & phant_id (pack_lattice phr bl) l =>
+  bottom bl bl.
+
+Definition top_of (r: {porder T}) :=
+  fun mo & phant_id (Meet.pack_order T phr mo) r =>
+  fun l & phant_id (Lattice.pack_order T phr l) mo =>
+  fun bl & phant_id (pack_lattice phr bl) l =>
+  top bl bl.
+  
+
+End ClassDef.
+Module Exports.
+
+Coercion pack_lattice: pack >-> Lattice.pack.
+Coercion pack_class: pack >-> class.
+Canonical porder_of.
+Notation bottom r := (bottom_of _ (Phant _) r _ id _ id _ id).
+Notation top r := (top_of _ (Phant _) r _ id _ id _ id).
+Notation "{ 'tblattice' T }" := (pack T (Phant _)) 
+  (at level 0, format "{ 'tblattice'  T }").
+Notation TBLatticeClass topEle botEle := (Class _ _ _ _ topEle botEle).
+Notation TBLatticePack cla := (Pack _ (Phant _) _ cla). 
+End Exports.
+
+End TBLattice.
+Include TBLattice.Exports.
+
+Section TBLatticeTheory.
+Variable (T: eqType) (L : { tblattice T }).
+
+Lemma botEle : forall x, bottom L <=_L x.
+Proof.
+by case: L => ? [].
+Qed.
+
+Lemma topEle : forall x, x <=_L top L.
+Proof.
+by case: L => ? [].
+Qed.
+
+Lemma joinx0 : right_id (bottom L) (join L).
+Proof.
+by move=> x; apply/eqP; rewrite joinC -leEjoin botEle.
+Qed.
+
+Lemma join0x : left_id (bottom L) (join L).
+Proof.
+by move=> x; apply/eqP; rewrite -leEjoin botEle.
+Qed.
+
+Lemma meet0x : left_id (top L) (meet L).
+Proof.
+by move=> x; apply/eqP; rewrite meetC -leEmeet topEle.
+Qed.
+
+Lemma meetx0 : right_id (top L) (meet L).
+Proof.
+by move=> x; apply/eqP; rewrite -leEmeet topEle.
+Qed.
+
+
+
+End TBLatticeTheory.
+
+Section NumTBLattice.
+Context (disp : unit) (L : tbLatticeType disp).
+
+Lemma num_botEle : forall x:L, (0 <= x)%O.
+Admitted.
+
+Lemma num_topEle : forall x:L, (x <= 1)%O.
+Admitted.
+
+Definition tblattice_class_num := TBLatticeClass num_topEle num_botEle.
+Canonical tblattice_pack_num := TBLatticePack tblattice_class_num.
+
+Goal forall x:L, (bottom [leo: <=%O] <= x)%O.
+Proof.
+exact: botEle.
+Qed.
+End NumTBLattice.
 
 
 
@@ -886,11 +1042,58 @@ End SubLattices.
 
 (* ==================================================================== *)
 Section SubLatticesTheory.
-Context {T : finType} (L : {lattice T}) (S : subLattice L).
+Context {T : finType} (L : { tblattice T}) (S : subLattice L).
 
 Lemma stable_join : forall x y, x \in S -> y \in S -> join L x y \in S.
 Proof. by case: S => /= fS /stableP[]. Qed.
 
 Lemma stable_meet : forall x y, x \in S -> y \in S -> meet L x y \in S.
 Proof. by case: S => /= fS /stableP[]. Qed.
+
+Canonical join_monoid := Monoid.Law (joinA _ L) (join0x _ L) (joinx0 _ L).
+Canonical join_comonoid := Monoid.ComLaw (joinC _ L).
+Canonical meet_monoid := Monoid.Law (meetA _ L) (meet0x _ L) (meetx0 _ L).
+Canonical meet_comonoid := Monoid.ComLaw (meetC _ L).
+
+Definition big_join := \big [(join L)/ (bottom L)]_(i in S) i.
+Definition big_meet := \big [(meet L)/ (top L)]_(i in S) i.
+
+Lemma big_join_leE : forall x, x \in S -> x <=_L big_join.
+Proof.
+move=> x x_in_S.
+by rewrite /big_join (big_setD1 _ x_in_S) /= leEmeet joinKI.
+Qed.
+
+Lemma big_meet_leE : forall x, x \in S -> big_meet <=_L x.
+Proof.
+move => x x_in_S.
+by rewrite /big_meet (big_setD1 _ x_in_S) /= leIl.
+Qed.
+
+Lemma big_join_stable : elements _ S != set0 -> big_join \in S.
+Proof.
+(*rewrite /big_join; case: S => /= elem /stableP /= [_ stable_join].
+case/set0Pn => x; rewrite -mem_enum => x_in_elem; rewrite -mem_enum.
+have: forall x y, x \in enum elem -> y \in enum elem -> join L x y \in enum elem.
+- by move=> ? ? ? ?; rewrite mem_enum; apply: stable_join; rewrite -mem_enum.
+move: x_in_elem; rewrite -big_enum.
+
+Search _ "big".
+
+elim: (enum elem) => /=.
+- by rewrite in_nil.
+- move=> a l; case: l.
+  + by move=> _ _ _; rewrite big_cons big_nil mem_seq1 joinx0.
+  + move => b l.
+Qed.*)
+Admitted.
+
+Lemma big_meet_stable : elements _ S != set0 -> big_meet \in S.
+Admitted.
+
+
+
 End SubLatticesTheory.
+
+(*Treillis gradués*)
+(*Treillis des sous-ensembles*)
