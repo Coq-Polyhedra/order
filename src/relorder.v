@@ -370,7 +370,6 @@ Canonical porder_of.
 Notation meet r := (meet_of _ (Phant _) r _ id).
 Notation "{ 'meet_order' T }" := (pack T (Phant _))
   (at level 0, format "{ 'meet_order'  T }").
-Check Class.
 Notation MeetClass meetC meetA meetxx leEmeet :=
   (Class _ _ _ meetC meetA meetxx leEmeet).
 Notation MeetPack cla := (Pack _ (Phant _) _ cla). 
@@ -1038,7 +1037,8 @@ Lemma stableP (r : pred T) :
     (stable r).
 Proof. by apply/andPP; apply/'forall_'forall_'imply_[idP, implyP]. Qed.
 
-Record subLattice := { elements :> {set T}; _ : stable (mem elements) }.
+Record subLattice :=
+  SubLattice { elements :> {set T}; _ : stable (mem elements) }.
 
 Canonical subLattice_subType := Eval hnf in [subType for elements].
 
@@ -1100,9 +1100,95 @@ Admitted.
 Lemma subbot_stable : elements _ S != set0 -> subbot \in S.
 Admitted.
 
+Definition atom a := (a \in S) && (subbot <_L a) &&
+  ~~ [exists x, (x \in S) && (subbot <_L x) && (x <_L a)].
+
+Definition coatom a := (a \in S) && (a <_L subtop) &&
+  ~~ [exists x, (x \in S) && (a <_L x) && (x <_L subtop)].
+
+Lemma atomP a : a \in S -> subbot <_L a ->
+  reflect (forall x, x \in S -> subbot <_L x -> ~~ (x <_L a)) (atom a).
+Proof.
+move => a_in_S bot_lt_a; apply/(iffP idP); rewrite /atom a_in_S bot_lt_a /=.
+- move/existsPn => atomH x x_in_S bot_le_x.
+  by move: (atomH x); rewrite x_in_S bot_le_x.
+- move => atomPH; apply/existsPn => x.
+  move: (atomPH x) => ?; rewrite negb_and.
+  by rewrite -implyNb; apply/implyP; case/negbNE/andP.
+Qed.
+
+
+
+Lemma coatomP a : a <_L subtop ->
+  reflect (forall x, x <_L subtop -> ~~ (a <_L x)) (coatom a).
+Admitted.
 
 
 End SubLatticesTheory.
+
+Section SubLatticeInd.
+
+Context {T : finType} (L : { tblattice T}).
+
+
+Lemma stableT : stable L (mem [set:T]).
+Proof.
+by apply/andP; split; apply/forallP => x; apply/forallP => y; 
+  do !rewrite /= in_setT.
+Qed.
+
+Definition SL := SubLattice _ _ stableT.
+
+Definition interval (a b : T) := [set x : T | (a <=_L x) && (x <=_L b)].
+
+Lemma stable_interval a b:
+  stable L (mem (interval a b)).
+Proof.
+apply/andP; split; apply/forallP => x; apply/forallP => y;
+  rewrite /= !inE; apply/implyP => /andP [a_le_x x_le_b];
+  apply/implyP => /andP [a_le_y y_le_b]; apply/andP; split.
+- by rewrite lexI a_le_x a_le_y.
+- rewrite -(meetxx _ L b); apply leI2 => //.
+- admit.
+- admit.
+Admitted.
+
+Definition SubLatInterval a b := SubLattice _ _ (stable_interval a b).
+
+Notation "[< a ; b >]" := (SubLatInterval a b)
+  (at level 0, format "[<  a  ;  b  >]").
+
+Lemma intervalP : forall S: subLattice L, S \subset [<subbot _ S; subtop _ S>].
+Proof.
+by move=> S; apply/subsetP => x x_in_S; rewrite inE subtop_leE // subbot_leE.
+Qed.
+
+Lemma incr_interval : forall S: subLattice L, forall a, atom _ S a ->
+  let SI := [< a; subtop L S>] in
+  (SI \subset S) /\ forall S0: subLattice L, ~~((SI \proper S0) && (S0 \proper S)).
+Proof.
+move=> S a; rewrite /atom => /andP [/andP [a_in_S bot_lt_a] /existsPn atomic_a].
+split.
+- apply/subsetP => x; rewrite inE; case/andP => a_le_x x_le_top.
+Admitted.
+
+Variable (P : subLattice L -> Prop) (S0 : subLattice L).
+Hypothesis (P_0 : P S0).
+Hypothesis (P_incr : forall S, forall x, atom _ S x -> P S -> P [< x; subtop _ S>]).
+Hypothesis (P_decr : forall S, forall x, coatom _ S x -> P S -> P [<subbot _ S; x>]).
+
+Goal forall S : subLattice L, S \subset S0 -> P S.
+move=> S S_sub_S0.
+Admitted.
+
+(* P S0 est vrai            *)
+(* étant donnés x, y \in L, '[< x; y>] est un subLattice S *)
+(* forall S, forall x, atom S x -> P S -> P '[< x; top S >] *)
+(* forall S, forall x, coatom S x -> P S -> P '[< bot S; x >] *)
+(* Goal forall S, S \subset S0 -> P S *)
+
+
+End SubLatticeInd.
 
 Module GradedLattice.
 Section ClassDef.
@@ -1273,9 +1359,3 @@ Canonical STBLatticePack := TBLatticePack STBLatticeClass.
 
 End SubsetLattice.
 
-(* P : subLattice L -> Prop *)
-(* P S0 est vrai            *)
-(* étant donnés x, y \in L, '[< x; y>] est un subLattice S *)
-(* forall S, forall x, atom S x -> P S -> P '[< x; top S >] *)
-(* forall S, forall x, coatom S x -> P S -> P '[< bot S; x >] *)
-(* Goal forall S, S \subset S0 -> P S *)
