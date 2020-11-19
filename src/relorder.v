@@ -1,5 +1,8 @@
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect all_algebra.
+From mathcomp Require Import all_ssreflect all_algebra finmap.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
 
 Open Scope ring_scope.
 
@@ -32,26 +35,26 @@ Structure pack (phr : phant (rel T)) := Pack
 Variable (phr : phant (rel T)) (r : pack phr).
 
 Definition class_of := let: Pack _ _ c as r0 := r
-  return (class (pack_le phr r0) (pack_lt phr r0)) in c.
+  return (class (pack_le r0) (pack_lt r0)) in c.
 
 Definition pack_of_le (r : rel T) :=
-  fun (ro : pack phr) & phant_id (pack_le phr ro) r =>
+  fun (ro : pack phr) & phant_id (pack_le ro) r =>
   ro.
 
 Definition pack_of_lt (r : rel T) :=
-  fun (ro : pack phr) & phant_id (pack_lt phr ro) r =>
+  fun (ro : pack phr) & phant_id (pack_lt ro) r =>
   ro.
 
 End ClassDef.
 
 Module Exports.
-Notation lto r := (pack_lt _ _ r).
-Notation leo r:= (pack_le _ _ r).
-Notation order le :=  (axiom _ le).
-Notation strict lt le := (strict _ lt le).
-Notation OrderClass ax st := (Class _ _ _ ax st).
-Notation OrderPack cla := (Pack _ (Phant _) _ _ cla).
-Notation "{ 'porder' T }" := (pack T (Phant (_)))
+Notation lto r := (pack_lt r).
+Notation leo r:= (pack_le r).
+Notation order le :=  (axiom le).
+Notation strict lt le := (strict lt le).
+Notation OrderClass ax st := (Class ax st).
+Notation OrderPack cla := (Pack (Phant _) cla).
+Notation "{ 'porder' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'porder'  T }").
 Notation "<=: r" := (leo r) (at level 0, format "<=: r").
 Notation "<: r" := (lto r) (at level 0, format "<: r").
@@ -65,9 +68,9 @@ Notation "x <=_ r0 y <_ r1 z" := ((x <=_r0 y) && (y <_r1 z))
   (at level 70, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <_ r1  z").
 Notation "x <_ r0 y <=_ r1 z" := ((x <_r0 y) && (y <=_r1 z))
   (at level 70, r0 at level 2, r1 at level 2, format "x  <_ r0  y  <=_ r1  z").
-Notation "[ 'leo:' r ]" := (pack_of_le _ (Phant _) r _ id)
+Notation "[ 'leo:' r ]" := (@pack_of_le _ (Phant _) r _ id)
   (at level 0, format "[ 'leo:'  r ]").
-Notation "[ 'lto:' r ]" := (pack_of_lt _ (Phant _) r _ id)
+Notation "[ 'lto:' r ]" := (@pack_of_lt _ (Phant _) r _ id)
   (at level 0, format "[ 'lto:'  r ]").
 (*TODO : Notations supplémentaires*)
 
@@ -86,6 +89,7 @@ Local Notation "x < y < z" := ((x < y) && (y < z)).
 Local Notation "x < y <= z" := ((x < y) && (y <= z)).
 Local Notation "x <= y < z" := ((x <= y) && (y < z)).
 
+Check (order _).
 Lemma orderP : order (leo r).
 Proof.
 by case: r => le lt [].
@@ -149,13 +153,13 @@ Qed.
 Lemma lt_le_trans y x z: x < y -> y <= z -> x < z.
 Proof.
 rewrite !ostrict => /andP [nexy lexy leyz];
-  rewrite (otrans _ _ _ lexy) // andbT.
+  rewrite (otrans lexy) // andbT.
 by apply: contraNneq nexy => eqxz; rewrite eqxz eq_le leyz andbT in lexy *.
 Qed.
 
 Lemma lt_trans: transitive (fun x y => (x < y)).
 Proof.
-by move => y x z ltxy /ltW leyz; apply (lt_le_trans y).
+by move => y x z ltxy /ltW leyz; apply: (lt_le_trans ltxy).
 Qed.
 
 Lemma le_lt_trans y x z: x <= y -> y < z -> x < z.
@@ -165,7 +169,7 @@ Qed.
 
 Lemma lt_nsym x y : x < y -> y < x -> False.
 Proof.
-by move=> xy /(lt_trans _ _ _ xy); rewrite ltostrict.
+by move=> xy /(lt_trans xy); rewrite ltostrict.
 Qed.
 
 Lemma lt_asym x y : x < y < x = false.
@@ -183,7 +187,7 @@ Proof.
 by move=> le_xy; apply/negP => /le_lt_trans /(_ le_xy); rewrite ltostrict.
 Qed.
 
-Definition lt_gtF x y hxy := le_gtF _ _ (@ltW x y hxy).
+Definition lt_gtF x y hxy := le_gtF (@ltW x y hxy).
 
 
 Lemma lt_leAnge x y : (x < y) = (x <= y) && ~~ (y <= x).
@@ -264,7 +268,7 @@ Definition mixin_of (r : rel T) :=
 
 Record class (le lt : rel T) := Class
 {
-  base : Order.class _ le lt;
+  base : Order.class le lt;
   mixin : mixin_of le
 }.
 
@@ -278,17 +282,17 @@ Structure pack (phr : phant (rel T)) := Pack
 Variable (phr : phant (rel T)) (rT : pack phr).
 
 Definition class_of := let: Pack _ _ c as rT' := rT
-  return class (pack_le phr rT') (pack_lt phr rT') in c.    
+  return class (pack_le rT') (pack_lt rT') in c.    
 
-Canonical order := OrderPack (base _ _ class_of).
+Canonical order := OrderPack (base class_of).
 
 End ClassDef.
 
 Module Exports.
-Notation total r := (mixin_of _ r).
+Notation total r := (mixin_of r).
 Notation TotalClass ax st to := (Class _ _ _ (Order.Class _ _ _ ax st) to).
 Notation TotalPack cla := (Pack _ (Phant _) _ _ cla).
-Notation "{ 'torder' T }" := (pack T (Phant _))
+Notation "{ 'torder' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'torder'  T }").
 Coercion order : pack >-> Order.pack.
 Canonical order.
@@ -351,15 +355,14 @@ Local Coercion pack_order: pack >-> Order.pack.
 
 Variables (phr : phant (rel T)) (mr : pack phr).
 
+Check Order.Pack.
 Canonical porder_of :=
-  Order.Pack _ phr
-    (Order.pack_le _ _ mr) (Order.pack_lt _ _ mr)
-    (Order.pack_class _ _ mr).
+  Order.Pack phr (Order.pack_class mr).
 
 
 Definition meet_of (r : {porder T}) :=
-  fun (pr : pack phr) & phant_id (pack_order _ pr) r =>
-  meet (pack_order _ pr) (pack_class _ pr).
+  fun (pr : pack phr) & phant_id (pack_order pr) r =>
+  meet (pack_class pr).
 
 End ClassDef.
 
@@ -367,12 +370,12 @@ Module Exports.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
-Notation meet r := (meet_of _ (Phant _) r _ id).
-Notation "{ 'meet_order' T }" := (pack T (Phant _))
+Notation meet r := (@meet_of _ (Phant _) r _ id).
+Notation "{ 'meet_order' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'meet_order'  T }").
 Notation MeetClass meetC meetA meetxx leEmeet :=
-  (Class _ _ _ meetC meetA meetxx leEmeet).
-Notation MeetPack cla := (Pack _ (Phant _) _ cla). 
+  (Class meetC meetA meetxx leEmeet).
+Notation MeetPack cla := (Pack (Phant _)cla). 
 
 
 End Exports.
@@ -701,13 +704,13 @@ Variables (phr : phant (rel T)) (mjr : pack phr).
 Local Coercion pack_order : pack >-> Meet.pack.
 Local Coercion pack_class : pack >-> class.
 
-Canonical porder_of := Order.Pack T (Phant (rel T)) (leo mjr) (lto mjr)
- (Order.class_of _ _ (Meet.pack_order _ _ mjr)).
+Canonical porder_of := Order.Pack phr (Order.class_of (Meet.pack_order mjr)).
 
+Check Meet.pack_order.
 Definition join_of (r : {porder T}) :=
-  fun mr & phant_id (Meet.pack_order T (Phant _) mr) r =>
-  fun lr & phant_id (pack_order (Phant _) lr) mr =>
-  join lr lr.    
+  fun (mr : {meet_order T}) & phant_id (Meet.pack_order mr) r =>
+  fun (lr : pack phr) & phant_id (pack_order lr) mr =>
+  join lr.    
 
 
 
@@ -717,12 +720,12 @@ Module Exports.
 Coercion pack_order : pack >-> Meet.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
-Notation "{ 'lattice' T }" := (pack T (Phant _))
+Notation "{ 'lattice' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'lattice'  T }").
 Notation LatticeClass joinC joinA joinxx joinKI joinKU leEjoin:=
-  (Class _ _ _ joinC joinA joinxx joinKI joinKU leEjoin).
-Notation LatticePack cla := (Pack _ (Phant _) _ cla).
-Notation join r := (join_of _ r _ id _ id).
+  (Class joinC joinA joinxx joinKI joinKU leEjoin).
+Notation LatticePack cla := (Pack (Phant _) cla).
+Notation join r := (@join_of _ (Phant _) r _ id _ id).
 
 End Exports.
 End Lattice.
@@ -852,19 +855,19 @@ Local Coercion pack_class: pack >-> class.
 
 Variable (phr : phant (rel T)) (bl : pack phr).
 
-Canonical porder_of := Lattice.porder_of _ _ bl.
+Canonical porder_of := Lattice.porder_of bl.
 
 Definition bottom_of (r: {porder T}) :=
-  fun mo & phant_id (Meet.pack_order T phr mo) r =>
-  fun l & phant_id (Lattice.pack_order T phr l) mo =>
-  fun bl & phant_id (pack_lattice phr bl) l =>
-  bottom bl bl.
+  fun (mo : {meet_order T}) & phant_id (Meet.pack_order mo) r =>
+  fun (l : {lattice T}) & phant_id (Lattice.pack_order l) mo =>
+  fun (bl : pack phr) & phant_id (pack_lattice bl) l =>
+  bottom bl.
 
 Definition top_of (r: {porder T}) :=
-  fun mo & phant_id (Meet.pack_order T phr mo) r =>
-  fun l & phant_id (Lattice.pack_order T phr l) mo =>
-  fun bl & phant_id (pack_lattice phr bl) l =>
-  top bl bl.
+  fun (mo : {meet_order T} ) & phant_id (Meet.pack_order mo) r =>
+  fun (l : {lattice T} ) & phant_id (Lattice.pack_order l) mo =>
+  fun (bl : pack phr) & phant_id (pack_lattice bl) l =>
+  top bl.
   
 
 End ClassDef.
@@ -873,12 +876,12 @@ Module Exports.
 Coercion pack_lattice: pack >-> Lattice.pack.
 Coercion pack_class: pack >-> class.
 Canonical porder_of.
-Notation bottom r := (bottom_of _ (Phant _) r _ id _ id _ id).
-Notation top r := (top_of _ (Phant _) r _ id _ id _ id).
-Notation "{ 'tblattice' T }" := (pack T (Phant _)) 
+Notation bottom r := (@bottom_of _ (Phant _) r _ id _ id _ id).
+Notation top r := (@top_of _ (Phant _) r _ id _ id _ id).
+Notation "{ 'tblattice' T }" := (pack (Phant (rel T))) 
   (at level 0, format "{ 'tblattice'  T }").
-Notation TBLatticeClass topEle botEle := (Class _ _ _ _ topEle botEle).
-Notation TBLatticePack cla := (Pack _ (Phant _) _ cla). 
+Notation TBLatticeClass topEle botEle := (Class topEle botEle).
+Notation TBLatticePack cla := (Pack (Phant _) cla). 
 End Exports.
 
 End TBLattice.
@@ -1024,21 +1027,34 @@ Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
   (at level 4, right associativity, format "''imply_[' view1 ,  view2 ]").
 
 Section SubLattices.
-Context {T : finType} (L : {lattice T}).
+(*TODO (T : choiceType)*)
+Context {T : choiceType} (L : {lattice T}).
 
-Definition stable (r : pred T) :=
-     [forall x : T, [forall y : T, r x ==> r y ==> r (meet L x y)]]
-  && [forall x : T, [forall y : T, r x ==> r y ==> r (join L x y)]].
+(*stable : {fset T} -> bool*)
+Definition stable (E : {fset T}) :=
+  [forall x : E, [forall y : E, (meet L (val x) (val y) \in E)]]
+  && [forall x : E, [forall y : E, (join L (val x) (val y) \in E)]].
 
-Lemma stableP (r : pred T) :
+Lemma stableP (E : {fset T}) :
   reflect
-    [/\ forall x y, r x -> r y -> r (meet L x y)
-      & forall x y, r x -> r y -> r (join L x y)]
-    (stable r).
-Proof. by apply/andPP; apply/'forall_'forall_'imply_[idP, implyP]. Qed.
+    [/\ forall x y, x \in E -> y \in E -> (meet L x y) \in E
+      & forall x y, x \in E -> y \in E -> (join L x y) \in E]
+    (stable E).
+Proof. apply/andPP; apply/(iffP idP).
+- move/forallP => /= stableH x y.
+  case : (in_fsetP) => u // _ _; case: (in_fsetP) => v // _ _.
+  by move/forallP: (stableH u); apply.
+- move=> stableH; apply/forallP => /= x; apply/forallP => /= y.
+  apply: stableH; exact: fsvalP.
+- move/forallP => /= stableH x y.
+  case : (in_fsetP) => u // _ _; case: (in_fsetP) => v // _ _.
+  by move/forallP: (stableH u); apply.
+- move=> stableH; apply/forallP => /= x; apply/forallP => /= y.
+  apply: stableH; exact: fsvalP.
+Qed.
 
 Record subLattice :=
-  SubLattice { elements :> {set T}; _ : stable (mem elements) }.
+  SubLattice { elements :> {fset T}; _ : stable elements }.
 
 Canonical subLattice_subType := Eval hnf in [subType for elements].
 
@@ -1051,35 +1067,37 @@ End SubLattices.
 
 (* ==================================================================== *)
 Section SubLatticesTheory.
-Context {T : finType} (L : { tblattice T}) (S : subLattice L).
+Context {T : choiceType} (L : { tblattice T}) (S : subLattice L).
 
-Lemma stable_join : forall x y, x \in S -> y \in S -> join L x y \in S.
+Lemma stable_join : forall x y, x \in (S : {fset _}) -> y \in (S : {fset _}) ->
+  join L x y \in (S : {fset _}).
 Proof. by case: S => /= fS /stableP[]. Qed.
 
-Lemma stable_meet : forall x y, x \in S -> y \in S -> meet L x y \in S.
+Lemma stable_meet : forall x y, x \in (S : {fset _}) -> y \in (S : {fset _}) ->
+  meet L x y \in (S : {fset _}).
 Proof. by case: S => /= fS /stableP[]. Qed.
 
-Canonical join_monoid := Monoid.Law (joinA _ L) (join0x _ L) (joinx0 _ L).
-Canonical join_comonoid := Monoid.ComLaw (joinC _ L).
-Canonical meet_monoid := Monoid.Law (meetA _ L) (meet0x _ L) (meetx0 _ L).
-Canonical meet_comonoid := Monoid.ComLaw (meetC _ L).
+Canonical join_monoid := Monoid.Law (joinA L) (join0x L) (joinx0 L).
+Canonical join_comonoid := Monoid.ComLaw (joinC L).
+Canonical meet_monoid := Monoid.Law (meetA L) (meet0x L) (meetx0 L).
+Canonical meet_comonoid := Monoid.ComLaw (meetC L).
 
-Definition subtop := \big [(join L)/ (bottom L)]_(i in S) i.
-Definition subbot := \big [(meet L)/ (top L)]_(i in S) i.
+Definition subtop := \big [(join L)/ (bottom L)]_(i <- S) i.
+Definition subbot := \big [(meet L)/ (top L)]_(i <- S) i.
 
-Lemma subtop_leE : forall x, x \in S -> x <=_L subtop.
+Lemma subtop_leE : forall x, x \in (S : {fset _}) -> x <=_L subtop.
 Proof.
-move=> x x_in_S.
-by rewrite /subtop (big_setD1 _ x_in_S) /= leEmeet joinKI.
+move=> x /= x_in_S.
+by rewrite /subtop (big_fsetD1 _ x_in_S) /= leEmeet joinKI.
 Qed.
 
-Lemma subbot_leE : forall x, x \in S -> subbot <=_L x.
+Lemma subbot_leE : forall x, x \in (S : {fset _})  -> subbot <=_L x.
 Proof.
 move => x x_in_S.
-by rewrite /subbot (big_setD1 _ x_in_S) /= leIl.
+by rewrite /subbot (big_fsetD1 _ x_in_S) /= leIl.
 Qed.
 
-Lemma subtop_stable : elements _ S != set0 -> subtop \in S.
+Lemma subtop_stable : ((S : {fset _}) != fset0) -> subtop \in (S : {fset _}).
 Proof.
 (*rewrite /big_join; case: S => /= elem /stableP /= [_ stable_join].
 case/set0Pn => x; rewrite -mem_enum => x_in_elem; rewrite -mem_enum.
@@ -1097,87 +1115,64 @@ elim: (enum elem) => /=.
 Qed.*)
 Admitted.
 
-Lemma subbot_stable : elements _ S != set0 -> subbot \in S.
+Lemma subbot_stable : (S : {fset _}) != fset0 -> subbot \in (S : {fset _}).
 Admitted.
 
-Definition atom a := (a \in S) && (subbot <_L a) &&
-  ~~ [exists x, (x \in S) && (subbot <_L x) && (x <_L a)].
+Definition atom a := [/\ (a \in (S : {fset _})), (subbot <_L a) &
+  forall x, x \in (S : {fset _}) -> subbot <_L x -> ~~ (x <_L a)].
 
-Definition coatom a := (a \in S) && (a <_L subtop) &&
-  ~~ [exists x, (x \in S) && (a <_L x) && (x <_L subtop)].
-
-Lemma atomP a : a \in S -> subbot <_L a ->
-  reflect (forall x, x \in S -> subbot <_L x -> ~~ (x <_L a)) (atom a).
-Proof.
-move => a_in_S bot_lt_a; apply/(iffP idP); rewrite /atom a_in_S bot_lt_a /=.
-- move/existsPn => atomH x x_in_S bot_le_x.
-  by move: (atomH x); rewrite x_in_S bot_le_x.
-- move => atomPH; apply/existsPn => x.
-  move: (atomPH x) => ?; rewrite negb_and.
-  by rewrite -implyNb; apply/implyP; case/negbNE/andP.
-Qed.
-
-
-
-Lemma coatomP a : a <_L subtop ->
-  reflect (forall x, x <_L subtop -> ~~ (a <_L x)) (coatom a).
-Admitted.
+Definition coatom a := [/\ (a \in (S : {fset _})), (a <_L subtop) &
+  forall x, (x \in (S : {fset _})) -> (x <_L subtop) -> ~~ (a <_L x)].
 
 
 End SubLatticesTheory.
 
 Section SubLatticeInd.
 
-Context {T : finType} (L : { tblattice T}).
+Context {T : choiceType} (L : { tblattice T}).
 
+Definition interval (S : subLattice L) (a b : T) := 
+  [fset x| x in (S : {fset _ }) & ((a <=_L x) && (x <=_L b))]%fset.
 
-Lemma stableT : stable L (mem [set:T]).
+Lemma in_interval (S : subLattice L) (a b : T) :
+  forall x, x \in interval S a b -> x \in (S : {fset _}).
 Proof.
-by apply/andP; split; apply/forallP => x; apply/forallP => y; 
-  do !rewrite /= in_setT.
+by move=> x; rewrite inE /= unfold_in /= => /and3P [? _ _].
 Qed.
 
-Definition SL := SubLattice _ _ stableT.
-
-Definition interval (a b : T) := [set x : T | (a <=_L x) && (x <=_L b)].
-
-Lemma stable_interval a b:
-  stable L (mem (interval a b)).
+Lemma foo (S : subLattice L) : forall x, x \in (S : {fset _}) -> mem_seq (T:=T) S x.
 Proof.
-apply/andP; split; apply/forallP => x; apply/forallP => y;
-  rewrite /= !inE; apply/implyP => /andP [a_le_x x_le_b];
-  apply/implyP => /andP [a_le_y y_le_b]; apply/andP; split.
-- by rewrite lexI a_le_x a_le_y.
-- rewrite -(meetxx _ L b); apply leI2 => //.
-- admit.
-- admit.
-Admitted.
-
-Definition SubLatInterval a b := SubLattice _ _ (stable_interval a b).
-
-Notation "[< a ; b >]" := (SubLatInterval a b)
-  (at level 0, format "[<  a  ;  b  >]").
-
-Lemma intervalP : forall S: subLattice L, S \subset [<subbot _ S; subtop _ S>].
-Proof.
-by move=> S; apply/subsetP => x x_in_S; rewrite inE subtop_leE // subbot_leE.
+by [].
 Qed.
 
-Lemma incr_interval : forall S: subLattice L, forall a, atom _ S a ->
-  let SI := [< a; subtop L S>] in
-  (SI \subset S) /\ forall S0: subLattice L, ~~((SI \proper S0) && (S0 \proper S)).
+
+Lemma stable_interval S a b:
+  stable L (interval S a b).
 Proof.
-move=> S a; rewrite /atom => /andP [/andP [a_in_S bot_lt_a] /existsPn atomic_a].
-split.
-- apply/subsetP => x; rewrite inE; case/andP => a_le_x x_le_top.
 Admitted.
+(*apply/stableP; split => x y x_in_ab y_in_ab; rewrite in_fsetE unfold_in /=;
+  apply/and3P; split; rewrite ?unfold_in.
+- apply/foo. apply: stable_meet.*)
+
+Definition SubLatInterval S a b := SubLattice (stable_interval S a b).
+
+Notation " S : [< a ; b >]" := (SubLatInterval S a b)
+  (at level 0, format "S : [<  a  ;  b  >]").
+
+Lemma intervalP : forall S: subLattice L, S = S:[<subbot S; subtop S>].
+Proof.
+move=> S; apply/eqP/fset_eqP => x; apply/(sameP idP)/(iffP idP).
+- exact: in_interval.
+- by move=> x_in_S; rewrite inE /= unfold_in /=; apply/and3P; split;
+    rewrite // ?subtop_leE ?subbot_leE.
+Qed.
 
 Variable (P : subLattice L -> Prop) (S0 : subLattice L).
 Hypothesis (P_0 : P S0).
-Hypothesis (P_incr : forall S, forall x, atom _ S x -> P S -> P [< x; subtop _ S>]).
-Hypothesis (P_decr : forall S, forall x, coatom _ S x -> P S -> P [<subbot _ S; x>]).
+Hypothesis (P_incr : forall S, forall x, atom S x -> P S -> P S:[< x; subtop S>]).
+Hypothesis (P_decr : forall S, forall x, coatom S x -> P S -> P S:[<subbot S; x>]).
 
-Goal forall S : subLattice L, S \subset S0 -> P S.
+Goal forall S : subLattice L, (S `<=` S0)%fset -> P S.
 move=> S S_sub_S0.
 Admitted.
 
@@ -1214,7 +1209,7 @@ Local Coercion pack_class : pack >-> class.
 
 Variable (phr : phant (rel T)) (gl : pack phr).
 
-Canonical porder_of := TBLattice.porder_of _ _ gl. 
+Canonical porder_of := TBLattice.porder_of gl. 
 
 End ClassDef.
 Module Exports.
@@ -1222,11 +1217,11 @@ Module Exports.
 Coercion pack_lattice : pack >-> TBLattice.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
-Notation rank L := (rank _ _ L).
-Notation "{ 'glattice' T }" := (pack T (Phant _))
+Notation rank L := (rank L).
+Notation "{ 'glattice' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'glattice'  T }").
-Notation GLatticeClass rkbot rkinc rkdens := (Class _ _ _ rkbot rkinc rkdens).
-Notation GLatticePack cla := (Pack _ (Phant _) _ cla).
+Notation GLatticeClass rkbot rkinc rkdens := (Class rkbot rkinc rkdens).
+Notation GLatticePack cla := (Pack (Phant _) cla).
 End Exports.
 End GradedLattice.
 Include GradedLattice.Exports.
