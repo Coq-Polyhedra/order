@@ -248,8 +248,6 @@ Canonical pack_num := OrderPack class_num.
 End NumOrder.
 
 Section OrderTest.
-(*Check [<=%O]^O.*)
-(*Check (otrans _ [<=%O]^O).*)
 Goal forall x y : rat, (x < y)%O && (x <= y)%O -> x != y.
 Proof.
 by move=> x y /andP []; rewrite ostrict /=; case/andP.
@@ -354,7 +352,6 @@ Local Coercion pack_order: pack >-> Order.pack.
 
 Variables (phr : phant (rel T)) (mr : pack phr).
 
-Check Order.Pack.
 Canonical porder_of :=
   Order.Pack phr (Order.pack_class mr).
 
@@ -705,7 +702,6 @@ Local Coercion pack_class : pack >-> class.
 
 Canonical porder_of := Order.Pack phr (Order.class_of (Meet.pack_order mjr)).
 
-Check Meet.pack_order.
 Definition join_of (r : {porder T}) :=
   fun (mr : {meet_order T}) & phant_id (Meet.pack_order mr) r =>
   fun (lr : pack phr) & phant_id (pack_order lr) mr =>
@@ -1128,12 +1124,39 @@ Proof.
 by move/eqP; rewrite /subbot => ->; rewrite big_seq_fset0.
 Qed.
 
-Definition atom a := [/\ (a \in (S : {fset _})), (subbot <_L a) &
-  forall x, x \in (S : {fset _}) -> subbot <_L x -> ~~ (x <_L a)].
+Definition atom a := [&& (a \in (S : {fset _})), (subbot <_L a) &
+  ~~[exists x : S, (subbot <_L val x) && (val x <_L a)]].
 
-Definition coatom a := [/\ (a \in (S : {fset _})), (a <_L subtop) &
-  forall x, (x \in (S : {fset _})) -> (x <_L subtop) -> ~~ (a <_L x)].
+Definition coatom a := [&& (a \in (S : {fset _})), (a <_L subtop) &
+~~[exists x : S, (val x <_L subtop ) && (a <_L val x)]].
 
+Lemma atomP a: reflect
+  ([/\ a \in (S : {fset _}), (subbot <_L a) &
+  forall x, x \in (S:{fset _}) -> subbot <_L x -> ~~(x <_L a)])
+  (atom a).
+Proof.
+apply/(iffP idP).
+- case/andP => a_in_S /andP [bot_lt_a /existsPn atomic]; split => //.
+  move=> y y_in_S bot_lt_y; move: (atomic [`y_in_S]%fset) => /=.
+  by rewrite negb_and bot_lt_y /=.
+- case; rewrite /atom => -> -> /= atomic; apply/existsPn.
+  move=> x; rewrite negb_and -implybE; apply/implyP => ?.
+  apply/atomic => //.
+Qed.
+
+Lemma coatomP a: reflect
+  ([/\ a \in (S: {fset _}), (a <_L subtop) &
+  forall x, x \in (S:{fset _}) -> x <_L subtop -> ~~(a <_L x)])
+  (coatom a).
+Proof.
+apply/(iffP idP).
+- case/andP => a_in_S /andP [bot_lt_a /existsPn coatomic]; split => //.
+  move=> y y_in_S bot_lt_y; move: (coatomic [`y_in_S]%fset) => /=.
+  by rewrite negb_and bot_lt_y /=.
+- case; rewrite /coatom => -> -> /= coatomic; apply/existsPn.
+  move=> x; rewrite negb_and -implybE; apply/implyP => ?.
+  apply/coatomic => //.
+Qed.
 
 End SubLatticesTheory.
 
@@ -1223,24 +1246,45 @@ have top_in_ab: subtop S:[< a ; b>] \in (S:[<a; b>] : {fset _})
   by apply/subtop_stable/fset0Pn; exists b.
 apply: (@oanti _ L); rewrite (subtop_leE b_in_ab).
 by case: (in_interval_ab top_in_ab) => _ ->.
-Qed. 
+Qed.
 
-Lemma interval_atom : forall S: subLattice L, forall a b,
-  a \in (S : {fset _}) -> a <_L b ->
-  exists c, atom S:[<a; b>] c.
+Lemma atom_set (S:subLattice L) a b : a \in (S : {fset _}) ->
+  b \in (S : {fset _}) -> a <=_L b ->
+  let I_Da := ((S:[<a; b>]) `\ a)%fset in
+  ([fset x in (S:{fset _}) | atom S:[<a; b>] x])%fset ==
+  ([fset x in I_Da | [forall y:I_Da, (fsval y <=_L x) ==> (fsval y == x)]])%fset.
 Proof.
-move=> S a b.
-set I := (S:[<a; b>] `\ a)%fset.
-Admitted.
- 
-
-
+move=> a_in_S b_in_S a_le_b; apply/fset_eqP => x.
+apply/(sameP idP)/(iffP idP).
+- rewrite !inE /= !unfold_in. 
+  case/andP => /and4P [x_neq_a x_in_S a_le_x x_le_b] /forallP mini.
+  apply/andP; split => //; apply/atomP; rewrite interval_bot => //; split.
+  + by apply/in_intervalP; split.
+  + by rewrite ostrict eq_sym x_neq_a a_le_x.
+  + move=> y /in_intervalP [y_in_S [a_le_y y_le_b]] a_lt_y.
+    apply: contraT; rewrite negbK lt_def => /andP [x_neq_y].
+    have y_in_IDa: y \in (S:[<a; b>] `\ a)%fset.
+    - rewrite inE; apply/andP; split; last by apply/in_intervalP.
+      by rewrite inE (gt_eqF a_lt_y).
+    move/implyP: (mini [` y_in_IDa]%fset) => /= absurd /absurd x_eq_y.
+    by move: x_neq_y; rewrite eq_sym x_eq_y.
+- rewrite !inE /= !unfold_in => /andP [] x_in_S /atomP.
+  case => /in_intervalP [_ [a_le_x x_le_b]]; rewrite interval_bot // => a_lt_x.
+  move=> atomic; apply/andP; split; [apply/and3P; split |] => //.
+  + by rewrite (gt_eqF a_lt_x).
+  + by rewrite a_le_x x_le_b.
+  + apply/forallP => /= y; apply/implyP/contraTT.
+    rewrite le_eqVlt negb_or => -> /=.
+    apply/atomic; move: (fsvalP y); rewrite !inE; case/andP => //.
+    by rewrite ostrict eq_sym => -> /and3P [].
+Qed.
 
 Lemma sub_atomic_top : forall S : subLattice L,
   forall x, x \in (S : {fset _}) -> x <=_L subtop S -> subbot S <_L x ->
-  exists a, atom S a /\ (S : [< x ; subtop S>] `<=` (S : [< a; subtop S >]))%fset.
+  exists a, atom S a /\ (S:[< x ; subtop S>] `<=` (S:[< a; subtop S >]))%fset.
 Proof.
-move=> S x x_in_S x_le_top bot_lt_x.
+
+(*move=> S x x_in_S x_le_top bot_lt_x.
 have x_in_bot_x: x \in (S:[<subbot S ; x >] : {fset _})
   by apply/in_intervalP; split => //; split; [ exact: ltW| exact: orefl].
 have bot_in_bot_x: subbot S \in (S : [< subbot S; x>] : {fset _}).
@@ -1248,7 +1292,7 @@ have bot_in_bot_x: subbot S \in (S : [< subbot S; x>] : {fset _}).
     [apply: subbot_stable|exact : orefl| exact: ltW].
   by apply/fset0Pn; exists x.
 set I :=
-  ((S:[<subbot S; x>] : {fset _}) `\` ([fset x; subbot S]))%fset.
+  (S:[<subbot S; x>] `\` ([fset x; subbot S]))%fset.
 case eq_I: (I == fset0).
 - exists x; move: eq_I; rewrite fsetD_eq0 => /fsubsetP doubleton.
   split => //.
@@ -1266,7 +1310,7 @@ case eq_I: (I == fset0).
   + split => //; rewrite ?lt_def ?a_neq_bot ?bot_le_a //.
     move=> x0 x0_in_S bot_lt_.
     admit.
-  + admit.
+  + admit.*)
 Admitted.
 
 
@@ -1275,7 +1319,7 @@ Hypothesis (P_0 : P S0).
 Hypothesis (P_incr : forall S, forall x, atom S x -> P S -> P S:[< x; subtop S>]).
 Hypothesis (P_decr : forall S, forall x, coatom S x -> P S -> P S:[<subbot S; x>]).
 
-Goal forall S : subLattice L, (S `<=` S0)%fset -> P S. (*forall x y, P S0: [<x; y>] ?*)
+Goal forall S : subLattice L, (S `<=` S0)%fset -> P S. (*forall x y, P S0:[<x; y>] ?*)
 move=> S S_sub_S0.
 Admitted.
 
