@@ -207,41 +207,49 @@ Qed.
 
 End OrderTheory.
 
+Local Open Scope fset_scope.
+
+Section FSetRect.
+Context (T : choiceType) (P : {fset T} -> Type).
+
+Hypothesis P0 : P fset0.
+Hypothesis PS : forall x S, x \notin S -> P S -> P (x |` S).
+
+Lemma fset_rect S : P S.
+Proof.
+move: {2}#|`S| (@leqnn #|`S|) => n; elim: n S => [|n ih] S.
+- by rewrite leqn0 cardfs_eq0 => /eqP->.
+rewrite leq_eqVlt ltnS orbC; case: leqP => /= [/ih //|_ nz_S].
+have: S != fset0 by rewrite -cardfs_gt0 (eqP nz_S).
+move/fset0Pn => x; have: xchoose x \in S by apply: xchooseP.
+move/fsetD1K => <-; apply: PS; first by rewrite !in_fsetE eqxx.
+apply: ih; move: nz_S; rewrite (cardfsD1 (xchoose x)).
+by rewrite (xchooseP x) add1n => /eqP[] <-.
+Qed.
+End FSetRect.
+
+Definition fset_ind (T : choiceType) (P : {fset T} -> Prop) :=
+  @fset_rect T P.
+
 Section FsetOrderTheory.
 
 Variable (T: choiceType) (L : {porder T}).
 
-Lemma min_elt : forall K : {fset T}, K != fset0 ->
-  exists m, m \in K /\ forall x, x \in K -> x <=_L m -> x == m.
+Lemma min_elt (K : {fset T}) : K != fset0 ->
+  exists2 m, m \in K & forall x, x \in K -> x <=_L m -> x == m.
 Proof.
-have ind: forall n (K : {fset T}) a, a \in K -> (#|` K `\ a |)%fset == n ->
-  exists m, m \in K /\ forall x, x \in K -> x <=_L m -> x == m.
-elim.
-- move=> K a a_in_K.
-  rewrite cardfs_eq0 fsetD_eq0 => /fsubsetP K_single.
-  by exists a; split => // x /K_single; rewrite inE => /eqP ->; rewrite eq_refl.
-- move=> n IHn K a a_in_K /eqP KDa_Sn.
-  have: (#|` (K `\ a)%fset| > 0)%N by rewrite KDa_Sn ltn0Sn.
-  rewrite cardfs_gt0; case/fset0Pn => b b_in_KDa.
-  have KDab_n: #|` (K `\ a) `\ b|%fset == n by
-    rewrite cardfsD KDa_Sn fsetI1 b_in_KDa cardfs1 subn1 -pred_Sn.
-  case: (IHn (K `\ a)%fset b b_in_KDa KDab_n) => m0 [m0_in_KDa mini].
-  exists (if a <_L m0 then a else m0); case: ifP.
-  + move=> a_lt_m0; split => //; move=> x x_in_K.
-    case x_eq_a : (x == a); first by move/eqP: x_eq_a => ->; rewrite orefl.
-    have x_in_KDa: x \in (K `\ a)%fset by rewrite !inE x_eq_a x_in_K.
-    move=> x_le_a; move: (ltW (le_lt_trans x_le_a a_lt_m0)) => x_le_m0.
-    move: (mini _ x_in_KDa x_le_m0) => /eqP x_eq_m0.
-    have: (a <_L m0) && (m0 <_L a) by
-      rewrite a_lt_m0 lt_def -x_eq_m0 x_le_a eq_sym x_eq_a.
-    by rewrite lt_asym.
-  + move=> a_nle_m0; split; first (by move: m0_in_KDa; rewrite !inE; case/andP).
-    move=> x x_in_K.
-    case x_in_KDa: (x \in (K `\ a)%fset); first exact: (mini _ x_in_KDa).
-    have: x == a by move: x_in_KDa; rewrite !inE x_in_K andbT; case : (x == a).
-    by move/eqP => ->; rewrite le_eqVlt; case/orP => //; rewrite a_nle_m0.
-move=> K /fset0Pn [a a_in_K].
-exact: (ind _ _ _ a_in_K (eq_refl #|` K `\ a |%fset)).
+elim/fset_ind: K => //= [x S _ _ _]; elim/fset_ind: S => /= [|y S _ ih].
+- exists x; first by rewrite !in_fsetE eqxx.
+  by move=> y; rewrite !in_fsetE orbF.
+case: ih => m m_in_xS min_m; exists (if y <_L m then y else m).
+- case: ifP => _; first by rewrite !in_fsetE eqxx !Monoid.simpm.
+  by rewrite fsetUCA in_fsetU m_in_xS orbT.
+move=> z; rewrite fsetUCA in_fsetU in_fset1 => /orP[].
+- by move/eqP=> ->; case: ifP => //; rewrite le_eqVlt orbC => ->.
+move=> z_in_xS; case: ifPn; last by move=> ? /(min_m _ z_in_xS).
+move=> le_ym le_zy; have /eqP eq_zm: z == m.
+- by apply: min_m => //; apply/ltW/(le_lt_trans le_zy).
+by move: le_zy; rewrite eq_zm => /le_gtF; rewrite le_ym.
 Qed.
 
 End FsetOrderTheory.
