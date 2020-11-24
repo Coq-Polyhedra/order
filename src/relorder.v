@@ -207,6 +207,45 @@ Qed.
 
 End OrderTheory.
 
+Section FsetOrderTheory.
+
+Variable (T: choiceType) (L : {porder T}).
+
+Lemma min_elt : forall K : {fset T}, K != fset0 ->
+  exists m, m \in K /\ forall x, x \in K -> x <=_L m -> x == m.
+Proof.
+have ind: forall n (K : {fset T}) a, a \in K -> (#|` K `\ a |)%fset == n ->
+  exists m, m \in K /\ forall x, x \in K -> x <=_L m -> x == m.
+elim.
+- move=> K a a_in_K.
+  rewrite cardfs_eq0 fsetD_eq0 => /fsubsetP K_single.
+  by exists a; split => // x /K_single; rewrite inE => /eqP ->; rewrite eq_refl.
+- move=> n IHn K a a_in_K /eqP KDa_Sn.
+  have: (#|` (K `\ a)%fset| > 0)%N by rewrite KDa_Sn ltn0Sn.
+  rewrite cardfs_gt0; case/fset0Pn => b b_in_KDa.
+  have KDab_n: #|` (K `\ a) `\ b|%fset == n by
+    rewrite cardfsD KDa_Sn fsetI1 b_in_KDa cardfs1 subn1 -pred_Sn.
+  case: (IHn (K `\ a)%fset b b_in_KDa KDab_n) => m0 [m0_in_KDa mini].
+  exists (if a <_L m0 then a else m0); case: ifP.
+  + move=> a_lt_m0; split => //; move=> x x_in_K.
+    case x_eq_a : (x == a); first by move/eqP: x_eq_a => ->; rewrite orefl.
+    have x_in_KDa: x \in (K `\ a)%fset by rewrite !inE x_eq_a x_in_K.
+    move=> x_le_a; move: (ltW (le_lt_trans x_le_a a_lt_m0)) => x_le_m0.
+    move: (mini _ x_in_KDa x_le_m0) => /eqP x_eq_m0.
+    have: (a <_L m0) && (m0 <_L a) by
+      rewrite a_lt_m0 lt_def -x_eq_m0 x_le_a eq_sym x_eq_a.
+    by rewrite lt_asym.
+  + move=> a_nle_m0; split; first (by move: m0_in_KDa; rewrite !inE; case/andP).
+    move=> x x_in_K.
+    case x_in_KDa: (x \in (K `\ a)%fset); first exact: (mini _ x_in_KDa).
+    have: x == a by move: x_in_KDa; rewrite !inE x_in_K andbT; case : (x == a).
+    by move/eqP => ->; rewrite le_eqVlt; case/orP => //; rewrite a_nle_m0.
+move=> K /fset0Pn [a a_in_K].
+exact: (ind _ _ _ a_in_K (eq_refl #|` K `\ a |%fset)).
+Qed.
+
+End FsetOrderTheory.
+
 (*Section RatOrder.
 
 Lemma order_rat : order le_rat.
@@ -1248,7 +1287,7 @@ apply: (@oanti _ L); rewrite (subtop_leE b_in_ab).
 by case: (in_interval_ab top_in_ab) => _ ->.
 Qed.
 
-Lemma atom_set (S:subLattice L) a b : a \in (S : {fset _}) ->
+Lemma interval_atom_set (S:subLattice L) a b : a \in (S : {fset _}) ->
   b \in (S : {fset _}) -> a <=_L b ->
   let I_Da := ((S:[<a; b>]) `\ a)%fset in
   ([fset x in (S:{fset _}) | atom S:[<a; b>] x])%fset ==
@@ -1279,10 +1318,41 @@ apply/(sameP idP)/(iffP idP).
     by rewrite ostrict eq_sym => -> /and3P [].
 Qed.
 
+
 Lemma sub_atomic_top : forall S : subLattice L,
-  forall x, x \in (S : {fset _}) -> x <=_L subtop S -> subbot S <_L x ->
+  forall x, x \in (S : {fset _}) -> subbot S <_L x ->
   exists a, atom S a /\ (S:[< x ; subtop S>] `<=` (S:[< a; subtop S >]))%fset.
 Proof.
+move=> S x x_in_S bot_lt_x.
+move: (subtop_leE x_in_S) => x_le_top.
+have Sprop0: (S : {fset _}) != fset0 by apply/fset0Pn; exists x.
+move/eqP: (interval_atom_set (subbot_stable Sprop0) x_in_S (ltW bot_lt_x)) =>
+  atoms_x_eq.
+set atoms_x := [fset y in (S : {fset _}) | atom S:[<subbot S; x>] y]%fset.
+have: atoms_x != fset0.
+- apply/fset0Pn. rewrite /atoms_x atoms_x_eq.
+  have: ((S:[<subbot S; x>]: {fset _}) `\ subbot S)%fset != fset0 by
+    apply/fset0Pn; exists x;
+    rewrite !inE eq_sym (lt_eqF bot_lt_x) x_in_S (ltW bot_lt_x) orefl.
+  case/(min_elt L) => a [].
+  rewrite !inE => /and4P [a_neq_bot a_in_S bot_le_a a_le_x] mini.
+  exists a; rewrite !inE a_neq_bot a_in_S bot_le_a a_le_x /=.
+  apply/forallP => y; apply/implyP.
+  by move/(mini (fsval y) (fsvalP y)).
+case/fset0Pn => a; rewrite !inE => /andP [a_in_S /atomP [/in_intervalP]].
+case => _ [bot_le_a a_le_x].
+rewrite interval_bot ?subbot_stable ?subbot_leE //.
+move=> bot_lt_a atomistic_a; exists a; split.
+- apply/atomP; rewrite a_in_S bot_lt_a; split => //=.
+  move=> y y_in_S; apply: contraTN => y_lt_a.
+  have: y \in (S:[<subbot S; x>] : {fset _}) by
+  apply/in_intervalP;
+  rewrite y_in_S (subbot_leE y_in_S) (ltW (lt_le_trans y_lt_a a_le_x)).
+  by move/atomistic_a/contraTN; apply.
+- apply/fsubsetP => y /in_intervalP [y_in_S [x_le_y y_le_top]].
+  apply/in_intervalP; rewrite y_in_S y_le_top; split; split => //.
+  by apply:(otrans a_le_x).
+Qed.
 
 (*move=> S x x_in_S x_le_top bot_lt_x.
 have x_in_bot_x: x \in (S:[<subbot S ; x >] : {fset _})
