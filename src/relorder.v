@@ -235,7 +235,7 @@ Section FsetOrderTheory.
 
 Variable (T: choiceType) (L : {porder T}).
 
-Lemma min_elt (K : {fset T}) : K != fset0 ->
+Lemma ex_min_elt (K : {fset T}) : K != fset0 ->
   exists2 m, m \in K & forall x, x \in K -> x <=_L m -> x == m.
 Proof.
 elim/fset_ind: K => //= [x S _ _ _]; elim/fset_ind: S => /= [|y S _ ih].
@@ -251,6 +251,26 @@ move=> le_ym le_zy; have /eqP eq_zm: z == m.
 - by apply: min_m => //; apply/ltW/(le_lt_trans le_zy).
 by move: le_zy; rewrite eq_zm => /le_gtF; rewrite le_ym.
 Qed.
+
+Definition min_elts (K : {fset T}) :=
+  [fset x in K | [forall y : K, (fsval y <=_L x) ==> (fsval y == x)]].
+
+Lemma min_eltsPn (K : {fset T}) :
+  K != fset0 -> (min_elts K) != fset0.
+Proof.
+case/ex_min_elt => x x_in_K min_x.
+apply/fset0Pn; exists x; rewrite !inE x_in_K /=.
+apply/forallP => y; apply/implyP/min_x.
+exact: fsvalP.
+Qed.
+
+Definition max_elts (K : {fset T}) :=
+  [fset x in K | [forall y : K, (x <=_L fsval y) ==> (x == fsval y)]].
+
+Lemma max_eltsPn (K : {fset T}) :
+  K != fset0 -> (max_elts K) != fset0.
+Admitted.
+(*TODO*)
 
 End FsetOrderTheory.
 
@@ -1128,6 +1148,7 @@ Canonical meet_comonoid := Monoid.ComLaw (meetC L).
 Definition subtop := \big [(join L)/ (bottom L)]_(i <- S) i.
 Definition subbot := \big [(meet L)/ (top L)]_(i <- S) i.
 
+
 Lemma subtop_leE : forall x, x \in (S : {fset _}) -> x <=_L subtop.
 Proof.
 move=> x /= x_in_S.
@@ -1237,19 +1258,21 @@ Admitted.
 
 Definition SubLatInterval S a b := SubLattice (stable_interval S a b).
 
-Notation " S : [< a ; b >]" := (SubLatInterval S a b)
-  (at level 0, format "S : [<  a  ;  b  >]").
+Notation " [< a ; b >]_ S " := (SubLatInterval S a b)
+  (at level 0, format "[<  a  ;  b  >]_ S").
 
-Lemma in_intervalP (S: subLattice L) a b x:
+
+Lemma in_intervalP 
+(S: subLattice L) a b x:
   reflect (x \in (S : {fset _}) /\ a <=_L x /\ x <=_L b)
-  (x \in (S:[<a;b>] : {fset _})).
+  (x \in ( ([< a ; b >]_S) : {fset _})).
 Proof.
 apply/(iffP idP).
 - by rewrite in_fsetE unfold_in => /and3P [? ? ?].
 - by case=> ? [? ?]; rewrite in_fsetE unfold_in /=; apply/and3P.
 Qed.
 
-Lemma intervalP : forall S: subLattice L, S = S:[<subbot S; subtop S>].
+Lemma intervalP : forall S: subLattice L, S = [<subbot S; subtop S>]_S.
 Proof.
 move=> S; apply/eqP/fset_eqP => x; apply/(sameP idP)/(iffP idP).
 - exact: in_interval_S.
@@ -1259,24 +1282,32 @@ Qed.
 
 
 
-Lemma sub_interval : forall S0 S : subLattice L, (S `<=` S0)%fset ->
-  subbot S0 <=_L subbot S /\ subtop S <=_L subtop S0. 
-move=> S0 S; rewrite {1}(intervalP S0).
-move/fsubsetP => S_sub_S0; case S_empty: ((S : {fset _ }) == fset0).
-- by rewrite (subtop_empty S_empty) (subbot_empty S_empty) topEle botEle.
-- move/eqP/eqP: S_empty => S_empty.
-  case/S_sub_S0/in_interval_ab: (subtop_stable S_empty).
-  by case/S_sub_S0/in_interval_ab: (subbot_stable S_empty).
+Lemma sub_interval : forall (S : subLattice L) a b c d,
+  a \in (S : {fset _}) -> b \in (S : {fset _}) ->
+  a <=_L b -> c <=_L d ->
+  ([<a;b>]_S `<=` [<c;d>]_S)%fset <-> c <=_L a /\ b <=_L d.
+Proof.
+move=> S a b c d a_in_S b_in_S a_le_b c_le_d; split.
+- move/fsubsetP => sub.
+  have/in_intervalP[]: a \in ([<c;d>]_S : {fset _}) by
+    apply/sub/in_intervalP; rewrite a_in_S orefl a_le_b.
+  have/in_intervalP[]: b \in ([<c;d>]_S : {fset _}) by
+    apply/sub/in_intervalP; rewrite b_in_S orefl a_le_b.
+  by move=> _ [_ ?] _ [].
+- case=> c_le_a b_le_d; apply/fsubsetP =>
+    x /in_intervalP [x_in_S [a_le_x x_le_b]].
+  apply/in_intervalP; rewrite x_in_S; split=> //; split;
+    [exact:(otrans c_le_a)|exact: (otrans x_le_b)].
 Qed.
 
 Lemma interval_bot : forall S : subLattice L, forall a b,
   a \in (S : {fset _}) -> a <=_L b ->
-  subbot (S: [<a; b>]) = a.
+  subbot ([<a; b>]_S) = a.
 Proof.
 move=> S a b a_in_S a_le_b.
-have a_in_ab: a \in (S:[<a; b>] : {fset _})
+have a_in_ab: a \in ([<a; b>]_S : {fset _})
   by rewrite inE unfold_in; apply/and3P; split => //; exact: orefl.
-have bot_in_ab: subbot S:[< a ; b>] \in (S:[<a; b>] : {fset _})
+have bot_in_ab: subbot [< a ; b>]_S \in ([<a; b>]_S : {fset _})
   by apply/subbot_stable/fset0Pn; exists a.
 apply: (@oanti _ L); rewrite (subbot_leE a_in_ab).
 by case: (in_interval_ab bot_in_ab) => ->.
@@ -1284,24 +1315,25 @@ Qed.
 
 Lemma interval_top : forall S : subLattice L, forall a b,
   b \in (S : {fset _}) -> a <=_L b ->
-  subtop (S: [<a; b>]) = b.
+  subtop ([<a; b>]_S) = b.
 Proof.
 move=> S a b b_in_S a_le_b.
-have b_in_ab: b \in (S:[<a; b>] : {fset _})
+have b_in_ab: b \in ([<a; b>]_S : {fset _})
   by rewrite inE unfold_in; apply/and3P; split => //; exact: orefl.
-have top_in_ab: subtop S:[< a ; b>] \in (S:[<a; b>] : {fset _})
+have top_in_ab: subtop [< a ; b>]_S \in ([<a; b>]_S : {fset _})
   by apply/subtop_stable/fset0Pn; exists b.
 apply: (@oanti _ L); rewrite (subtop_leE b_in_ab).
 by case: (in_interval_ab top_in_ab) => _ ->.
 Qed.
 
-Lemma interval_atom_set (S:subLattice L) a b : a \in (S : {fset _}) ->
+Definition I_atom_set (S : subLattice L) a b :=
+  [fset x in (S: {fset _}) | atom [<a; b>]_S x].
+
+Lemma I_atom_setP (S:subLattice L) a b : a \in (S : {fset _}) ->
   b \in (S : {fset _}) -> a <=_L b ->
-  let I_Da := ((S:[<a; b>]) `\ a)%fset in
-  ([fset x in (S:{fset _}) | atom S:[<a; b>] x])%fset ==
-  ([fset x in I_Da | [forall y:I_Da, (fsval y <=_L x) ==> (fsval y == x)]])%fset.
+  I_atom_set S a b = (min_elts L ([<a; b>]_S `\ a))%fset.
 Proof.
-move=> a_in_S b_in_S a_le_b; apply/fset_eqP => x.
+move=> a_in_S b_in_S a_le_b; apply/eqP/fset_eqP => x.
 apply/(sameP idP)/(iffP idP).
 - rewrite !inE /= !unfold_in. 
   case/andP => /and4P [x_neq_a x_in_S a_le_x x_le_b] /forallP mini.
@@ -1310,7 +1342,7 @@ apply/(sameP idP)/(iffP idP).
   + by rewrite ostrict eq_sym x_neq_a a_le_x.
   + move=> y /in_intervalP [y_in_S [a_le_y y_le_b]] a_lt_y.
     apply: contraT; rewrite negbK lt_def => /andP [x_neq_y].
-    have y_in_IDa: y \in (S:[<a; b>] `\ a)%fset.
+    have y_in_IDa: y \in ([<a; b>]_S `\ a)%fset.
     - rewrite inE; apply/andP; split; last by apply/in_intervalP.
       by rewrite inE (gt_eqF a_lt_y).
     move/implyP: (mini [` y_in_IDa]%fset) => /= absurd /absurd x_eq_y.
@@ -1329,31 +1361,30 @@ Qed.
 
 Lemma sub_atomic_top : forall S : subLattice L,
   forall x, x \in (S : {fset _}) -> subbot S <_L x ->
-  exists a, atom S a /\ (S:[< x ; subtop S>] `<=` (S:[< a; subtop S >]))%fset.
+  exists2 a, atom S a & ([< x ; subtop S>]_S `<=` ([< a; subtop S >]_S))%fset.
 Proof.
 move=> S x x_in_S bot_lt_x.
 move: (subtop_leE x_in_S) => x_le_top.
 have Sprop0: (S : {fset _}) != fset0 by apply/fset0Pn; exists x.
-move/eqP: (interval_atom_set (subbot_stable Sprop0) x_in_S (ltW bot_lt_x)) =>
+move: (I_atom_setP (subbot_stable Sprop0) x_in_S (ltW bot_lt_x)) =>
   atoms_x_eq.
-set atoms_x := [fset y in (S : {fset _}) | atom S:[<subbot S; x>] y]%fset.
+set atoms_x := I_atom_set S (subbot S) x.
 have: atoms_x != fset0.
-- apply/fset0Pn. rewrite /atoms_x atoms_x_eq.
-  have: ((S:[<subbot S; x>]: {fset _}) `\ subbot S)%fset != fset0 by
+- apply/fset0Pn; rewrite /atoms_x atoms_x_eq.
+  have: (([<subbot S; x>]_S: {fset _}) `\ subbot S)%fset != fset0 by
     apply/fset0Pn; exists x;
     rewrite !inE eq_sym (lt_eqF bot_lt_x) x_in_S (ltW bot_lt_x) orefl.
-  case/(min_elt L) => a [].
-  rewrite !inE => /and4P [a_neq_bot a_in_S bot_le_a a_le_x] mini.
+  case/(min_eltsPn L)/fset0Pn => a.
+  rewrite !inE => /andP [/and4P [a_neq_bot a_in_S bot_le_a a_le_x] mini].
   exists a; rewrite !inE a_neq_bot a_in_S bot_le_a a_le_x /=.
-  apply/forallP => y; apply/implyP.
-  by move/(mini (fsval y) (fsvalP y)).
+  exact: mini.
 case/fset0Pn => a; rewrite !inE => /andP [a_in_S /atomP [/in_intervalP]].
 case => _ [bot_le_a a_le_x].
 rewrite interval_bot ?subbot_stable ?subbot_leE //.
-move=> bot_lt_a atomistic_a; exists a; split.
+move=> bot_lt_a atomistic_a; exists a.
 - apply/atomP; rewrite a_in_S bot_lt_a; split => //=.
   move=> y y_in_S; apply: contraTN => y_lt_a.
-  have: y \in (S:[<subbot S; x>] : {fset _}) by
+  have: y \in ([<subbot S; x>]_S : {fset _}) by
   apply/in_intervalP;
   rewrite y_in_S (subbot_leE y_in_S) (ltW (lt_le_trans y_lt_a a_le_x)).
   by move/atomistic_a/contraTN; apply.
@@ -1362,43 +1393,67 @@ move=> bot_lt_a atomistic_a; exists a; split.
   by apply:(otrans a_le_x).
 Qed.
 
-(*move=> S x x_in_S x_le_top bot_lt_x.
-have x_in_bot_x: x \in (S:[<subbot S ; x >] : {fset _})
-  by apply/in_intervalP; split => //; split; [ exact: ltW| exact: orefl].
-have bot_in_bot_x: subbot S \in (S : [< subbot S; x>] : {fset _}).
-- apply/in_intervalP; split; last split;
-    [apply: subbot_stable|exact : orefl| exact: ltW].
-  by apply/fset0Pn; exists x.
-set I :=
-  (S:[<subbot S; x>] `\` ([fset x; subbot S]))%fset.
-case eq_I: (I == fset0).
-- exists x; move: eq_I; rewrite fsetD_eq0 => /fsubsetP doubleton.
-  split => //.
-  rewrite /atom x_in_S bot_lt_x; split => //.
-  move=> y y_in_S bot_lt_y.
-  apply: contraT; rewrite negbK => y_lt_x.
-  have/doubleton: y \in (S: [<subbot S ; x >] : {fset _})
-    by apply/in_intervalP; split => //; split; [exact :ltW| exact: ltW].
-  rewrite in_fsetE !in_fset1.
-  by rewrite (lt_eqF y_lt_x) /= -(lt_eqF bot_lt_y) eq_sym.
-- case/fset0Pn: eq_I => a; do 4 rewrite in_fsetE.
-  case/andP; rewrite negb_or; case/andP => a_neq_x a_neq_bot.
-  case/in_intervalP => a_in_S [bot_le_a a_le_x].
-  exists a; split.
-  + split => //; rewrite ?lt_def ?a_neq_bot ?bot_le_a //.
-    move=> x0 x0_in_S bot_lt_.
-    admit.
-  + admit.*)
+Definition I_coatom_set (S : subLattice L) a b :=
+  [fset x in (S: {fset _}) | coatom [<a; b>]_S x].
+
+Lemma I_coatom_setP (S:subLattice L) a b :
+  a \in (S : {fset _}) -> b \in (S : {fset _}) ->
+  a <=_L b ->
+  let I_Db := (([<a; b>]_S) `\ b)%fset in
+  I_coatom_set S a b == (max_elts L I_Db).
 Admitted.
 
+Lemma sub_coatomic_bottom : forall (S: subLattice L) x,
+  x \in (S : {fset _}) -> x <_L subtop S ->
+  exists2 a, coatom S a & ([<subbot S; x>]_S `<=` [<subbot S; a>]_S).
+Admitted.
 
-Variable (P : subLattice L -> Prop) (S0 : subLattice L).
-Hypothesis (P_0 : P S0).
-Hypothesis (P_incr : forall S, forall x, atom S x -> P S -> P S:[< x; subtop S>]).
-Hypothesis (P_decr : forall S, forall x, coatom S x -> P S -> P S:[<subbot S; x>]).
+(*Definition is_chain (S: subLattice L) (K : fpowerset (S:{fset _})) :=
+  [ && (subbot S) \in val K, subtop S \in val K &
+    [forall x: val K,  [forall y: val K,
+    (fsval x <=_L fsval y) || (fsval y <=_L fsval x)]]].
 
-Goal forall S : subLattice L, (S `<=` S0)%fset -> P S. (*forall x y, P S0:[<x; y>] ?*)
-move=> S S_sub_S0.
+Lemma is_chainE (S:subLattice L) (K: fpowerset (S:{fset _})):
+  reflect
+    (subbot S \in val K /\ subtop S \in val K /\
+    forall x y, x \in val K -> y \in val K -> x <=_L y \/ y <=_L x)
+    (is_chain K).
+Proof.
+apply/(iffP idP).
+- case/and3P => -> ->; move/forallP => total; split; split => //.
+  move=> x y x_in_valK y_in_valK.
+  move/forallP: (total [`x_in_valK])=> totaly.
+  by move/orP: (totaly [`y_in_valK]).
+- rewrite /is_chain; case => -> [-> /= total].
+  apply/forallP => x; apply/forallP => y.
+  by apply/orP/total/fsvalP/fsvalP.
+Qed.
+
+Lemma trivial_chains (S:subLattice L): (S:{fset _}) != fset0 ->
+  subbot S == subtop S ->
+  forall (K: fpowerset (S:{fset _})), is_chain K ->
+  #|` val K|%fset == 1%N.
+Proof.
+move=> Sprop0 bot_eq_top K.
+have/fsubsetP: val K `<=` S by rewrite -fpowersetE fsvalP.
+move=> vK_sub_S /is_chainE [? [_ _]]; apply/cardfs1P; exists (subbot S).
+apply/eqP/fset_eqP=> x.
+apply/(sameP idP)/(iffP idP); rewrite in_fset1.
+- by move/eqP => ->.
+- move/vK_sub_S; move: (intervalP S); rewrite -(eqP bot_eq_top) => ->.
+  move/in_interval_ab => /andP /oanti <-.
+  by rewrite interval_bot ?(subbot_stable Sprop0) ?orefl.
+Qed.*)
+
+
+
+
+Variable (P : subLattice L -> Prop).
+Hypothesis (P_incr : forall S, forall x, atom S x -> P S -> P [< x; subtop S>]_S).
+Hypothesis (P_decr : forall S, forall x, coatom S x -> P S -> P [<subbot S; x>]_S).
+
+Goal forall (S : subLattice L) x y, P S -> P [<x; y>]_S.
+move=> S x y.
 Admitted.
 
 (* P S0 est vrai            *)
