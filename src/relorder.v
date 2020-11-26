@@ -898,12 +898,14 @@ End SubLattices.
 Section SubLatticesTheory.
 Context {T : choiceType} (L : {tblattice T}) (S : subLattice L).
 
-Lemma stable_join : forall x y, x \in (S : {fset _}) -> y \in (S : {fset _}) ->
-  join L x y \in (S : {fset _}).
+Lemma mem_join : forall x y,
+  x \in (S : {fset _}) -> y \in (S : {fset _})
+    -> join L x y \in (S : {fset _}).
 Proof. by case: S => /= fS /stableP[]. Qed.
 
-Lemma stable_meet : forall x y, x \in (S : {fset _}) -> y \in (S : {fset _}) ->
-  meet L x y \in (S : {fset _}).
+Lemma mem_meet : forall x y,
+  x \in (S : {fset _}) -> y \in (S : {fset _})
+    -> meet L x y \in (S : {fset _}).
 Proof. by case: S => /= fS /stableP[]. Qed.
 
 Definition subtop := \big [join L/bottom L]_(i <- S) i.
@@ -926,7 +928,7 @@ Proof.
 case/fset0Pn=> x xS; rewrite /subtop (perm_big _ (perm_to_rem xS)).
 rewrite big_cons; have /= := @mem_rem _ x (val S).
 elim: (rem _ _) => [|y s ih] leS; first by rewrite big_nil joinx0.
-rewrite big_cons joinCA; apply/stable_join/ih.
+rewrite big_cons joinCA; apply/mem_join/ih.
 - by apply/leS; rewrite !inE eqxx.
 - by move=> z z_in_s; apply/leS; rewrite !inE z_in_s orbT.
 Qed.
@@ -936,7 +938,7 @@ Proof.                     (* Should be obtained from dual ordering *)
 case/fset0Pn=> x xS; rewrite /subbot (perm_big _ (perm_to_rem xS)).
 rewrite big_cons; have /= := @mem_rem _ x (val S).
 elim: (rem _ _) => [|y s ih] leS; first by rewrite big_nil meetx1.
-rewrite big_cons meetCA; apply/stable_meet/ih.
+rewrite big_cons meetCA; apply/mem_meet/ih.
 - by apply/leS; rewrite !inE eqxx.
 - by move=> z z_in_s; apply/leS; rewrite !inE z_in_s orbT.
 Qed.
@@ -1043,9 +1045,9 @@ Proof. by case/intervalP. Qed.
 Lemma stable_interval S a b: stable L (interval S a b).
 Proof.
 apply/stableP; split=> x y /intervalP[xS le_ax le_xb] /intervalP[yS le_ay le_yb].
-- apply/intervalP; split; first by apply/stable_meet.
+- apply/intervalP; split; first by apply/mem_meet.
   - by rewrite lexI -(rwP andP). - by rewrite leIxl.
-- apply/intervalP; split; first by apply/stable_join.
+- apply/intervalP; split; first by apply/mem_join.
   - by rewrite lexUl. - by rewrite leUx -(rwP andP).
 Qed.
 
