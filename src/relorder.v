@@ -81,8 +81,8 @@ Notation OrderClass ax st := (Class ax st).
 Notation OrderPack cla := (Pack (Phant _) cla).
 Notation "{ 'porder' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'porder'  T }").
-Notation "<=: r" := (leo r) (at level 0, format "<=: r").
-Notation "<: r" := (lto r) (at level 0, format "<: r").
+Notation "<=: r" := (leo r) (at level 2, r at level 1, format "<=: r").
+Notation "<: r" := (lto r) (at level 2, r at level 1, format "<: r").
 Notation "x <=_ r y" := (<=:r x y) (at level 65, r at level 2, format "x  <=_ r  y").
 Notation "x <_ r y" := (<:r x y) (at level 65, r at level 2, format "x  <_ r  y").
 Notation "x <=_ r0 y <=_ r1 z" := ((x <=_r0 y) && (y <=_r1 z))
@@ -269,6 +269,59 @@ Admitted.
 (*TODO*)
 
 End FsetOrderTheory.
+
+(* ==================================================================== *)
+
+Section DualOrder.
+
+Context (T: eqType).
+
+Notation mirror := (fun r : rel T => fun (x y : T) => r y x).
+
+Variable (r: {porder T}).
+
+Lemma dual_lexx : reflexive (mirror <=:r).
+Proof.
+exact: lexx.
+Qed.
+
+Lemma dual_le_anti : antisymmetric (mirror <=:r).
+Proof.
+by move=> x y; move/le_anti => ->.
+Qed.
+
+Lemma dual_le_trans : transitive (mirror <=:r).
+move=> y x z le_yx le_zy.
+exact: (le_trans le_zy).
+Qed.
+
+Lemma dual_order : order (mirror <=:r).
+Proof.
+split;
+  [exact : dual_lexx | exact: dual_le_anti | exact: dual_le_trans].
+Qed.
+
+Lemma dual_strict : strict (mirror <:r) (mirror <=:r).
+Proof.
+move=> x y; exact: lt_def.
+Qed.
+
+Definition DualOrderClass := OrderClass dual_order dual_strict.
+Canonical DualOrderPack := OrderPack DualOrderClass.
+
+Lemma dual_le : forall x y, (x <=_(DualOrderPack) y) = y <=_r x.
+Proof.
+by [].
+Qed.
+
+Lemma dual_lt : forall x y, (x <_(DualOrderPack) y) = y <_r x.
+Proof.
+by [].
+Qed.
+
+End DualOrder.
+
+Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
 
 (* ==================================================================== *)
 Module TotalOrder.
@@ -662,7 +715,54 @@ Lemma leEjoin x y : (x <= y) = (x `|` y == y).
 Proof.
 by rewrite leEmeet; apply/eqP/eqP => <-; rewrite (joinKI, meetUK).
 Qed.
+
 End LatticeTheory.
+
+(* ==================================================================== *)
+
+Section DualLattice.
+
+Context (T: eqType) (r : {lattice T}).
+
+Lemma dual_leEmeet: forall x y, (x <=_(r^~) y) = ((join r x y) == x).
+Proof.
+by move=> x y /=; rewrite leEjoin joinC.
+Qed.
+
+Definition DualMeetClass :=
+  MeetClass (joinC r) (joinA r) (joinxx r) dual_leEmeet.
+Canonical DualMeetPack := MeetPack DualMeetClass.
+
+Lemma dual_joinKI : forall y x, meet (r^~) x (meet r x y) = x.
+Proof.
+by move=> y x /=; rewrite /(meet r^~) /= meetKU.
+Qed.
+
+Lemma dual_joinKU : forall y x, meet r x (meet r^~ x y) = x.
+by move=> y x; rewrite /(meet r^~) /= joinKI.
+Qed.
+
+Lemma dual_leEjoin : forall y x, (y <=_(r^~) x) = ((meet r x y) == x).
+Proof.
+by move=> y x /=; rewrite leEmeet.
+Qed.
+
+Definition DualLatticeClass := LatticeClass (meetC r) (meetA r) (meetxx r)
+    dual_joinKI dual_joinKU dual_leEjoin.
+Canonical DualLatticePack := LatticePack DualLatticeClass.
+
+Lemma dual_meet: meet r^~ = join r.
+Proof.
+by [].
+Qed.
+
+Lemma dual_join: join r^~ = meet r.
+Proof.
+by [].
+Qed.
+
+
+End DualLattice.
 
 (* ==================================================================== *)
 Module TBLattice.
@@ -772,10 +872,8 @@ Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
   (at level 4, right associativity, format "''imply_[' view1 ,  view2 ]").
 
 Section SubLattices.
-(*TODO (T : choiceType)*)
 Context {T : choiceType} (L : {lattice T}).
 
-(*stable : {fset T} -> bool*)
 Definition stable (E : {fset T}) :=
      [forall x : E, [forall y : E, meet L (val x) (val y) \in E]]
   && [forall x : E, [forall y : E, join L (val x) (val y) \in E]].
@@ -809,15 +907,22 @@ Canonical  subLattice_eqType  := Eval hnf in EqType subLattice subLattice_eqMixi
 Definition subLattice_choiceMixin := [choiceMixin of subLattice by <:].
 Canonical  subLattice_choiceType  := Eval hnf in ChoiceType subLattice subLattice_choiceMixin.
 (*TODO : MemPred with subLattice*)
+
+Definition mem_subLattice (S: subLattice) : {pred T} :=
+  fun x : T => (x \in (elements S)).
+Canonical subLattice_predType := PredType mem_subLattice.
+
 End SubLattices.
 
 (* ==================================================================== *)
 Section SubLatticesTheory.
 Context {T : choiceType} (L : { tblattice T}) (S : subLattice L).
 
-Lemma stable_join : forall x y, x \in (S : {fset _}) -> y \in (S : {fset _}) ->
-  join L x y \in (S : {fset _}).
-Proof. by case: S => /= fS /stableP[]. Qed.
+Lemma stable_join : forall x y, x \in S -> y \in S ->
+  join L x y \in S.
+Proof. case: S => /= fS stablefS; case:(stableP L fS stablefS) => _; apply.
+Qed.
+(*WHY ?*)
 
 Lemma stable_meet : forall x y, x \in (S : {fset _}) -> y \in (S : {fset _}) ->
   meet L x y \in (S : {fset _}).
