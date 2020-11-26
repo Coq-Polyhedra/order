@@ -1,16 +1,43 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 
-Set Implicit Arguments.
+Set   Implicit Arguments.
 Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
-Open Scope ring_scope.
+Import GRing.Theory Num.Theory.
 
+Local Open Scope fset_scope.
+Local Open Scope ring_scope.
+
+(* ==================================================================== *)
+Section FSetRect.
+Context (T : choiceType) (P : {fset T} -> Type).
+
+Hypothesis P0 : P fset0.
+Hypothesis PS : forall x S, x \notin S -> P S -> P (x |` S).
+
+Lemma fset_rect S : P S.
+Proof.
+move: {2}#|`S| (@leqnn #|`S|) => n; elim: n S => [|n ih] S.
+- by rewrite leqn0 cardfs_eq0 => /eqP->.
+rewrite leq_eqVlt ltnS orbC; case: leqP => /= [/ih //|_ nz_S].
+have: S != fset0 by rewrite -cardfs_gt0 (eqP nz_S).
+move/fset0Pn => x; have: xchoose x \in S by apply: xchooseP.
+move/fsetD1K => <-; apply: PS; first by rewrite !in_fsetE eqxx.
+apply: ih; move: nz_S; rewrite (cardfsD1 (xchoose x)).
+by rewrite (xchooseP x) add1n => /eqP[] <-.
+Qed.
+End FSetRect.
+
+Definition fset_ind (T : choiceType) (P : {fset T} -> Prop) :=
+  @fset_rect T P.
+
+(* ==================================================================== *)
 Module Order.
-
 Section ClassDef.
 
-Variable (T: eqType).
+Context {T: eqType}.
 
 Definition axiom (r : rel T) :=
   [/\ reflexive r, antisymmetric r & transitive r].
@@ -18,15 +45,13 @@ Definition axiom (r : rel T) :=
 Definition strict (lt le: rel T) :=
   forall x y, lt x y = (x != y) && (le x y).
 
-Record class (le lt: rel T) := Class
-  {
-    _ : axiom le;
-    _ : strict lt le;
-  }.
+Record class (le lt : rel T) := Class {
+  _ : axiom le;
+  _ : strict lt le;
+}.
 
 (*TODO : Confirm that the phantom is required*)
-Structure pack (phr : phant (rel T)) := Pack
-{
+Structure pack (phr : phant (rel T)) := Pack {
   pack_le;
   pack_lt;
   pack_class : class pack_le pack_lt
@@ -44,9 +69,9 @@ Definition pack_of_le (r : rel T) :=
 Definition pack_of_lt (r : rel T) :=
   fun (ro : pack phr) & phant_id (pack_lt ro) r =>
   ro.
-
 End ClassDef.
 
+(* -------------------------------------------------------------------- *)
 Module Exports.
 Notation lto r := (pack_lt r).
 Notation leo r:= (pack_le r).
@@ -73,38 +98,35 @@ Notation "[ 'leo:' r ]" := (@pack_of_le _ (Phant _) r _ id)
 Notation "[ 'lto:' r ]" := (@pack_of_lt _ (Phant _) r _ id)
   (at level 0, format "[ 'lto:'  r ]").
 (*TODO : Notations supplémentaires*)
-
-
 End Exports.
 End Order.
+
 Include Order.Exports.
 
+(* ==================================================================== *)
 Section OrderTheory.
 
 Variables ( T: eqType ) (r: {porder T}).
-Local Notation "x <= y" := (x <=_r y).
-Local Notation "x < y" := (x <_r y).
+
+Local Notation "x <= y"      := (x <=_r y).
+Local Notation "x < y"       := (x <_r y).
 Local Notation "x <= y <= z" := ((x <= y) && (y <= z)).
-Local Notation "x < y < z" := ((x < y) && (y < z)).
-Local Notation "x < y <= z" := ((x < y) && (y <= z)).
-Local Notation "x <= y < z" := ((x <= y) && (y < z)).
+Local Notation "x < y < z"   := ((x < y) && (y < z)).
+Local Notation "x < y <= z"  := ((x < y) && (y <= z)).
+Local Notation "x <= y < z"  := ((x <= y) && (y < z)).
 
 Lemma orderP : order (<=:r).
-Proof.
-by case: r => le lt [].
-Qed.
+Proof. by case: r => le lt []. Qed.
 
-Lemma orefl : reflexive (<=:r).
-Proof.
-by case: orderP.
-Qed.
+Lemma lexx : reflexive (<=:r).
+Proof. by case: orderP. Qed.
 
-Lemma oanti : antisymmetric (<=:r).
+Lemma le_anti : antisymmetric (<=:r).
 Proof.
 by case: orderP.
 Qed.
 
-Lemma otrans : transitive (<=:r).
+Lemma le_trans : transitive (<=:r).
 Proof.
 by case: orderP.
 Qed.
@@ -114,10 +136,8 @@ Proof.
 by move=> x y; case: r => le lt [].
 Qed.
 
-Lemma ltostrict: forall x, x < x = false.
-Proof.
-by move=>x; rewrite ostrict eq_refl orefl.
-Qed.
+Lemma ltxx x : x < x = false.
+Proof. by rewrite ostrict eq_refl lexx. Qed.
 
 Lemma lt_def x y: (x < y) = (y != x) && (x <= y).
 Proof.
@@ -126,7 +146,7 @@ Qed.
 
 Lemma le_eqVlt x y: (x <= y) = (x == y) || (x < y).
 Proof.
-by rewrite ostrict; case: eqP => //= ->; rewrite orefl.
+by rewrite ostrict; case: eqP => //= ->; rewrite lexx.
 Qed.
 
 Lemma lt_eqF x y: x < y -> x == y = false.
@@ -134,14 +154,14 @@ Proof.
 by rewrite ostrict => /andP [/negbTE->].
 Qed.
 
-Lemma gt_eqF x y : y < x -> x == y = false.
+Lemma gt_eqF x y: y < x -> x == y = false.
 Proof.
-by apply: contraTF => /eqP ->; rewrite ltostrict. 
+by apply: contraTF => /eqP ->; rewrite ltxx. 
 Qed.
 
 Lemma eq_le x y: (x == y) = (x <= y <= x).
 Proof.
-by apply/eqP/idP => [->|/oanti]; rewrite ?orefl.
+by apply/eqP/idP => [->|/le_anti]; rewrite ?lexx.
 Qed.
 
 Lemma ltW x y: x < y -> x <= y.
@@ -151,9 +171,9 @@ Qed.
 
 Lemma lt_le_trans y x z: x < y -> y <= z -> x < z.
 Proof.
-rewrite !ostrict => /andP [nexy lexy leyz];
-  rewrite (otrans lexy) // andbT.
-by apply: contraNneq nexy => eqxz; rewrite eqxz eq_le leyz andbT in lexy *.
+rewrite !ostrict => /andP [nexy lexy leyz].
+rewrite (le_trans lexy) // andbT; apply: contraNneq nexy.
+by move=> eqxz; rewrite eqxz eq_le leyz andbT in lexy *.
 Qed.
 
 Lemma lt_trans: transitive (fun x y => (x < y)).
@@ -168,7 +188,7 @@ Qed.
 
 Lemma lt_nsym x y : x < y -> y < x -> False.
 Proof.
-by move=> xy /(lt_trans xy); rewrite ltostrict.
+by move=> xy /(lt_trans xy); rewrite ltxx.
 Qed.
 
 Lemma lt_asym x y : x < y < x = false.
@@ -178,21 +198,20 @@ Qed.
 
 Lemma le_gtF x y: x <= y -> y < x = false.
 Proof.
-by move=> le_xy; apply/negP => /lt_le_trans /(_ le_xy); rewrite ltostrict.
+by move=> le_xy; apply/negP => /lt_le_trans /(_ le_xy); rewrite ltxx.
 Qed.
 
 Lemma lt_geF x y : (x < y) -> y <= x = false.
 Proof.
-by move=> le_xy; apply/negP => /le_lt_trans /(_ le_xy); rewrite ltostrict.
+by move=> le_xy; apply/negP => /le_lt_trans /(_ le_xy); rewrite ltxx.
 Qed.
 
 Definition lt_gtF x y hxy := le_gtF (@ltW x y hxy).
 
-
 Lemma lt_leAnge x y : (x < y) = (x <= y) && ~~ (y <= x).
 Proof.
 apply/idP/idP => [ltxy|/andP[lexy Nleyx]]; first by rewrite ltW // lt_geF.
-rewrite ostrict lexy andbT; apply: contraNneq Nleyx => ->; exact: orefl.
+rewrite ostrict lexy andbT; apply: contraNneq Nleyx => ->; exact: lexx.
 Qed.
 
 Lemma lt_le_asym x y : x < y <= x = false.
@@ -207,33 +226,10 @@ Qed.
 
 End OrderTheory.
 
-Local Open Scope fset_scope.
-
-Section FSetRect.
-Context (T : choiceType) (P : {fset T} -> Type).
-
-Hypothesis P0 : P fset0.
-Hypothesis PS : forall x S, x \notin S -> P S -> P (x |` S).
-
-Lemma fset_rect S : P S.
-Proof.
-move: {2}#|`S| (@leqnn #|`S|) => n; elim: n S => [|n ih] S.
-- by rewrite leqn0 cardfs_eq0 => /eqP->.
-rewrite leq_eqVlt ltnS orbC; case: leqP => /= [/ih //|_ nz_S].
-have: S != fset0 by rewrite -cardfs_gt0 (eqP nz_S).
-move/fset0Pn => x; have: xchoose x \in S by apply: xchooseP.
-move/fsetD1K => <-; apply: PS; first by rewrite !in_fsetE eqxx.
-apply: ih; move: nz_S; rewrite (cardfsD1 (xchoose x)).
-by rewrite (xchooseP x) add1n => /eqP[] <-.
-Qed.
-End FSetRect.
-
-Definition fset_ind (T : choiceType) (P : {fset T} -> Prop) :=
-  @fset_rect T P.
-
+(* ==================================================================== *)
 Section FsetOrderTheory.
 
-Variable (T: choiceType) (L : {porder T}).
+Context {T : choiceType} (L : {porder T}).
 
 Lemma ex_min_elt (K : {fset T}) : K != fset0 ->
   exists2 m, m \in K & forall x, x \in K -> x <=_L m -> x == m.
@@ -274,70 +270,21 @@ Admitted.
 
 End FsetOrderTheory.
 
-(*Section RatOrder.
-
-Lemma order_rat : order le_rat.
-Admitted.
-
-Lemma strict_rat : forall (x y : rat), (lt_rat x y) = (x != y) && le_rat x y.
-Admitted.
-
-Canonical class_rat := OrderClass order_rat strict_rat.
-Canonical pack_rat := OrderPack class_rat.
-
-Lemma lt_rat_def (x y : rat) : (le_rat x y) = (lt_rat x y) || (x == y).
-Proof.
-by rewrite le_eqVlt orbC.
-Qed.
-
-End RatOrder.*)
-
-Section NumOrder.
-
-Context (disp : unit) (R : porderType disp).
-
-Lemma num_order : order (@Order.le _ R).
-Proof.
-split.
-- by [].
-- exact: Order.POrderTheory.le_anti.
-- exact: Order.POrderTheory.le_trans.
-Qed.
-
-Lemma num_strict : forall (x y: R), ((x < y) = (x != y) && (x <= y))%O.
-Proof.
-exact: Order.POrderTheory.lt_neqAle.
-Qed.
-
-Canonical class_num := OrderClass num_order num_strict.
-Canonical pack_num := OrderPack class_num.
-
-End NumOrder.
-
-Section OrderTest.
-Goal forall x y : rat, (x < y)%O && (x <= y)%O -> x != y.
-Proof.
-by move=> x y /andP []; rewrite ostrict /=; case/andP.
-Qed.
-
-End OrderTest.
-
+(* ==================================================================== *)
 Module TotalOrder.
 Section ClassDef.
 
-Variables (T : eqType).
+Context {T : eqType}.
 
 Definition mixin_of (r : rel T) :=
-    forall x y, r x y || r y x.
+  forall x y, r x y || r y x.
 
-Record class (le lt : rel T) := Class
-{
+Record class (le lt : rel T) := Class {
   base : Order.class le lt;
   mixin : mixin_of le
 }.
 
-Structure pack (phr : phant (rel T)) := Pack
-{
+Structure pack (phr : phant (rel T)) := Pack {
   pack_le;
   pack_lt;
   pack_class : class pack_le pack_lt
@@ -349,9 +296,9 @@ Definition class_of := let: Pack _ _ c as rT' := rT
   return class (pack_le rT') (pack_lt rT') in c.    
 
 Canonical order := OrderPack (base class_of).
-
 End ClassDef.
 
+(* -------------------------------------------------------------------- *)
 Module Exports.
 Notation total r := (mixin_of r).
 Notation TotalClass ax st to := (Class _ _ _ (Order.Class _ _ _ ax st) to).
@@ -370,39 +317,19 @@ Section TotalOrderTheory.
 Variables (T:eqType) (r : {torder T}).
 
 Lemma totalMP : total (leo r).
-Proof.
-by case: r => ? ? [].
-Qed.
+Proof. by case: r => ?? []. Qed.
 
 Lemma totalP : order (leo r).
-Proof.
-by case: r => ? ? [[]].
-Qed. 
-
+Proof. by case: r => ? ? [[]]. Qed. 
 End TotalOrderTheory.
 
-(*Section RatTotalOrder.
-Lemma total_rat : forall x y, le_rat x y || le_rat y x.
-Admitted.
-
-Definition totalclass_rat := TotalClass order_rat strict_rat total_rat.
-Canonical totalorder_rat := TotalPack totalclass_rat.
-
-Lemma order_rat_total : order (le_rat).
-Proof.
-apply: totalP.
-Qed.
-
-End RatTotalOrder.
-*)
-
+(* ==================================================================== *)
 Module Meet.
 (*TODO : Adapter la structure MeetSemilattice de order.v*)
 Section ClassDef.
-Variable (T : eqType).
+Context {T : eqType}.
 
-Record class (r : {porder T}) := Class
-{
+Record class (r : {porder T}) := Class {
   meet : T -> T -> T;
   _ : commutative meet;
   _ : associative meet;
@@ -410,8 +337,7 @@ Record class (r : {porder T}) := Class
   _ : forall x y, (x <=_r y) = (meet x y == x)
 }.
 
-Structure pack (phr : phant (rel T)) := Pack
-{
+Structure pack (phr : phant (rel T)) := Pack {
   pack_order;
   pack_class : class pack_order
 }.
@@ -422,13 +348,12 @@ Variables (phr : phant (rel T)) (mr : pack phr).
 Canonical porder_of :=
   Order.Pack phr (Order.pack_class mr).
 
-
 Definition meet_of (r : {porder T}) :=
   fun (pr : pack phr) & phant_id (pack_order pr) r =>
   meet (pack_class pr).
-
 End ClassDef.
 
+(* -------------------------------------------------------------------- *)
 Module Exports.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
@@ -439,77 +364,50 @@ Notation "{ 'meet_order' T }" := (pack (Phant (rel T)))
 Notation MeetClass meetC meetA meetxx leEmeet :=
   (Class meetC meetA meetxx leEmeet).
 Notation MeetPack cla := (Pack (Phant _)cla). 
-
-
 End Exports.
-
 End Meet.
+
 Include Meet.Exports.
 
+(* ==================================================================== *)
 Section MeetTheory.
+Context {T: eqType} (r: {meet_order T}).
 
-Variable (T: eqType) (r: {meet_order T}).
 Local Notation "x `&` y" := (meet r x y).
 Local Notation "x <= y" := (x <=_r y).
 
-(*Order.axiom T
-  (Order.pack_le T (Phant (rel (Equality.sort T)))
-     (Meet.order T (Phant (rel (Equality.sort T))) r))*)
-
-Lemma meet_order_is_order : order (<=:r).
-Proof.
-exact: orderP.
-Qed.
-
 Lemma meetC : commutative (meet r).
-Proof.
-by case: r => ? [? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma meetA : associative (meet r).
-Proof.
-by case: r => ? [? ? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma meetxx : idempotent (meet r).
-Proof.
-by case: r => ? [? ? ? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma leEmeet x y : (x <= y) = (x `&` y == x).
-Proof.
-by case: r => ? [? ? ? ? ?]. 
-Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma meetAC : right_commutative (meet r).
-Proof.
-by move=> x y z; rewrite -!meetA [X in _ `&` X]meetC.
-Qed.
+Proof. by move=> x y z; rewrite -!meetA [X in _ `&` X]meetC. Qed.
+
 Lemma meetCA : left_commutative (meet r).
-Proof.
-by move=> x y z; rewrite !meetA [X in X `&` _]meetC.
-Qed.
+Proof. by move=> x y z; rewrite !meetA [X in X `&` _]meetC. Qed.
+
 Lemma meetACA : interchange (meet r) (meet r).
-Proof.
-by move=> x y z t; rewrite !meetA [X in X `&` _]meetAC.
-Qed.
+Proof. by move=> x y z t; rewrite !meetA [X in X `&` _]meetAC. Qed.
 
 Lemma meetKI y x : x `&` (x `&` y) = x `&` y.
-Proof.
-by rewrite meetA meetxx.
-Qed.
+Proof. by rewrite meetA meetxx. Qed.
+
 Lemma meetIK y x : (x `&` y) `&` y = x `&` y.
-Proof.
-by rewrite -meetA meetxx.
-Qed.
+Proof. by rewrite -meetA meetxx. Qed.
+
 Lemma meetKIC y x : x `&` (y `&` x) = x `&` y.
-Proof.
-by rewrite meetC meetIK meetC.
-Qed.
+Proof. by rewrite meetC meetIK meetC. Qed.
+
 Lemma meetIKC y x : y `&` x `&` y = x `&` y.
-Proof.
-by rewrite meetAC meetC meetxx.
-Qed.
+Proof. by rewrite meetAC meetC meetxx. Qed.
 
 Lemma lexI x y z : (x <= y `&` z) = (x <= y) && (x <= z).
 Proof.
@@ -519,117 +417,47 @@ by rewrite -[X in X `&` _]meetA meetIK meetA.
 Qed.
 
 Lemma leIxl x y z : y <= x -> y `&` z <= x.
-Proof.
-by rewrite !leEmeet meetAC => /eqP ->.
-Qed.
+Proof. by rewrite !leEmeet meetAC => /eqP ->. Qed.
 
 Lemma leIxr x y z : z <= x -> y `&` z <= x.
-Proof.
-by rewrite !leEmeet -meetA => /eqP ->.
-Qed.
+Proof. by rewrite !leEmeet -meetA => /eqP ->. Qed.
 
 Lemma leIx2 x y z : (y <= x) || (z <= x) -> y `&` z <= x.
-Proof.
-by case/orP => [/leIxl|/leIxr].
-Qed.
+Proof. by case/orP => [/leIxl|/leIxr]. Qed.
 
 Lemma leIr x y : y `&` x <= x.
-Proof.
-by rewrite leIx2 ?orefl ?orbT.
-Qed.
+Proof. by rewrite leIx2 ?lexx ?orbT. Qed.
 
 Lemma leIl x y : x `&` y <= x.
-Proof.
-by rewrite leIx2 ?orefl ?orbT.
-Qed.
+Proof. by rewrite leIx2 ?lexx ?orbT. Qed.
 
 Lemma meet_idPl {x y} : reflect (x `&` y = x) (x <= y).
-Proof.
-by rewrite leEmeet; apply/eqP.
-Qed.
+Proof. by rewrite leEmeet; apply/eqP. Qed.
+
 Lemma meet_idPr {x y} : reflect (y `&` x = x) (x <= y).
-Proof.
-by rewrite meetC; apply/meet_idPl.
-Qed.
+Proof. by rewrite meetC; apply/meet_idPl. Qed.
 
 Lemma meet_l x y : x <= y -> x `&` y = x.
-Proof.
-exact/meet_idPl.
-Qed.
+Proof. exact/meet_idPl. Qed.
+
 Lemma meet_r x y : y <= x -> x `&` y = y.
-Proof.
-exact/meet_idPr.
-Qed.
+Proof. exact/meet_idPr. Qed.
 
 Lemma leIidl x y : (x <= x `&` y) = (x <= y).
-Proof. by rewrite !leEmeet meetKI.
-Qed.
+Proof. by rewrite !leEmeet meetKI. Qed.
+
 Lemma leIidr x y : (x <= y `&` x) = (x <= y).
-Proof.
-by rewrite !leEmeet meetKIC.
-Qed.
+Proof. by rewrite !leEmeet meetKIC. Qed.
 
 Lemma eq_meetl x y : (x `&` y == x) = (x <= y).
-Proof.
-by apply/esym/leEmeet.
-Qed.
+Proof. by apply/esym/leEmeet. Qed.
 
 Lemma eq_meetr x y : (x `&` y == y) = (y <= x).
-Proof.
-by rewrite meetC eq_meetl.
-Qed.
+Proof. by rewrite meetC eq_meetl. Qed.
 
 Lemma leI2 x y z t : x <= z -> y <= t -> x `&` y <= z `&` t.
-Proof.
-by move=> xz yt; rewrite lexI !leIx2 ?xz ?yt ?orbT //.
-Qed.
-
+Proof. by move=> xz yt; rewrite lexI !leIx2 ?xz ?yt ?orbT. Qed.
 End MeetTheory.
-
-Section NumMeet.
-
-Context (disp : unit) (R : meetSemilatticeType disp).
-
-Lemma num_minC : commutative (@Order.meet _ R).
-Proof.
-Admitted.
-
-Lemma num_minA : associative (@Order.meet _ R).
-Proof.
-Admitted.
-
-Lemma num_minxx : idempotent (@Order.meet _ R).
-Proof.
-Admitted.
-
-Lemma num_leEmin :
-  forall x y, (x <= y)%O = ((@Order.meet _ R) x y == x).
-Proof.
-Admitted.
-
-Definition meet_class_num :=
-  MeetClass num_minC num_minA num_minxx num_leEmin.
-Canonical meet_pack_num := MeetPack meet_class_num.
-
-Lemma lower_bound_rat (x y : R) : (((@Order.meet _ R) x y) <= x)%O.
-Proof.
-exact : leIl.
-Qed.
-
-End NumMeet.
-
-Section Test.
-Context (disp : unit) (R : meetSemilatticeType disp).
-Variables (x y : R).
-
-Goal ((meet [leo: <=%O] x y) <= x)%O.
-Proof.
-rewrite /(meet _) /=.
-apply: leIl.
-Qed.
-
-
-End Test.
 
 (*Module Join.
 
@@ -734,20 +562,20 @@ Lemma neq_join_irr : forall x y, ~~ ((join [leo: <=%O] x y) < (join [leo: <=%O] 
 Proof.
 move => x y.
 have ->: (join [leo: <=%O] x y) = (join [leo: <=%O] y x).
-- apply/(oanti _ [leo: <=%O])/andP; rewrite /=.
+- apply/(le_anti _ [leo: <=%O])/andP; rewrite /=.
   split; [exact : joinC_ex | exact : joinC_ex].
-by rewrite ltostrict.
+by rewrite ltxx.
 Qed.
 
 End NumJoin.*)
 
+(* ==================================================================== *)
 Module Lattice.
 Section ClassDef.
 
-Variable (T : eqType).
+Context {T : eqType}.
 
-Record class (r : {meet_order T}) := Class
-{
+Record class (r : {meet_order T}) := Class {
   join : T -> T -> T;
   _ : commutative join;
   _ : associative join;
@@ -757,8 +585,7 @@ Record class (r : {meet_order T}) := Class
   _ : forall y x, (y <=_r x) = ((join x y) == x) 
 }.
 
-Structure pack (phr : phant (rel T)) := Pack
-{
+Structure pack (phr : phant (rel T)) := Pack {
   pack_order;
   pack_class : class pack_order
 }.
@@ -773,11 +600,9 @@ Definition join_of (r : {porder T}) :=
   fun (mr : {meet_order T}) & phant_id (Meet.pack_order mr) r =>
   fun (lr : pack phr) & phant_id (pack_order lr) mr =>
   join lr.    
-
-
-
 End ClassDef.
 
+(* -------------------------------------------------------------------- *)
 Module Exports.
 Coercion pack_order : pack >-> Meet.pack.
 Coercion pack_class : pack >-> class.
@@ -794,120 +619,65 @@ End Lattice.
 Include Lattice.Exports.
 
 Section LatticeTheory.
-Variable (T : eqType) (r : {lattice T}).
+Context {T : eqType} (r : {lattice T}).
 
 Local Notation "x `&` y" := (meet r x y).
 Local Notation "x `|` y" := (join r x y).
 Local Notation "x <= y" := (x <=_r y).
 
 Lemma joinC : commutative (join r).
-Proof.
-by case: r => ? [? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
+
 Lemma joinA : associative (join r).
-Proof.
-by case: r => ? [? ? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
+
 Lemma joinxx : idempotent (join r).
-Proof.
-by case: r => ? [? ? ? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
+
 Lemma joinKI y x : x `&` (x `|` y) = x.
-Proof.
-by case: r => ? [? ? ? ? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
+
 Lemma meetKU y x : x `|` (x `&` y) = x.
-Proof.
-by case: r => ? [? ? ? ? ? ?].
-Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma joinKIC y x : x `&` (y `|` x) = x.
-Proof.
-by rewrite joinC joinKI.
-Qed.
+Proof. by rewrite joinC joinKI. Qed.
+
 Lemma meetKUC y x : x `|` (y `&` x) = x.
-Proof.
-by rewrite meetC meetKU.
-Qed.
+Proof. by rewrite meetC meetKU. Qed.
 
 Lemma meetUK x y : (x `&` y) `|` y = y.
-Proof.
-by rewrite joinC meetC meetKU.
-Qed.
+Proof. by rewrite joinC meetC meetKU. Qed.
+
 Lemma joinIK x y : (x `|` y) `&` y = y.
-Proof.
-by rewrite joinC meetC joinKI.
-Qed.
+Proof. by rewrite joinC meetC joinKI. Qed.
 
 Lemma meetUKC x y : (y `&` x) `|` y = y.
-Proof.
-by rewrite meetC meetUK.
-Qed.
+Proof. by rewrite meetC meetUK. Qed.
+
 Lemma joinIKC x y : (y `|` x) `&` y = y.
-Proof.
-by rewrite joinC joinIK.
-Qed.
+Proof. by rewrite joinC joinIK. Qed.
 
 Lemma leEjoin x y : (x <= y) = (x `|` y == y).
 Proof.
 by rewrite leEmeet; apply/eqP/eqP => <-; rewrite (joinKI, meetUK).
 Qed.
-
 End LatticeTheory.
-Section NumLattice.
 
-Context (disp : unit) (R : latticeType disp).
-
-Lemma num_joinC : commutative (@Order.join _ R).
-Admitted.
-
-Lemma num_joinA : associative (@Order.join _ R).
-Admitted.
-
-Lemma num_joinxx: idempotent (@Order.join _ R).
-Admitted.
-
-Lemma num_joinKI : forall y x, meet [leo: <=%O] x ((@Order.join _ R) x y) = x.
-Admitted.
-
-Lemma num_joinKU : forall y x, (@Order.join _ R) x (meet [leo: <=%O] x y) = x.
-Admitted.
-
-Lemma num_leEjoin : forall y x, (y <= x)%O = ((@Order.join _ R x y) == x).
-Admitted.
-
-Definition lattice_class_num :=
-  LatticeClass num_joinC num_joinA num_joinxx num_joinKI num_joinKU num_leEjoin.
-Canonical lattice_pack_num := LatticePack lattice_class_num.
-
-
-End NumLattice.
-
-Section Test.
-Context (disp: unit) (R : latticeType disp).
-
-Goal forall x : R, (join [lto: <%O] x x) = x.
-move=> x.
-exact: joinxx.
-Qed.
-End Test.
-
+(* ==================================================================== *)
 Module TBLattice.
 Section ClassDef.
 
-Variable (T : eqType).
+Context {T : eqType}.
 
-(*TODO : top element*)
-Record class (L : {lattice T}) := Class
-{
+Record class (L : {lattice T}) := Class {
   bottom : T;
   top : T;
   _ : forall x, x <=_L top;
   _ : forall x, bottom <=_L x
 }.
 
-Structure pack (phr : phant (rel T)) := Pack
-{
+Structure pack (phr : phant (rel T)) := Pack {
   pack_lattice;
   pack_class : class pack_lattice
 }.
@@ -930,9 +700,9 @@ Definition top_of (r: {porder T}) :=
   fun (l : {lattice T} ) & phant_id (Lattice.pack_order l) mo =>
   fun (bl : pack phr) & phant_id (pack_lattice bl) l =>
   top bl.
-  
-
 End ClassDef.
+
+(* -------------------------------------------------------------------- *)
 Module Exports.
 
 Coercion pack_lattice: pack >-> Lattice.pack.
@@ -949,8 +719,9 @@ End Exports.
 End TBLattice.
 Include TBLattice.Exports.
 
+(* -------------------------------------------------------------------- *)
 Section TBLatticeTheory.
-Variable (T: eqType) (L : { tblattice T }).
+Context {T : eqType} (L : { tblattice T }).
 
 Lemma botEle : forall x, bottom L <=_L x.
 Proof.
@@ -981,95 +752,7 @@ Lemma meetx0 : right_id (top L) (meet L).
 Proof.
 by move=> x; apply/eqP; rewrite -leEmeet topEle.
 Qed.
-
-
-
 End TBLatticeTheory.
-
-Section NumTBLattice.
-Context (disp : unit) (L : tbLatticeType disp).
-
-Lemma num_botEle : forall x:L, (0 <= x)%O.
-Admitted.
-
-Lemma num_topEle : forall x:L, (x <= 1)%O.
-Admitted.
-
-Definition tblattice_class_num := TBLatticeClass num_topEle num_botEle.
-Canonical tblattice_pack_num := TBLatticePack tblattice_class_num.
-
-Goal forall x:L, (bottom [leo: <=%O] <= x)%O.
-Proof.
-exact: botEle.
-Qed.
-End NumTBLattice.
-
-
-
-(*Section MirrorOrder.
-
-Variable (T : Type).
-
-Definition mirrorOrder (r: {order T}) := fun x y => r y x.
-Notation "r '^~I'" := (mirrorOrder r) (at level 100).
-
-Lemma mirrorOrderP (r:{order T}): (order (r^~I)).
-Proof.
-split; rewrite /mirrorOrder.
-- exact: OrderRefl.
-- by move=>x y r_anti; apply: (OrderAnti _ r); rewrite andbC.
-- by move => y x z r_y_x r_z_y; apply: (OrderTrans _ r y).
-Qed.
-
-Canonical MirrorOrder (r: {order T}):= Order (mirrorOrderP r).
-
-Lemma mirrorTotalOrderP (r : {total_order T}) : (total_order (r^~I)).
-Proof.
-split; first exact: mirrorOrderP; rewrite /mirrorOrder.
-move=> x y; exact: totalMP.
-Qed.
-
-Canonical MirrorTotalOrder (r : {total_order T}) :=
-    TotalOrder (mirrorTotalOrderP r).
-End MirrorOrder.
-
-Section SubOrder.
-
-
-Variables (T:Type).
-Definition subOrder (P: pred T) (sT: subType P) (r : {order T}) :=
-    fun x y : sT => r (val x) (val y).
-Notation "r '%_(' sT ')'" := (subOrder _ sT r) (at level 100).
-
-Variables (P:pred T) (sT : subType P).
-
-Lemma subOrderP (r: {order T}): order (r%_(sT)).
-Proof.
-split; rewrite /subOrder.
-- move => x; exact: OrderRefl.
-- move=> x y /(OrderAnti _ r); exact: val_inj.
-- move => y x z; exact: OrderTrans.
-Qed.
-
-Canonical SubOrder (r : {order T}) := Order (subOrderP r).
-
-Lemma subTotalOrderP (r : {total_order T}) : total_order (r %_(sT)).
-Proof.
-split; first exact: subOrderP; rewrite /subOrder.
-move=> x y; exact : totalMP.
-Qed.
-
-Canonical SubTotalOrder (r : {total_order T}) :=
-    TotalOrder (subTotalOrderP r).
-
-End SubOrder.
-
-Lemma l : forall n : nat, n <= n.
-Proof.
-move=> n.
-apply: (OrderTrans _ _ n) => /=; exact: OrderRefl.
-Qed.
-*)
 
 (* ==================================================================== *)
 Lemma andPP P Q b c :
@@ -1094,8 +777,8 @@ Context {T : choiceType} (L : {lattice T}).
 
 (*stable : {fset T} -> bool*)
 Definition stable (E : {fset T}) :=
-  [forall x : E, [forall y : E, (meet L (val x) (val y) \in E)]]
-  && [forall x : E, [forall y : E, (join L (val x) (val y) \in E)]].
+     [forall x : E, [forall y : E, meet L (val x) (val y) \in E]]
+  && [forall x : E, [forall y : E, join L (val x) (val y) \in E]].
 
 Lemma stableP (E : {fset T}) :
   reflect
@@ -1230,6 +913,7 @@ End SubLatticesTheory.
 Notation "''top_' S" := (subtop S) (at level 8, S at level 2, format "''top_' S").
 Notation "''bot_' S" := (subbot S) (at level 8, S at level 2, format "''bot_' S").
 
+(* ==================================================================== *)
 Section SubLatticeInd.
 
 Context {T : choiceType} (L : { tblattice T}).
@@ -1281,8 +965,6 @@ move=> S; apply/eqP/fset_eqP => x; apply/(sameP idP)/(iffP idP).
     rewrite // ?subtop_leE ?subbot_leE.
 Qed.
 
-
-
 Lemma sub_interval : forall (S : subLattice L) a b c d,
   a \in (S : {fset _}) -> b \in (S : {fset _}) ->
   a <=_L b -> c <=_L d ->
@@ -1291,14 +973,14 @@ Proof.
 move=> S a b c d a_in_S b_in_S a_le_b c_le_d; split.
 - move/fsubsetP => sub.
   have/in_intervalP[]: a \in ([<c;d>]_S : {fset _}) by
-    apply/sub/in_intervalP; rewrite a_in_S orefl a_le_b.
+    apply/sub/in_intervalP; rewrite a_in_S lexx a_le_b.
   have/in_intervalP[]: b \in ([<c;d>]_S : {fset _}) by
-    apply/sub/in_intervalP; rewrite b_in_S orefl a_le_b.
-  by move=> _ [_ ?] _ [].
+    apply/sub/in_intervalP; rewrite b_in_S lexx a_le_b.
+  done.
 - case=> c_le_a b_le_d; apply/fsubsetP =>
-    x /in_intervalP [x_in_S [a_le_x x_le_b]].
+    x /in_intervalP [x_in_S a_le_x x_le_b].
   apply/in_intervalP; rewrite x_in_S; split=> //;
-    [exact:(otrans c_le_a)|exact: (otrans x_le_b)].
+    [exact:(le_trans c_le_a) | exact: (le_trans x_le_b)].
 Qed.
 
 Lemma interval_bot : forall S : subLattice L, forall a b,
@@ -1307,10 +989,10 @@ Lemma interval_bot : forall S : subLattice L, forall a b,
 Proof.
 move=> S a b a_in_S a_le_b.
 have a_in_ab: a \in ([<a; b>]_S : {fset _})
-  by rewrite inE unfold_in; apply/and3P; split => //; exact: orefl.
+  by rewrite inE unfold_in; apply/and3P; split => //; exact: lexx.
 have bot_in_ab: subbot [< a ; b>]_S \in ([<a; b>]_S : {fset _})
   by apply/subbot_stable/fset0Pn; exists a.
-apply: (@oanti _ L); rewrite (subbot_leE a_in_ab).
+apply: (@le_anti _ L); rewrite (subbot_leE a_in_ab).
 by case: (in_interval_ab bot_in_ab) => ->.
 Qed.
 
@@ -1320,10 +1002,10 @@ Lemma interval_top : forall S : subLattice L, forall a b,
 Proof.
 move=> S a b b_in_S a_le_b.
 have b_in_ab: b \in ([<a; b>]_S : {fset _})
-  by rewrite inE unfold_in; apply/and3P; split => //; exact: orefl.
+  by rewrite inE unfold_in; apply/and3P; split => //; exact: lexx.
 have top_in_ab: subtop [< a ; b>]_S \in ([<a; b>]_S : {fset _})
   by apply/subtop_stable/fset0Pn; exists b.
-apply: (@oanti _ L); rewrite (subtop_leE b_in_ab).
+apply: (@le_anti _ L); rewrite (subtop_leE b_in_ab).
 by case: (in_interval_ab top_in_ab) => _ ->.
 Qed.
 
@@ -1341,7 +1023,7 @@ apply/(sameP idP)/(iffP idP).
   apply/andP; split => //; apply/atomP; rewrite interval_bot => //; split.
   + by apply/in_intervalP; split.
   + by rewrite ostrict eq_sym x_neq_a a_le_x.
-  + move=> y /in_intervalP [y_in_S [a_le_y y_le_b]] a_lt_y.
+  + move=> y /in_intervalP [y_in_S a_le_y y_le_b] a_lt_y.
     apply: contraT; rewrite negbK lt_def => /andP [x_neq_y].
     have y_in_IDa: y \in ([<a; b>]_S `\ a)%fset.
     - rewrite inE; apply/andP; split; last by apply/in_intervalP.
@@ -1349,7 +1031,7 @@ apply/(sameP idP)/(iffP idP).
     move/implyP: (mini [` y_in_IDa]%fset) => /= absurd /absurd x_eq_y.
     by move: x_neq_y; rewrite eq_sym x_eq_y.
 - rewrite !inE /= !unfold_in => /andP [] x_in_S /atomP.
-  case => /in_intervalP [_ [a_le_x x_le_b]]; rewrite interval_bot // => a_lt_x.
+  case => /in_intervalP [_ a_le_x x_le_b]; rewrite interval_bot // => a_lt_x.
   move=> atomic; apply/andP; split; [apply/and3P; split |] => //.
   + by rewrite (gt_eqF a_lt_x).
   + by rewrite a_le_x x_le_b.
@@ -1374,13 +1056,13 @@ have: atoms_x != fset0.
 - apply/fset0Pn; rewrite /atoms_x atoms_x_eq.
   have: (([<subbot S; x>]_S: {fset _}) `\ subbot S)%fset != fset0 by
     apply/fset0Pn; exists x;
-    rewrite !inE eq_sym (lt_eqF bot_lt_x) x_in_S (ltW bot_lt_x) orefl.
+    rewrite !inE eq_sym (lt_eqF bot_lt_x) x_in_S (ltW bot_lt_x) lexx.
   case/(min_eltsPn L)/fset0Pn => a.
   rewrite !inE => /andP [/and4P [a_neq_bot a_in_S bot_le_a a_le_x] mini].
   exists a; rewrite !inE a_neq_bot a_in_S bot_le_a a_le_x /=.
   exact: mini.
 case/fset0Pn => a; rewrite !inE => /andP [a_in_S /atomP [/in_intervalP]].
-case => _ [bot_le_a a_le_x].
+case=> _ bot_le_a a_le_x.
 rewrite interval_bot ?subbot_stable ?subbot_leE //.
 move=> bot_lt_a atomistic_a; exists a.
 - apply/atomP; rewrite a_in_S bot_lt_a; split => //=.
@@ -1389,9 +1071,9 @@ move=> bot_lt_a atomistic_a; exists a.
   apply/in_intervalP;
   rewrite y_in_S (subbot_leE y_in_S) (ltW (lt_le_trans y_lt_a a_le_x)).
   by move/atomistic_a/contraTN; apply.
-- apply/fsubsetP => y /in_intervalP [y_in_S [x_le_y y_le_top]].
+- apply/fsubsetP => y /in_intervalP [y_in_S x_le_y y_le_top].
   apply/in_intervalP; rewrite y_in_S y_le_top; split=> //.
-  by apply:(otrans a_le_x).
+  by apply:(le_trans a_le_x).
 Qed.
 
 Definition I_coatom_set (S : subLattice L) a b :=
@@ -1417,7 +1099,7 @@ Proof.
 move=> lex ley; apply/val_eqP/eqP/fsetP => z /=.
 apply/in_intervalP/in_intervalP; first by case=> /in_interval_S.
 case=> zS le_xz le_zy; split=> //; apply/in_intervalP.
-by split=> //; [apply: (otrans lex) | apply: (otrans le_zy)].
+by split=> //; [apply: (le_trans lex) | apply: (le_trans le_zy)].
 Qed.
 
 Lemma ltF_subbot (S : subLattice L) (x : T) :
@@ -1426,7 +1108,7 @@ Proof. by move=> xS; apply/negP => /lt_geF; rewrite subbot_leE. Qed.
 
 Lemma mem_low (S : subLattice L) (x y : T) :
   x \in (S : {fset _}) -> x <=_L y -> x \in ([< x; y >]_S : {fset _}).
-Proof. by move=> ??; apply/in_intervalP; split=> //; rewrite orefl. Qed.
+Proof. by move=> ??; apply/in_intervalP; split=> //; rewrite lexx. Qed.
 
 Lemma mem_bot_low (S : subLattice L) (y : T) :
   y \in (S : {fset _}) -> 'bot_S \in ([< 'bot_S; y >]_S : {fset _}).
@@ -1468,8 +1150,8 @@ apply/eqP/fset_eqP=> x.
 apply/(sameP idP)/(iffP idP); rewrite in_fset1.
 - by move/eqP => ->.
 - move/vK_sub_S; move: (intervalP S); rewrite -(eqP bot_eq_top) => ->.
-  move/in_interval_ab => /andP /oanti <-.
-  by rewrite interval_bot ?(subbot_stable Sprop0) ?orefl.
+  move/in_interval_ab => /andP /le_anti <-.
+  by rewrite interval_bot ?(subbot_stable Sprop0) ?lexx.
 Qed.*)
 
 (*
@@ -1489,7 +1171,7 @@ move=> PS xS; move: {2}#|`_| (leqnn #|`[< 'bot_S; x >]_S|) => n.
 elim: n S PS xS => [|n ih] S xS PS.
 - rewrite leqn0 => /eqP /cardfs0_eq /(congr1 (fun S => x \in S)).
   rewrite in_fset0 => /in_intervalP; case; split=> //.
-  - by rewrite subbot_leE. - by rewrite orefl.
+  - by rewrite subbot_leE. - by rewrite lexx.
 case/boolP: (atom S x) => [atom_Sx|atomN_Sx]; first by move=> _; apply: P_incr.
 case: (x =P 'bot_S) => [-> _|/eqP neq0_x]; first by rewrite -intervalP.
 move=> sz; case: (@sub_atomic_top S x) => //.
@@ -1504,7 +1186,7 @@ have: x \in ([< y; 'top_S >]_S : {fset _}).
 - by apply/in_intervalP; rewrite xS ltW 1?subtop_leE.
 move/ih => /(_ (P_incr atom_Sy PS)).
 rewrite !(interval_bot, interval_top) 1?(subtop_stable, subtop_leE) //.
-rewrite !mono_interval ?(orefl, subtop_leE) //; last by apply/ltW.
+rewrite !mono_interval ?(lexx, subtop_leE) //; last by apply/ltW.
 apply; rewrite -ltnS; pose X := 'bot_S |` [< 'bot_S; x >]_S `\ 'bot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // mem_bot_low.
 apply: fproper_ltn_card; rewrite {}/X.
@@ -1512,10 +1194,10 @@ rewrite fsetD1K ?mem_bot_low //.
 apply: (@fsub_proper_trans _ ([< 'bot_S; x >]_S `\ 'bot_S)); last first.
 - by apply/fproperD1; rewrite mem_bot_low.
 apply/fsubsetD1P; split.
-- by apply/sub_interval; rewrite ?(subbot_leE, orefl) //; apply/ltW.
+- by apply/sub_interval; rewrite ?(subbot_leE, lexx) //; apply/ltW.
 apply: contraL atom_Sy => /in_intervalP[_].
 rewrite le_eqVlt ltF_subbot // orbF => /eqP-> _.
-by apply/negP => /atomP; rewrite ltostrict; case.
+by apply/negP => /atomP; rewrite ltxx; case.
 Qed.
 End IndIncr.
 
@@ -1540,7 +1222,7 @@ Lemma ind_id (S : subLattice L) (x y : T) :
 Proof.
 move=> xS yS le_xy PS; have h: P [< x; 'top_S >]_S by apply: ind_incr.
 suff: P [< 'bot_[< x; 'top_S >]_S; y >]_[< x; 'top_S >]_S.
-- by rewrite interval_bot ?subtop_leE // mono_interval // (orefl, subtop_leE).
+- by rewrite interval_bot ?subtop_leE // mono_interval // (lexx, subtop_leE).
 apply: ind_decr => //; apply/in_intervalP; split=> //.
 by rewrite subtop_leE.
 Qed.
@@ -1548,21 +1230,19 @@ End Ind.
 
 End SubLatticeInd.
 
+(* ==================================================================== *)
 Module GradedLattice.
 Section ClassDef.
-Variable (T: finType).
+Context {T: eqType}.
 
-
-Record class (L : {tblattice T}) := Class
-{
+Record class (L : {tblattice T}) := Class {
   rank : T -> nat;
   _ : rank (bottom L) = O%N;
   _ : forall x y, x <_L y -> (rank x < rank y)%N;
   _ : forall x y, x <=_L y -> ((rank x).+1 < rank y)%N -> exists z, (x <_L z) && (z <_L y)
 }.
 
-Structure pack (phr : phant (rel T)) := Pack
-{
+Structure pack (phr : phant (rel T)) := Pack {
   pack_lattice;
   pack_class : class pack_lattice
 }.
@@ -1589,18 +1269,15 @@ End Exports.
 End GradedLattice.
 Include GradedLattice.Exports.
 
+(* ==================================================================== *)
 Section GLatticeTheory.
 Variable (T : finType) (L : {glattice T}).
 
 Lemma rk_bottom : rank L (bottom L) = 0%N.
-Proof.
-by case: L => ? [].
-Qed.
+Proof. by case: L => ? []. Qed.
 
 Lemma rk_increasing : forall x y, x <_L y -> (rank L x < rank L y)%N.
-Proof.
-by case: L => ? [].
-Qed.
+Proof. by case: L => ? []. Qed.
 
 Lemma rk_dense : forall x y,
   x <=_L y -> ((rank L x).+1 < rank L y)%N -> exists z, (x <_L z) && (z <_L y).
@@ -1609,6 +1286,7 @@ by case: L => ? [].
 Qed.
 End GLatticeTheory.
 
+(*==================================================================== *)
 Section SubsetLattice.
 Variable (T : finType).
 
@@ -1716,4 +1394,3 @@ Definition STBLatticeClass := TBLatticeClass StopEle SbotEle.
 Canonical STBLatticePack := TBLatticePack STBLatticeClass.
 
 End SubsetLattice.
-
