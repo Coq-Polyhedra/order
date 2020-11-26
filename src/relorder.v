@@ -1065,11 +1065,6 @@ Lemma mem_join : forall x y,
   x \in (S : {fset _}) -> y \in (S : {fset _}) -> join L x y \in (S : {fset _}).
 Proof. by case: S => /= fS /stableP[]. Qed.
 
-Lemma mem_join : forall x y,
-  x \in (S : {fset _}) -> y \in (S : {fset _})
-    -> join L x y \in (S : {fset _}).
-Proof. by case: S => /= fS /stableP[]. Qed.
-
 Lemma mem_meet : forall x y,
   x \in (S : {fset _}) -> y \in (S : {fset _})
     -> meet L x y \in (S : {fset _}).
