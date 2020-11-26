@@ -1051,9 +1051,14 @@ Definition subLattice_choiceMixin := [choiceMixin of subLattice by <:].
 Canonical  subLattice_choiceType  := Eval hnf in ChoiceType subLattice subLattice_choiceMixin.
 (*TODO : MemPred with subLattice*)
 
-Definition mem_subLattice (S: subLattice) : {pred T} :=
+Coercion mem_subLattice (S: subLattice) : {pred T} :=
   fun x : T => (x \in (elements S)).
 Canonical subLattice_predType := PredType mem_subLattice.
+
+Lemma in_subLatticeE (S: subLattice) x : (x \in S) = (x \in elements S).
+Proof. by []. Qed.
+
+Definition inE := (in_subLatticeE, inE).
 
 End SubLattices.
 
@@ -1061,14 +1066,15 @@ End SubLattices.
 Section SubLatticesTheory.
 Context {T : choiceType} (L : {lattice T}) (S : subLattice L).
 
-Lemma mem_join : forall x y,
-  x \in (S : {fset _}) -> y \in (S : {fset _}) -> join L x y \in (S : {fset _}).
-Proof. by case: S => /= fS /stableP[]. Qed.
+Lemma mem_join x y:
+  x \in S -> y \in S -> join L x y \in S.
+Proof.
+by rewrite !inE; case: S => fS /= /stableP[] => _; apply.
+Qed.
 
-Lemma mem_meet : forall x y,
-  x \in (S : {fset _}) -> y \in (S : {fset _})
-    -> meet L x y \in (S : {fset _}).
-Proof. by case: S => /= fS /stableP[]. Qed.
+Lemma mem_meet x y:
+  x \in S -> y \in S -> meet L x y \in (S : {fset _}).
+Proof. by rewrite !inE; case: S => /= fS /stableP[] => H _; exact: H. Qed.
 
 End SubLatticesTheory.
 
@@ -1079,6 +1085,7 @@ Section DualSubLattices.
 Context {T: choiceType} (L : {lattice T}) (S : subLattice L).
 
 Lemma dual_stable: stable ([lattice of L^~]) S.
+(*TODO : why [lattice of ] is mandatory*)
 Proof.
 apply/stableP; rewrite /= dual_meet dual_join; split.
 - exact: mem_join.
@@ -1096,24 +1103,32 @@ Notation "S '^~s'" := (DualSubLattice S) (at level 0).
 
 Section SubTBLatticesTheory.
 
-Context {T: choiceType} (L : {tblattice T}) (S: subLattice L).
+Context {T: choiceType}.
+Implicit Type (L: {tblattice T}).
 
-Definition subtop := \big [join L/bottom L]_(i <- S) i.
-Definition subbot := \big [meet L/top L]_(i <- S) i.
+Definition subtop L (S: subLattice L) := \big [join L/bottom L]_(i <- S) i.
+Definition subbot L (S: subLattice L) := \big [meet L/top L]_(i <- S) i.
 
-Lemma subtop_leE : forall x, x \in (S : {fset _}) -> x <=_L subtop.
+Lemma dual_subbot L (S: subLattice L) : subbot S^~s = subtop S.
+Proof. by []. Qed.
+
+Lemma dual_subtop L (S: subLattice L) : subtop S^~s = subbot S.
+Proof. by []. Qed.
+
+Lemma subtop_leE L (S : subLattice L) : forall x, x \in S -> x <=_L subtop S.
 Proof.
 move=> x /= x_in_S.
 by rewrite /subtop (big_fsetD1 _ x_in_S) /= leEmeet joinKI.
 Qed.
 
-Lemma subbot_leE : forall x, x \in (S : {fset _}) -> subbot <=_L x.
+Lemma subbot_leE L (S : subLattice L): forall x, x \in S -> subbot S <=_L x.
 Proof.
-move => x x_in_S.
-by rewrite /subbot (big_fsetD1 _ x_in_S) /= leIl.
+move=> x x_in_S; rewrite -dual_le -dual_subtop; exact: subtop_leE.
 Qed.
 
-Lemma subtop_stable : S != fset0 :> {fset _ } -> subtop \in (S : {fset _}).
+
+Lemma subtop_stable L (S : subLattice L):
+  S != fset0 :> {fset _ } -> subtop S \in S.
 Proof.
 case/fset0Pn=> x xS; rewrite /subtop (perm_big _ (perm_to_rem xS)).
 rewrite big_cons; have /= := @mem_rem _ x (val S).
@@ -1123,45 +1138,41 @@ rewrite big_cons joinCA; apply/mem_join/ih.
 - by move=> z z_in_s; apply/leS; rewrite !inE z_in_s orbT.
 Qed.
 
-Lemma subbot_stable : S != fset0 :> {fset _} -> subbot \in (S : {fset _}).
-Proof.                     (* Should be obtained from dual ordering *)
-case/fset0Pn=> x xS; rewrite /subbot (perm_big _ (perm_to_rem xS)).
-rewrite big_cons; have /= := @mem_rem _ x (val S).
-elim: (rem _ _) => [|y s ih] leS; first by rewrite big_nil meetx1.
-rewrite big_cons meetCA; apply/mem_meet/ih.
-- by apply/leS; rewrite !inE eqxx.
-- by move=> z z_in_s; apply/leS; rewrite !inE z_in_s orbT.
+Lemma subbot_stable L (S: subLattice L):
+  S != fset0 :> {fset _} -> subbot S \in S.
+Proof.
+move=> Sprop0; rewrite -dual_subtop; exact: subtop_stable.
 Qed.
 
-Lemma subtop0E : (S : {fset _}) == fset0 -> subtop = bottom L.
+Lemma subtop0E L (S : subLattice L):
+  (S : {fset _}) == fset0 -> subtop S = bottom L.
 Proof. by move/eqP; rewrite /subtop => ->; rewrite big_seq_fset0. Qed.
 
-Lemma subbot0E : (S : {fset _}) == fset0 -> subbot = top L.
-Proof. by move/eqP; rewrite /subbot => ->; rewrite big_seq_fset0. Qed.
+Lemma subbot0E L (S: subLattice L):
+  (S : {fset _}) == fset0 -> subbot S = top L.
+Proof. move=> ?; rewrite -dual_bot -dual_subtop; exact: subtop0E. Qed.
 
-Lemma ltF_subbot x : x \in (S : {fset _}) -> x <_L subbot = false.
-Proof. by move=> xS; apply/negP => /lt_geF; rewrite subbot_leE. Qed.
-
-Lemma gtF_subtop x : x \in (S : {fset _}) -> subtop <_L x = false.
+Lemma gtF_subtop L (S: subLattice L) x : x \in S -> subtop S <_L x = false.
 Proof. by move=> xS; apply/negP => /lt_geF; rewrite subtop_leE. Qed.
 
-Lemma bot_spec a :
-     a \in (S : {fset _})
-  -> (forall x, x \in (S : {fset _}) -> a <=_L x)
-  -> subbot = a.
-Proof.
-move=> aS le_aS; rewrite /subbot (perm_big _ (perm_to_rem aS)) /=.
-by rewrite big_cons; apply/meet_idPl/meetsP_seq => i /mem_rem /le_aS.
-Qed.
+Lemma ltF_subbot L (S: subLattice L) x : x \in S -> x <_L subbot S = false.
+Proof. move=> ?; rewrite -dual_lt -dual_subtop; exact: gtF_subtop. Qed.
 
-Lemma top_spec a :
-     a \in (S : {fset _})
+Lemma top_spec L (S: subLattice L) a : a \in S
   -> (forall x, x \in (S : {fset _}) -> x <=_L a)
-  -> subtop = a.
+  -> subtop S = a.
 Proof.
 move=> aS le_Sa; rewrite /subtop (perm_big _ (perm_to_rem aS)) /=.
 by rewrite big_cons; apply/join_idPr/joinsP_seq => i /mem_rem /le_Sa.
 Qed.
+
+Lemma bot_spec L (S: subLattice L) a : a \in S
+  -> (forall x, x \in (S : {fset _}) -> a <=_L x)
+  -> subbot S = a.
+Proof. move=> ? ?; rewrite -dual_subtop; exact: top_spec. Qed.
+
+
+
 End SubTBLatticesTheory.
 
 Notation "''top_' S" := (subtop S) (at level 8, S at level 2, format "''top_' S").
@@ -1603,5 +1614,6 @@ Qed.
 
 Definition STBLatticeClass := TBLatticeClass StopEle SbotEle.
 Canonical STBLatticePack := TBLatticePack STBLatticeClass.
+
 
 End SubsetLattice.
