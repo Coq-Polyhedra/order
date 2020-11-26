@@ -653,6 +653,12 @@ Definition join_of (r : {porder T}) :=
   fun (mr : {meetSemiLattice T}) & phant_id (Meet.pack_order mr) r =>
   fun (lr : pack phr) & phant_id (pack_order lr) mr =>
   join lr.    
+
+Definition lattice_of (r : {porder T}) :=
+  fun (mr : {meetSemiLattice T}) & phant_id (Meet.pack_order mr) r =>
+  fun (lr : pack phr) & phant_id (pack_order lr) mr =>
+  lr.
+
 End ClassDef.
 
 (* -------------------------------------------------------------------- *)
@@ -666,6 +672,8 @@ Notation LatticeClass joinC joinA joinxx joinKI joinKU leEjoin:=
   (Class joinC joinA joinxx joinKI joinKU leEjoin).
 Notation LatticePack cla := (Pack (Phant _) cla).
 Notation join r := (@join_of _ (Phant _) r _ id _ id).
+Notation "[ 'lattice' 'of' r ]" := (@lattice_of _ (Phant _) r _ id _ id)
+  (at level 0, format "[ 'lattice'  'of'  r ]").
 
 End Exports.
 End Lattice.
@@ -798,6 +806,8 @@ by [].
 Qed.
 
 
+
+
 End DualLattice.
 
 (* ==================================================================== *)
@@ -836,6 +846,12 @@ Definition top_of (r: {porder T}) :=
   fun (l : {lattice T} ) & phant_id (Lattice.pack_order l) mo =>
   fun (bl : pack phr) & phant_id (pack_lattice bl) l =>
   top bl.
+
+Definition tblattice_of (r: {porder T}) :=
+  fun (mo : {meetSemiLattice T} ) & phant_id (Meet.pack_order mo) r =>
+  fun (l : {lattice T} ) & phant_id (Lattice.pack_order l) mo =>
+  fun (bl : pack phr) & phant_id (pack_lattice bl) l =>
+  bl.
 End ClassDef.
 
 (* -------------------------------------------------------------------- *)
@@ -850,6 +866,9 @@ Notation "{ 'tblattice' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'tblattice'  T }").
 Notation TBLatticeClass topEle botEle := (Class topEle botEle).
 Notation TBLatticePack cla := (Pack (Phant _) cla). 
+Notation "[ 'tblattice' 'of' r ]" :=
+  (@tblattice_of _ (Phant _) r _ id _ id _ id)
+  (at level 0, format "[ 'tblattice'  'of'  r ]").
 End Exports.
 
 End TBLattice.
@@ -889,6 +908,39 @@ Proof.
 by move=> x; apply/eqP; rewrite -leEmeet lex1.
 Qed.
 End TBLatticeTheory.
+
+(* ==================================================================== *)
+
+Section DualTBLattice.
+
+Context {T: eqType} (L : {tblattice T}).
+
+Lemma dual_lex1 : forall x : T, (top L) <=_(L^~) x.
+Proof.
+exact: lex1.
+Qed.
+
+Lemma dual_le0x : forall x: T, x <=_(L^~) (bottom L).
+Proof.
+exact: le0x.
+Qed.
+
+Definition DualTBLatticeClass := TBLatticeClass dual_le0x dual_lex1.
+Canonical DualTBLatticePack := TBLatticePack DualTBLatticeClass.
+
+Lemma dual_top : top (L^~) = bottom L.
+Proof.
+by [].
+Qed.
+
+Lemma dual_bot : bottom (L^~) = top L.
+Proof.
+by [].
+Qed.
+
+
+
+End DualTBLattice.
 
 (* ==================================================================== *)
 Section BigOps.
@@ -1000,7 +1052,7 @@ End SubLattices.
 
 (* ==================================================================== *)
 Section SubLatticesTheory.
-Context {T : choiceType} (L : {tblattice T}) (S : subLattice L).
+Context {T : choiceType} (L : {lattice T}) (S : subLattice L).
 
 Lemma stable_join : forall x y, x \in S -> y \in S ->
   join L x y \in S.
@@ -1008,10 +1060,43 @@ Proof. case: S => /= fS stablefS; case:(stableP L fS stablefS) => _; apply.
 Qed.
 (*WHY ?*)
 
+Lemma mem_join : forall x y,
+  x \in (S : {fset _}) -> y \in (S : {fset _})
+    -> join L x y \in (S : {fset _}).
+Proof. by case: S => /= fS /stableP[]. Qed.
+
 Lemma mem_meet : forall x y,
   x \in (S : {fset _}) -> y \in (S : {fset _})
     -> meet L x y \in (S : {fset _}).
 Proof. by case: S => /= fS /stableP[]. Qed.
+
+End SubLatticesTheory.
+
+(* ================================================================== *)
+
+Section DualSubLattices.
+
+Context {T: choiceType} (L : {lattice T}) (S : subLattice L).
+
+Lemma dual_stable: stable ([lattice of L^~]) S.
+Proof.
+apply/stableP; rewrite /= dual_meet dual_join; split.
+- exact: mem_join.
+- exact: mem_meet.
+Qed.
+
+Canonical DualSubLattice := SubLattice dual_stable. 
+
+End DualSubLattices.
+
+Notation "S '^~s'" := (DualSubLattice S) (at level 0).
+
+
+(* =================================================================== *)
+
+Section SubTBLatticesTheory.
+
+Context {T: choiceType} (L : {tblattice T}) (S: subLattice L).
 
 Definition subtop := \big [join L/bottom L]_(i <- S) i.
 Definition subbot := \big [meet L/top L]_(i <- S) i.
@@ -1077,7 +1162,7 @@ Proof.
 move=> aS le_Sa; rewrite /subtop (perm_big _ (perm_to_rem aS)) /=.
 by rewrite big_cons; apply/join_idPr/joinsP_seq => i /mem_rem /le_Sa.
 Qed.
-End SubLatticesTheory.
+End SubTBLatticesTheory.
 
 Notation "''top_' S" := (subtop S) (at level 8, S at level 2, format "''top_' S").
 Notation "''bot_' S" := (subbot S) (at level 8, S at level 2, format "''bot_' S").
