@@ -1,7 +1,8 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
+From HB Require Import structures.
 
-Set   Implicit Arguments.
+Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
@@ -34,6 +35,33 @@ Definition fset_ind (T : choiceType) (P : {fset T} -> Prop) :=
   @fset_rect T P.
 
 (* ==================================================================== *)
+
+(*
+(*Test HB*)
+
+HB.mixin Record EQType_of_Type T :=
+  {
+    op : rel T;
+    eq_ax : Equality.axiom op
+  }.
+HB.structure Definition EQType := {T of EQType_of_Type T}.
+
+HB.mixin Record porder_of_EQType T of (EQType T) :=
+  {
+    le : rel T;
+    lt : rel T;
+    lexx : reflexive le;
+    le_anti : antisymmetric le;
+    le_trans : transitive le;
+    ostrict : forall x y : T, lt x y = (~~ op x y) && (le x y)
+  }.
+HB.structure Definition POrder := {T of porder_of_EQType T &}.
+Notation "x <=_ r y" := (@le r x y) (at level 65, r at level 2).
+Check @le.
+Check forall (r: POrder.type) (x:r), x <=_r x.
+
+(*End of test HB*)
+*)
 Module Order.
 Section ClassDef.
 
@@ -1269,8 +1297,8 @@ Notation " [< a ; b >]_ S " := (@SubLatInterval _ S a b)
 
 Lemma in_intervalP L (S: subLattice L) a b x:
   reflect
-   [/\ x \in (S : {fset _}), a <=_L x & x <=_L b]
-    (x \in ( ([< a ; b >]_S) : {fset _})).
+   [/\ x \in S, a <=_L x & x <=_L b]
+    (x \in [< a ; b >]_S).
 Proof.
 apply/(iffP idP).
 - by rewrite in_fsetE unfold_in => /and3P [? ? ?].
@@ -1354,7 +1382,7 @@ Proof.
 by move => x; rewrite !inE /= [X in _ && X]andbC.
 Qed.
 
-
+(*
 (* -------------------------------------------------------------------- *)
 Lemma atom_minset L (S:subLattice L) a b :
      a \in (S : {fset _}) -> b \in (S : {fset _}) -> a <=_L b
@@ -1374,7 +1402,7 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 Lemma sub_atomic_top L (S : subLattice L) (x : T) :
-  x \in (S : {fset _}) -> 'bot_S <_L x ->
+  x \in S -> 'bot_S <_L x ->
     exists2 a, atom S a & ([< x ; subtop S>]_S `<=` ([< a; subtop S >]_S))%fset.
 Proof.
 move=> xS lt0x; have nz_S: S != fset0 :> {fset _} by apply/fset0Pn; exists x.
@@ -1393,15 +1421,44 @@ case/in_intervalP=> aS le0a le_ax lt0a min_a; exists a; last first.
     by apply/ltW/(lt_le_trans lt_ya).  
   by move/min_a => /(_ lt0y) /negbTE <-.
 Qed.
+*)
+
+Lemma sub_atomic L (S: subLattice L) x:
+  x \in S -> 'bot_S <_L x ->
+  exists y, atom S y /\ y <=_L x.
+Proof.
+set S' := ([< 'bot_S; x >]_S `\` [fset 'bot_S; x])%fset.
+move=> x_in_S bot_lt_x.
+case/boolP: (S' == fset0).
+- rewrite fsetD_eq0 => /fsubsetP intv_sub.
+  exists x; split; rewrite ?lexx //.
+  apply/atomP; split => // y y_in_S; apply: contraTN => y_lt_x.
+  rewrite lt_neqAle (subbot_leE y_in_S) andbT negbK.
+  have/intv_sub: (y \in [<'bot_S; x>]_S) by
+    apply/in_intervalP; split; [by []| exact: subbot_leE |exact:ltW].
+  by rewrite !inE (lt_eqF y_lt_x) orbF.
+- case/(minset_neq0 L)/fset0Pn => y /mem_minsetE.
+  rewrite !inE negb_or.
+  case => /and4P [/andP [yNbot y_neq_x] y_in_S bot_le_y y_le_x mini_y].
+  exists y; split => //; apply/atomP; split => //.
+    by rewrite lt_neqAle yNbot bot_le_y.
+  move=> x0 x0_in_S bot_lt_x0; apply: contraT; rewrite negbK => x0_lt_y.
+  have/mini_y: x0 \in S'.
+    rewrite !inE x0_in_S eq_sym (lt_eqF bot_lt_x0) (ltW bot_lt_x0) /=.
+    rewrite -ostrict; exact: (lt_le_trans x0_lt_y).
+  by rewrite x0_lt_y.
+Qed.
+
 
 (* -------------------------------------------------------------------- *)
 Section IndIncr.
-Variable (P :  forall L, subLattice L -> Prop).
+Context (L : {tblattice T}).
+Variable (P : subLattice L -> Prop).
 
-Hypothesis (P_incr : forall L, forall (S: subLattice L), forall x,
+Hypothesis (P_incr : forall S, forall x,
   atom S x -> P S -> P [<x; 'top_S>]_S).
 
-Lemma ind_incr L (S : subLattice L) (x : T) :
+Lemma ind_incr (S : subLattice L) (x : T) :
   x \in S -> P S -> P [<x; 'top_S>]_S.
 Proof.
 move=> xS PS; move: {2}#|`_| (leqnn #|`[< 'bot_S; x >]_S|) => n.
@@ -1411,19 +1468,16 @@ elim: n S xS PS => [|n ih] S xS PS.
   - by rewrite subbot_leE. - by rewrite lexx.
 case/boolP: (atom S x) => [atom_Sx|atomN_Sx]; first by move=> _; apply: P_incr.
 case: (x =P 'bot_S) => [-> _|/eqP neq0_x]; first by rewrite intv_id.
-move=> sz; case: (@sub_atomic_top L S x) => //.
-- by rewrite ostrict subbot_leE // andbT eq_sym.
-move=> y atom_Sy; have yS: y \in (S : {fset _}) by case/atomP: atom_Sy.
+have bot_lt_x: 'bot_S <_L x by rewrite ostrict eq_sym neq0_x (subbot_leE xS).
+move=> sz; case: (sub_atomic xS bot_lt_x) => y [atom_Sy y_le_x].
+have yS: y \in S by case/atomP: atom_Sy.
 have nz_S: S != fset0 :> {fset _} by apply/fset0Pn; exists x.
-case/sub_interval=> //; try by rewrite ?subtop_leE.
-- by apply: subtop_stable.
 have ne_xy: x != y by apply: contraNneq atomN_Sx => ->.
-rewrite le_eqVlt eq_sym (negbTE ne_xy) /= => {ne_xy} lt_yx _.
 have: x \in ([< y; 'top_S >]_S : {fset _}).
-- by apply/in_intervalP; rewrite xS ltW 1?subtop_leE.
+- by apply/in_intervalP; rewrite xS y_le_x subtop_leE.
 move/ih => /(_ (P_incr atom_Sy PS)).
 rewrite !(intv0E, intv1E) 1?(subtop_stable, subtop_leE) //.
-rewrite !mono_interval ?(lexx, subtop_leE) //; last by apply/ltW.
+rewrite !mono_interval ?(lexx, subtop_leE) //.
 apply; rewrite -ltnS; pose X := 'bot_S |` [< 'bot_S; x >]_S `\ 'bot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // in0L_intv.
 apply: fproper_ltn_card; rewrite {}/X.
@@ -1440,27 +1494,37 @@ End IndIncr.
 
 (* -------------------------------------------------------------------- *)
 Section IndDecr.
-Variable (P : forall L, subLattice L -> Prop).
+Context (L : {tblattice T}).
+Variable (P : subLattice L -> Prop).
 
-Hypothesis (P_decr : forall L, forall (S: subLattice L), forall x,
+Hypothesis (P_decr : forall S, forall x,
   coatom S x -> P S -> P [<'bot_S; x>]_S).
 
-Lemma ind_decr L (S : subLattice L) (x : T) :
+Definition mirror := (fun r : rel nat => fun (x y : nat) => r y x).
+
+Lemma ind_decr (S : subLattice L) (x : T) :
   x \in S -> P S -> P [<'bot_S; x>]_S.
-Proof. (* From ind_incr, using the dual ordering *) Admitted.
+Proof.
+move=> x_in_S PS.
+have f: rel nat by admit.
+have : (mirror (mirror f)) = f.
+reflexivity. 
+Admitted.
+(* From ind_incr, using the dual ordering *)
 End IndDecr.
 
 (* -------------------------------------------------------------------- *)
 Section Ind.
-Variable (P : forall L, subLattice L -> Prop).
+Context (L : {tblattice T}).
+Variable (P : subLattice L -> Prop).
 
-Hypothesis (P_incr : forall L, forall (S: subLattice L), forall x,
+Hypothesis (P_incr : forall (S: subLattice L), forall x,
   atom S x -> P S -> P [<x; 'top_S>]_S).
-Hypothesis (P_decr : forall L, forall (S:subLattice L), forall x,
+Hypothesis (P_decr : forall (S:subLattice L), forall x,
   coatom S x -> P S -> P [<'bot_S; x>]_S).
 
-Lemma ind_id L (S : subLattice L) (x y : T) :
-  x \in (S : {fset _}) -> y \in (S : {fset _}) -> x <=_L y -> P S -> P [<x; y>]_S.
+Lemma ind_id (S : subLattice L) (x y : T) :
+  x \in S -> y \in S -> x <=_L y -> P S -> P [<x; y>]_S.
 Proof.
 move=> xS yS le_xy PS; have h: P [< x; 'top_S >]_S by apply: ind_incr.
 suff: P [< 'bot_[< x; 'top_S >]_S; y >]_[< x; 'top_S >]_S.
