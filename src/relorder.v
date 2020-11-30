@@ -360,6 +360,9 @@ Proof. by rewrite /= leEdual. Qed.
 Lemma dual_lt x y: (x <_(DualOrderPack) y) = y <_r x.
 Proof. by rewrite /= dual_strict leEdual ostrict eq_sym. Qed.
 
+Lemma dltoE x y: (dlto x y = y <_r x).
+Proof. by rewrite /dlto -dual_lt ostrict. Qed.
+
 End DualOrder.
 
 Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
@@ -389,21 +392,20 @@ Context {T : eqType}.
 Definition mixin_of (r : rel T) :=
   forall x y, r x y || r y x.
 
-Record class (le lt : rel T) := Class {
-  base : Order.class le lt;
+Record class (le lt dle: rel T) := Class {
+  base : Order.class le lt dle;
   mixin : mixin_of le
 }.
 
 Structure pack (phr : phant (rel T)) := Pack {
-  pack_le;
-  pack_lt;
-  pack_class : class pack_le pack_lt
+  pack_le; pack_lt; pack_dle;
+  pack_class : class pack_le pack_lt pack_dle
 }.
 
 Variable (phr : phant (rel T)) (rT : pack phr).
 
-Definition class_of := let: Pack _ _ c as rT' := rT
-  return class (pack_le rT') (pack_lt rT') in c.    
+Definition class_of := let: Pack _ _ _ c as rT' := rT
+  return class (pack_le rT') (pack_lt rT') (pack_dle rT') in c.    
 
 Canonical order := OrderPack (base class_of).
 End ClassDef.
@@ -427,10 +429,10 @@ Section TotalOrderTheory.
 Variables (T:eqType) (r : {torder T}).
 
 Lemma totalMP : total (leo r).
-Proof. by case: r => ?? []. Qed.
+Proof. by case: r => ? ? ? []. Qed.
 
-Lemma totalP : order (leo r).
-Proof. by case: r => ? ? [[]]. Qed. 
+Lemma totalP : axiom (leo r).
+Proof. by case: r => ? ? ? [[]]. Qed. 
 End TotalOrderTheory.
 
 (* ==================================================================== *)
@@ -827,7 +829,7 @@ Context (T: eqType) (r : {lattice T}).
 
 Lemma dual_leEmeet: forall x y, (x <=_(r^~) y) = ((join r x y) == x).
 Proof.
-by move=> x y /=; rewrite leEjoin joinC.
+by move=> x y /=; rewrite leEdual leEjoin joinC.
 Qed.
 
 Definition DualMeetClass :=
@@ -845,7 +847,7 @@ Qed.
 
 Lemma dual_leEjoin : forall y x, (y <=_(r^~) x) = ((meet r x y) == x).
 Proof.
-by move=> y x /=; rewrite leEmeet.
+by move=> y x /=; rewrite leEdual leEmeet.
 Qed.
 
 Definition DualLatticeClass := LatticeClass (meetC r) (meetA r) (meetxx r)
@@ -861,9 +863,6 @@ Lemma dual_join: join r^~ = meet r.
 Proof.
 by [].
 Qed.
-
-
-
 
 End DualLattice.
 
@@ -972,14 +971,14 @@ Section DualTBLattice.
 
 Context {T: eqType} (L : {tblattice T}).
 
-Lemma dual_lex1 : forall x : T, (top L) <=_(L^~) x.
+Lemma dual_lex1 x: (top L) <=_(L^~) x.
 Proof.
-exact: lex1.
+rewrite /= leEdual; exact: lex1.
 Qed.
 
-Lemma dual_le0x : forall x: T, x <=_(L^~) (bottom L).
+Lemma dual_le0x x: x <=_(L^~) (bottom L).
 Proof.
-exact: le0x.
+rewrite /= leEdual; exact: le0x.
 Qed.
 
 Definition DualTBLatticeClass := TBLatticeClass dual_le0x dual_lex1.
@@ -1133,8 +1132,9 @@ End SubLatticesTheory.
 Section DualSubLattices.
 
 Context {T: choiceType} (L : {lattice T}) (S : subLattice L).
+Check stable.
 
-Lemma dual_stable: stable ([lattice of L^~]) S.
+Lemma dual_stable: stable [lattice of L^~] S.
 (*TODO : why [lattice of ] is mandatory*)
 Proof.
 apply/stableP; rewrite /= dual_meet dual_join; split.
@@ -1147,6 +1147,14 @@ Canonical DualSubLattice := SubLattice dual_stable.
 End DualSubLattices.
 
 Notation "S '^~s'" := (DualSubLattice S) (at level 0).
+
+Section Test.
+
+Context {T: choiceType}.
+Variable (L : {tblattice T}) (S: subLattice L).
+Fail Check (S^~s)^~s = S.
+
+End Test.
 
 
 (* =================================================================== *)
@@ -1163,7 +1171,7 @@ Lemma dual_subbot L (S: subLattice L) : subbot S^~s = subtop S.
 Proof. by []. Qed.
 
 Lemma dual_subtop L (S: subLattice L) : subtop S^~s = subbot S.
-Proof. by []. Qed.
+Proof. by []. Qed. 
 
 Lemma subtop_leE L (S : subLattice L) : forall x, x \in S -> x <=_L subtop S.
 Proof.
@@ -1209,7 +1217,7 @@ Lemma ltF_subbot L (S: subLattice L) x : x \in S -> x <_L subbot S = false.
 Proof. move=> ?; rewrite -dual_lt -dual_subtop; exact: gtF_subtop. Qed.
 
 Lemma top_spec L (S: subLattice L) a : a \in S
-  -> (forall x, x \in (S : {fset _}) -> x <=_L a)
+  -> (forall x, x \in S -> x <=_L a)
   -> subtop S = a.
 Proof.
 move=> aS le_Sa; rewrite /subtop (perm_big _ (perm_to_rem aS)) /=.
@@ -1217,9 +1225,11 @@ by rewrite big_cons; apply/join_idPr/joinsP_seq => i /mem_rem /le_Sa.
 Qed.
 
 Lemma bot_spec L (S: subLattice L) a : a \in S
-  -> (forall x, x \in (S : {fset _}) -> a <=_L x)
+  -> (forall x, x \in S -> a <=_L x)
   -> subbot S = a.
-Proof. move=> ? ?; rewrite -dual_subtop; exact: top_spec. Qed.
+Proof.
+move=> a_in_S min_a; rewrite -dual_subtop; apply: top_spec => //= x x_in_S.
+rewrite leEdual; exact: min_a. Qed.
 
 
 
@@ -1255,12 +1265,15 @@ Qed.
 
 Lemma dual_atom L (S : subLattice L) a : atom S^~s a = coatom S a.
 Proof.
-by rewrite /atom /coatom /= !inE dual_subbot.
+rewrite /atom /coatom !inE /= !dltoE dual_subbot.
+by apply/congr1/congr1/congr1/eq_existsb => x; rewrite !dltoE.
+
 Qed.
 
 Lemma dual_coatom L (S : subLattice L) a : coatom S^~s a = atom S a.
 Proof.
-by rewrite /atom /coatom /= !inE dual_subtop.
+rewrite /atom /coatom /= !dual_lt dual_subtop.
+by apply/congr1/congr1/congr1/eq_existsb => x; rewrite !dltoE.
 Qed.
 
 Lemma coatomP L (S : subLattice L) a: reflect
@@ -1269,8 +1282,10 @@ Lemma coatomP L (S : subLattice L) a: reflect
   (coatom S a).
 Proof.
 apply/(iffP idP); rewrite -dual_atom.
-- by case/atomP => /=; rewrite !inE dual_subbot => -> -> atomic; split.
-- case => ? ? ?; apply/atomP; split => //.
+- case/atomP => /=; rewrite !inE dual_subbot !dltoE => -> -> atomic.
+  by split => // x; move: (atomic x); rewrite !dltoE.
+- case=> ? ? ?; apply/atomP; split => //; rewrite dual_subbot ?dual_lt //.
+  by move=> x; rewrite !dual_lt inE /=; move: x.
 Qed.
 
 End Atom.
@@ -1401,7 +1416,8 @@ Qed.
 Lemma dual_intv L (S: subLattice L) (a b: T):
   [<a; b>]_(S^~s) =i [<b; a>]_S.
 Proof.
-by move => x; rewrite !inE /= [X in _ && X]andbC.
+move => x; rewrite !inE /= [X in _ && X]andbC.
+by apply/congr1/congr2; rewrite dual_le.
 Qed.
 
 (*
@@ -1476,7 +1492,7 @@ Lemma sub_coatomic L (S: subLattice L) x:
 Proof.
 move=> x_in_S; have x_in_Ss : x \in S^~s by [].
 rewrite -dual_lt -dual_subbot; case/(sub_atomic x_in_Ss) => y.
-by rewrite dual_atom; case => coatom_y /= x_le_y; exists y.
+by rewrite dual_le dual_atom; case => coatom_y /= x_le_y; exists y.
 Qed.
 
 
@@ -1623,13 +1639,15 @@ Qed.
 End GLatticeTheory.
 
 (*==================================================================== *)
+(*
+
 Section SubsetLattice.
 Variable (T : finType).
 
 Definition subset (A B : {set T}) := A \subset B.
 Definition ssubset (A B : {set T}) := (A != B) && subset A B.
 
-Lemma subset_order : order subset.
+Lemma subset_order : axiom subset.
 Proof.
 split.
 - exact: subxx.
@@ -1731,3 +1749,5 @@ Canonical STBLatticePack := TBLatticePack STBLatticeClass.
 
 
 End SubsetLattice.
+
+*)
