@@ -1,6 +1,5 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
-From HB Require Import structures.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -73,22 +72,22 @@ Definition axiom (r : rel T) :=
 Definition strict (lt le: rel T) :=
   forall x y, lt x y = (x != y) && (le x y).
 
-Record class (le lt : rel T) := Class {
+Record class (le lt dle: rel T) := Class {
   _ : axiom le;
   _ : strict lt le;
+  _ : forall x y, dle x y = le y x;
 }.
 
 (*TODO : Confirm that the phantom is required*)
 Structure pack (phr : phant (rel T)) := Pack {
-  pack_le;
-  pack_lt;
-  pack_class : class pack_le pack_lt
+  pack_le; pack_lt; pack_dle;
+  pack_class : class pack_le pack_lt pack_dle
 }.
 
 Variable (phr : phant (rel T)) (r : pack phr).
 
-Definition class_of := let: Pack _ _ c as r0 := r
-  return (class (pack_le r0) (pack_lt r0)) in c.
+Definition class_of := let: Pack _ _ _ c as r0 := r
+  return (class (pack_le r0) (pack_lt r0)) (pack_dle r0) in c.
 
 Definition pack_of_le (r : rel T) :=
   fun (ro : pack phr) & phant_id (pack_le ro) r =>
@@ -102,10 +101,11 @@ End ClassDef.
 (* -------------------------------------------------------------------- *)
 Module Exports.
 Notation lto r := (pack_lt r).
-Notation leo r:= (pack_le r).
-Notation order le :=  (axiom le).
+Notation leo r := (pack_le r).
+Notation dleo r := (pack_dle r).
+Notation axiom le := (axiom le).
 Notation strict lt le := (strict lt le).
-Notation OrderClass ax st := (Class ax st).
+Notation OrderClass ax st du := (Class ax st du).
 Notation OrderPack cla := (Pack (Phant _) cla).
 Notation "{ 'porder' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'porder'  T }").
@@ -143,8 +143,9 @@ Local Notation "x < y < z"   := ((x < y) && (y < z)).
 Local Notation "x < y <= z"  := ((x < y) && (y <= z)).
 Local Notation "x <= y < z"  := ((x <= y) && (y < z)).
 
-Lemma orderP : order (<=:r).
-Proof. by case: r => le lt []. Qed.
+
+Lemma orderP : axiom (<=:r).
+Proof. by case: r => le ? ? []. Qed.
 
 Lemma lexx : reflexive (<=:r).
 Proof. by case: orderP. Qed.
@@ -161,7 +162,7 @@ Qed.
 
 Lemma ostrict: forall (x y : T), (x < y) = (x != y) && (x <= y).
 Proof.
-by move=> x y; case: r => le lt [].
+by move=> x y; case: r => le lt ? [].
 Qed.
 
 Lemma ltxx x : x < x = false.
@@ -310,53 +311,74 @@ End FsetOrderTheory.
 Section DualOrder.
 
 Context (T: eqType).
+Variable (r : {porder T}).
 
-Notation mirror := (fun r : rel T => fun (x y : T) => r y x).
+Definition dlto x y := (x != y) && (dleo r x y).
 
-Variable (r: {porder T}).
-
-Lemma dual_lexx : reflexive (mirror <=:r).
+Lemma leEdual x y : dleo r x y = y <=_r x.
 Proof.
-exact: lexx.
+by case: r => ? ? ? [].
 Qed.
 
-Lemma dual_le_anti : antisymmetric (mirror <=:r).
+Lemma dual_lexx : reflexive (dleo r).
 Proof.
-by move=> x y; move/le_anti => ->.
+move=> x; rewrite leEdual; exact: lexx.
 Qed.
 
-Lemma dual_le_trans : transitive (mirror <=:r).
-move=> y x z le_yx le_zy.
+Lemma dual_le_anti : antisymmetric (dleo r).
+Proof.
+by move=> x y; rewrite !leEdual; move/le_anti => ->.
+Qed.
+
+Lemma dual_le_trans : transitive (dleo r).
+move=> y x z; rewrite !leEdual => le_yx le_zy.
 exact: (le_trans le_zy).
 Qed.
 
-Lemma dual_order : order (mirror <=:r).
+Lemma dual_order : axiom (dleo r).
 Proof.
 split;
   [exact : dual_lexx | exact: dual_le_anti | exact: dual_le_trans].
 Qed.
 
-Lemma dual_strict : strict (mirror <:r) (mirror <=:r).
+Lemma dual_strict : strict dlto (dleo r).
 Proof.
-move=> x y; exact: lt_neqAle.
+by move=> x y; rewrite /dlto.
 Qed.
 
-Definition DualOrderClass := OrderClass dual_order dual_strict.
+Lemma dualleE x y : x <=_r y = (dleo r) y x.
+Proof.
+by rewrite leEdual.
+Qed. 
+
+Definition DualOrderClass := OrderClass dual_order dual_strict dualleE.
 Canonical DualOrderPack := OrderPack DualOrderClass.
 
-Lemma dual_le : forall x y, (x <=_(DualOrderPack) y) = y <=_r x.
-Proof.
-by [].
-Qed.
+Lemma dual_le x y: (x <=_(DualOrderPack) y) = y <=_r x.
+Proof. by rewrite /= leEdual. Qed.
 
-Lemma dual_lt : forall x y, (x <_(DualOrderPack) y) = y <_r x.
-Proof.
-by [].
-Qed.
+Lemma dual_lt x y: (x <_(DualOrderPack) y) = y <_r x.
+Proof. by rewrite /= dual_strict leEdual ostrict eq_sym. Qed.
 
 End DualOrder.
 
 Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
+
+Section DualOrderTheory.
+Context {T: eqType}.
+Variable (r : {porder T}).
+
+Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
+Proof. by []. Qed.
+
+Lemma lt_dual_inv x y: x <_((r^~)^~) y = x <_r y.
+Proof. by rewrite /= ostrict /dlto. Qed.
+
+Check (r = (r^~)^~).
+
+End DualOrderTheory.
+
+
 
 (* ==================================================================== *)
 Module TotalOrder.
