@@ -1449,6 +1449,14 @@ case/boolP: (S' == fset0).
   by rewrite x0_lt_y.
 Qed.
 
+Lemma sub_coatomic L (S: subLattice L) x:
+  x \in S -> x <_L 'top_S -> exists y, coatom S y /\ x <=_L y.
+Proof.
+move=> x_in_S; have x_in_Ss : x \in S^~s by [].
+rewrite -dual_lt -dual_subbot; case/(sub_atomic x_in_Ss) => y.
+by rewrite dual_atom; case => coatom_y /= x_le_y; exists y.
+Qed.
+
 
 (* -------------------------------------------------------------------- *)
 Section IndIncr.
