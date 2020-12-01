@@ -345,7 +345,7 @@ End DualOrder.
 
 Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
 
-Section DualOrderTheory.
+Section DualOrderTest.
 Context {T: eqType}.
 Variable (r : {porder T}).
 
@@ -361,76 +361,10 @@ Proof. by []. Qed.
 Goal [leo: (<=:((r^~)^~))] = r.
 Proof. by []. Qed.
 
-End DualOrderTheory.
-
-(*Lemma leEdual x y : dleo r x y = y <=_r x.
-Proof.
-by case: r => ? ? ? [].
-Qed.*)
-
-Lemma dual_lexx : reflexive (dleo r).
-Admitted.
-(* Proof. move=> x; rewrite leEdual; exact: lexx. Qed.*)
-
-Lemma dual_le_anti : antisymmetric (dleo r).
-Admitted.
-(*Proof.
-by move=> x y; rewrite !leEdual; move/le_anti => ->.
-Qed.*)
-
-Lemma dual_le_trans : transitive (dleo r).
-Admitted.
-  (*move=> y x z; rewrite !leEdual => le_yx le_zy.
-exact: (le_trans le_zy).
-Qed.*)
-
-Lemma dual_order : axiom (dleo r).
-Proof.
-split;
-  [exact : dual_lexx | exact: dual_le_anti | exact: dual_le_trans].
-Qed.
-
-Lemma dual_strict : strict dlto (dleo r).
-Proof.
-by move=> x y; rewrite /dlto.
-Qed.
-
-Lemma dualleE x y : x <=_r y = (dleo r) y x.
-Proof.
-by rewrite leEdual.
-Qed.
-
-
-Lemma dual_le x y: (x <=_(DualOrderPack) y) = y <=_r x.
-Proof. by rewrite /= leEdual. Qed.
-
-Lemma dual_lt x y: (x <_(DualOrderPack) y) = y <_r x.
-Proof. by rewrite /= dual_strict leEdual ostrict eq_sym. Qed.
-
-Lemma dltoE x y: (dlto x y = y <_r x).
-Proof. by rewrite /dlto -dual_lt ostrict. Qed.
-
-End DualOrder.
-
-Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
-
-Section DualOrderTheory.
-Context {T: eqType}.
-Variable (r : {porder T}).
-
-Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
-Proof. by []. Qed.
-
-Lemma lt_dual_inv x y: x <_((r^~)^~) y = x <_r y.
-Proof. by rewrite /= ostrict /dlto. Qed.
-
-Check (r = (r^~)^~).
-End DualOrderTheory.
-
-
+End DualOrderTest.
 
 (* ==================================================================== *)
-Module TotalOrder.
+(*Module TotalOrder.
 Section ClassDef.
 
 Context {T : eqType}.
@@ -480,7 +414,7 @@ Proof. by case: r => ? ? ? []. Qed.
 
 Lemma totalP : axiom (leo r).
 Proof. by case: r => ? ? ? [[]]. Qed.
-End TotalOrderTheory.
+End TotalOrderTheory.*)
 
 (* ==================================================================== *)
 Module Meet.
@@ -488,18 +422,26 @@ Module Meet.
 Section ClassDef.
 Context {T : eqType}.
 
+Set Primitive Projections.
 Record class (r : {porder T}) := Class {
   meet : T -> T -> T;
   _ : commutative meet;
   _ : associative meet;
   _ : idempotent meet;
-  _ : forall x y, (x <=_r y) = (meet x y == x)
+  _ : forall x y, (x <=_r y) = (meet x y == x);
+  djoin : T -> T -> T;
+  _ : commutative djoin;
+  _ : associative djoin;
+  _ : idempotent djoin;
+  _ : forall x y, (x <=_(r^~) y) = (djoin y x == y) (* check *)
 }.
 
 Structure pack (phr : phant T) := Pack {
   pack_order;
   pack_class : class pack_order
 }.
+Unset Primitive Projections.
+
 Local Coercion pack_order: pack >-> Order.pack.
 
 Variables (phr : phant T) (mr : pack phr).
