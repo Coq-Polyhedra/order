@@ -10,6 +10,25 @@ Import GRing.Theory Num.Theory.
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
 
+(* Stupid test on primitive projections *)
+Section StupidTest.
+
+Record foo := Foo { bar1 : nat; bar2: nat }.
+
+Goal forall r: foo, r = Foo (bar1 r) (bar2 r).
+move => r. Fail done.
+Admitted.
+
+Set Primitive Projections.
+Record foo' := Foo' { bar1' : nat; bar2': nat }.
+Unset Primitive Projections.
+
+Goal forall r: foo', r = Foo' (bar1' r) (bar2' r).
+move => r. done.
+Qed.
+
+End StupidTest.
+
 (* ==================================================================== *)
 Section FSetRect.
 Context (T : choiceType) (P : {fset T} -> Type).
@@ -72,22 +91,28 @@ Definition axiom (r : rel T) :=
 Definition strict (lt le: rel T) :=
   forall x y, lt x y = (x != y) && (le x y).
 
-Record class (le lt dle: rel T) := Class {
-  _ : axiom le;
-  _ : strict lt le;
-  _ : forall x y, dle x y = le y x;
+Set Primitive Projections.
+
+Record class (le lt dle dlt: rel T) := Class {
+  foo : axiom le;
+  bar : strict lt le;
+  dfoo : axiom dle;
+  dbar : strict dlt dle;
 }.
 
 (*TODO : Confirm that the phantom is required*)
-Structure pack (phr : phant (rel T)) := Pack {
-  pack_le; pack_lt; pack_dle;
-  pack_class : class pack_le pack_lt pack_dle
+Structure pack (phr : phant T) := Pack {
+  pack_le; pack_lt;
+  pack_dle; pack_dlt;
+  pack_class : class pack_le pack_lt pack_dle pack_dlt;
 }.
 
-Variable (phr : phant (rel T)) (r : pack phr).
+Unset Primitive Projections.
 
-Definition class_of := let: Pack _ _ _ c as r0 := r
-  return (class (pack_le r0) (pack_lt r0)) (pack_dle r0) in c.
+Variable (phr : phant T) (r : pack phr).
+
+Definition class_of := let: Pack _ _ _ _ c as r0 := r
+  return (class (pack_le r0) (pack_lt r0) (pack_dle r0) (pack_dlt r0)) in c.
 
 Definition pack_of_le (r : rel T) :=
   fun (ro : pack phr) & phant_id (pack_le ro) r =>
@@ -96,6 +121,7 @@ Definition pack_of_le (r : rel T) :=
 Definition pack_of_lt (r : rel T) :=
   fun (ro : pack phr) & phant_id (pack_lt ro) r =>
   ro.
+
 End ClassDef.
 
 (* -------------------------------------------------------------------- *)
@@ -103,11 +129,13 @@ Module Exports.
 Notation lto r := (pack_lt r).
 Notation leo r := (pack_le r).
 Notation dleo r := (pack_dle r).
+Notation dlto r := (pack_dlt r).
 Notation axiom le := (axiom le).
+Notation class_of := class_of.
 Notation strict lt le := (strict lt le).
-Notation OrderClass ax st du := (Class ax st du).
+Notation OrderClass := Class.
 Notation OrderPack cla := (Pack (Phant _) cla).
-Notation "{ 'porder' T }" := (pack (Phant (rel T)))
+Notation "{ 'porder' T }" := (pack (Phant T))
   (at level 0, format "{ 'porder'  T }").
 Notation "<=: r" := (leo r) (at level 2, r at level 1, format "<=: r").
 Notation "<: r" := (lto r) (at level 2, r at level 1, format "<: r").
@@ -145,25 +173,19 @@ Local Notation "x <= y < z"  := ((x <= y) && (y < z)).
 
 
 Lemma orderP : axiom (<=:r).
-Proof. by case: r => le ? ? []. Qed.
+Proof. by case: r => le ? ? ? []. Qed.
 
 Lemma lexx : reflexive (<=:r).
 Proof. by case: orderP. Qed.
 
 Lemma le_anti : antisymmetric (<=:r).
-Proof.
-by case: orderP.
-Qed.
+Proof. by case: orderP. Qed.
 
 Lemma le_trans : transitive (<=:r).
-Proof.
-by case: orderP.
-Qed.
+Proof. by case: orderP. Qed.
 
 Lemma ostrict: forall (x y : T), (x < y) = (x != y) && (x <= y).
-Proof.
-by move=> x y; case: r => le lt ? [].
-Qed.
+Proof. by move=> x y; case: r => le lt ? ? []. Qed.
 
 Lemma ltxx x : x < x = false.
 Proof. by rewrite ostrict eq_refl lexx. Qed.
@@ -185,7 +207,7 @@ Qed.
 
 Lemma gt_eqF x y: y < x -> x == y = false.
 Proof.
-by apply: contraTF => /eqP ->; rewrite ltxx. 
+by apply: contraTF => /eqP ->; rewrite ltxx.
 Qed.
 
 Lemma eq_le x y: (x == y) = (x <= y <= x).
@@ -313,27 +335,54 @@ Section DualOrder.
 Context (T: eqType).
 Variable (r : {porder T}).
 
-Definition dlto x y := (x != y) && (dleo r x y).
+Definition DualOrderClass := Order.Class (Order.dfoo (Order.pack_class r))
+                                        (Order.dbar (Order.pack_class r))
+                                        (Order.foo (Order.pack_class r))
+                                        (Order.bar (Order.pack_class r)).
+Canonical DualOrderPack := @Order.Pack _ (Phant _) (dleo r) (dlto r) (leo r) (lto r) DualOrderClass.
 
-Lemma leEdual x y : dleo r x y = y <=_r x.
+End DualOrder.
+
+Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
+
+Section DualOrderTheory.
+Context {T: eqType}.
+Variable (r : {porder T}).
+
+Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
+Proof. by []. Qed.
+
+Lemma lt_dual_inv x y: x <_((r^~)^~) y = x <_r y.
+Proof. by []. Qed.
+
+Goal r = (r^~)^~.
+Proof. by []. Qed.
+
+Goal [leo: (<=:((r^~)^~))] = r.
+Proof. by []. Qed.
+
+End DualOrderTheory.
+
+(*Lemma leEdual x y : dleo r x y = y <=_r x.
 Proof.
 by case: r => ? ? ? [].
-Qed.
+Qed.*)
 
 Lemma dual_lexx : reflexive (dleo r).
-Proof.
-move=> x; rewrite leEdual; exact: lexx.
-Qed.
+Admitted.
+(* Proof. move=> x; rewrite leEdual; exact: lexx. Qed.*)
 
 Lemma dual_le_anti : antisymmetric (dleo r).
-Proof.
+Admitted.
+(*Proof.
 by move=> x y; rewrite !leEdual; move/le_anti => ->.
-Qed.
+Qed.*)
 
 Lemma dual_le_trans : transitive (dleo r).
-move=> y x z; rewrite !leEdual => le_yx le_zy.
+Admitted.
+  (*move=> y x z; rewrite !leEdual => le_yx le_zy.
 exact: (le_trans le_zy).
-Qed.
+Qed.*)
 
 Lemma dual_order : axiom (dleo r).
 Proof.
@@ -349,10 +398,8 @@ Qed.
 Lemma dualleE x y : x <=_r y = (dleo r) y x.
 Proof.
 by rewrite leEdual.
-Qed. 
+Qed.
 
-Definition DualOrderClass := OrderClass dual_order dual_strict dualleE.
-Canonical DualOrderPack := OrderPack DualOrderClass.
 
 Lemma dual_le x y: (x <=_(DualOrderPack) y) = y <=_r x.
 Proof. by rewrite /= leEdual. Qed.
@@ -378,7 +425,6 @@ Lemma lt_dual_inv x y: x <_((r^~)^~) y = x <_r y.
 Proof. by rewrite /= ostrict /dlto. Qed.
 
 Check (r = (r^~)^~).
-
 End DualOrderTheory.
 
 
@@ -397,17 +443,18 @@ Record class (le lt dle: rel T) := Class {
   mixin : mixin_of le
 }.
 
-Structure pack (phr : phant (rel T)) := Pack {
+Structure pack (phr : phant T) := Pack {
   pack_le; pack_lt; pack_dle;
   pack_class : class pack_le pack_lt pack_dle
 }.
 
-Variable (phr : phant (rel T)) (rT : pack phr).
+Variable (phr : phant T) (rT : pack phr).
 
 Definition class_of := let: Pack _ _ _ c as rT' := rT
-  return class (pack_le rT') (pack_lt rT') (pack_dle rT') in c.    
+  return class (pack_le rT') (pack_lt rT') (pack_dle rT') in c.
 
 Canonical order := OrderPack (base class_of).
+
 End ClassDef.
 
 (* -------------------------------------------------------------------- *)
@@ -432,7 +479,7 @@ Lemma totalMP : total (leo r).
 Proof. by case: r => ? ? ? []. Qed.
 
 Lemma totalP : axiom (leo r).
-Proof. by case: r => ? ? ? [[]]. Qed. 
+Proof. by case: r => ? ? ? [[]]. Qed.
 End TotalOrderTheory.
 
 (* ==================================================================== *)
@@ -449,13 +496,13 @@ Record class (r : {porder T}) := Class {
   _ : forall x y, (x <=_r y) = (meet x y == x)
 }.
 
-Structure pack (phr : phant (rel T)) := Pack {
+Structure pack (phr : phant T) := Pack {
   pack_order;
   pack_class : class pack_order
 }.
 Local Coercion pack_order: pack >-> Order.pack.
 
-Variables (phr : phant (rel T)) (mr : pack phr).
+Variables (phr : phant T) (mr : pack phr).
 
 Canonical porder_of :=
   Order.Pack phr (Order.pack_class mr).
@@ -475,7 +522,7 @@ Notation "{ 'meetSemiLattice' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'meetSemiLattice'  T }").
 Notation MeetClass meetC meetA meetxx leEmeet :=
   (Class meetC meetA meetxx leEmeet).
-Notation MeetPack cla := (Pack (Phant _)cla). 
+Notation MeetPack cla := (Pack (Phant _)cla).
 End Exports.
 End Meet.
 
@@ -590,14 +637,14 @@ Record class (r: {porder T}) := Class
   _ : lowest (leo r) join
 }.
 
-Structure pack (phr : phant (rel T)) := Pack
+Structure pack (phr : phant T) := Pack
 {
   pack_order;
   pack_class : class pack_order
 }.
 Local Coercion pack_order: pack >-> Order.pack.
 
-Variables (phr : phant (rel T)) (mr : pack phr).
+Variables (phr : phant T) (mr : pack phr).
 
 Canonical order_of :=
   Order.Pack _ phr
@@ -694,15 +741,15 @@ Record class (r : {meetSemiLattice T}) := Class {
   _ : idempotent join;
   _ : forall y x, meet r x (join x y) = x;
   _ : forall y x, join x (meet r x y) = x;
-  _ : forall y x, (y <=_r x) = ((join x y) == x) 
+  _ : forall y x, (y <=_r x) = ((join x y) == x)
 }.
 
-Structure pack (phr : phant (rel T)) := Pack {
+Structure pack (phr : phant T) := Pack {
   pack_order;
   pack_class : class pack_order
 }.
 
-Variables (phr : phant (rel T)) (mjr : pack phr).
+Variables (phr : phant T) (mjr : pack phr).
 Local Coercion pack_order : pack >-> Meet.pack.
 Local Coercion pack_class : pack >-> class.
 
@@ -711,7 +758,7 @@ Canonical porder_of := Order.Pack phr (Order.class_of (Meet.pack_order mjr)).
 Definition join_of (r : {porder T}) :=
   fun (mr : {meetSemiLattice T}) & phant_id (Meet.pack_order mr) r =>
   fun (lr : pack phr) & phant_id (pack_order lr) mr =>
-  join lr.    
+  join lr.
 
 Definition lattice_of (r : {porder T}) :=
   fun (mr : {meetSemiLattice T}) & phant_id (Meet.pack_order mr) r =>
@@ -879,7 +926,7 @@ Record class (L : {lattice T}) := Class {
   _ : forall x, bottom <=_L x
 }.
 
-Structure pack (phr : phant (rel T)) := Pack {
+Structure pack (phr : phant T) := Pack {
   pack_lattice;
   pack_class : class pack_lattice
 }.
@@ -887,7 +934,7 @@ Structure pack (phr : phant (rel T)) := Pack {
 Local Coercion pack_lattice: pack >-> Lattice.pack.
 Local Coercion pack_class: pack >-> class.
 
-Variable (phr : phant (rel T)) (bl : pack phr).
+Variable (phr : phant T) (bl : pack phr).
 
 Canonical porder_of := Lattice.porder_of bl.
 
@@ -918,10 +965,10 @@ Coercion pack_class: pack >-> class.
 Canonical porder_of.
 Notation bottom r := (@bottom_of _ (Phant _) r _ id _ id _ id).
 Notation top r := (@top_of _ (Phant _) r _ id _ id _ id).
-Notation "{ 'tblattice' T }" := (pack (Phant (rel T))) 
+Notation "{ 'tblattice' T }" := (pack (Phant (rel T)))
   (at level 0, format "{ 'tblattice'  T }").
 Notation TBLatticeClass topEle botEle := (Class topEle botEle).
-Notation TBLatticePack cla := (Pack (Phant _) cla). 
+Notation TBLatticePack cla := (Pack (Phant _) cla).
 Notation "[ 'tblattice' 'of' r ]" :=
   (@tblattice_of _ (Phant _) r _ id _ id _ id)
   (at level 0, format "[ 'tblattice'  'of'  r ]").
@@ -1142,7 +1189,7 @@ apply/stableP; rewrite /= dual_meet dual_join; split.
 - exact: mem_meet.
 Qed.
 
-Canonical DualSubLattice := SubLattice dual_stable. 
+Canonical DualSubLattice := SubLattice dual_stable.
 
 End DualSubLattices.
 
@@ -1171,7 +1218,7 @@ Lemma dual_subbot L (S: subLattice L) : subbot S^~s = subtop S.
 Proof. by []. Qed.
 
 Lemma dual_subtop L (S: subLattice L) : subtop S^~s = subbot S.
-Proof. by []. Qed. 
+Proof. by []. Qed.
 
 Lemma subtop_leE L (S : subLattice L) : forall x, x \in S -> x <=_L subtop S.
 Proof.
@@ -1260,7 +1307,7 @@ apply/(iffP idP).
   by rewrite negb_and bot_lt_y /=.
 - case; rewrite /atom => -> -> /= atomic; apply/existsPn.
   move=> x; rewrite negb_and -implybE; apply/implyP => ?.
-  apply/atomic => //; exact: fsvalP. 
+  apply/atomic => //; exact: fsvalP.
 Qed.
 
 Lemma dual_atom L (S : subLattice L) a : atom S^~s a = coatom S a.
@@ -1296,7 +1343,7 @@ Section SubLatticeInd.
 Context {T : choiceType}.
 Implicit Type (L:{tblattice T}).
 
-Definition interval L (S : subLattice L) (a b : T) := 
+Definition interval L (S : subLattice L) (a b : T) :=
   [fset x | x in S & (a <=_L x) && (x <=_L b)].
 
 Lemma intervalE L (S : subLattice L) a b (x : T) :
@@ -1376,7 +1423,7 @@ move=> S a b c d a_in_S b_in_S a_le_b c_le_d; split.
   apply/in_intervalP; rewrite x_in_S; split=> //;
     [exact:(le_trans c_le_a) | exact: (le_trans x_le_b)].
 Qed.
-    
+
 Lemma inL_intv L (S : subLattice L) (x y : T) :
   x \in S -> x <=_L y -> x \in [< x; y >]_S.
 Proof. by move=> ??; apply/in_intervalP; split=> //; rewrite lexx. Qed.
@@ -1456,7 +1503,7 @@ case/in_intervalP=> aS le0a le_ax lt0a min_a; exists a; last first.
 - apply/atomP; split=> // y yS lt0y; case/boolP: (_ <_L _) => //= lt_ya.
   have: y \in ([<subbot S; x>]_S : {fset _}).
   - apply/in_intervalP; split=> //; first by apply: subbot_leE.
-    by apply/ltW/(lt_le_trans lt_ya).  
+    by apply/ltW/(lt_le_trans lt_ya).
   by move/min_a => /(_ lt0y) /negbTE <-.
 Qed.
 *)
@@ -1554,7 +1601,7 @@ Proof.
 move=> x_in_S PS.
 have f: rel nat by admit.
 have : (mirror (mirror f)) = f.
-reflexivity. 
+reflexivity.
 Admitted.
 (* From ind_incr, using the dual ordering *)
 End IndDecr.
@@ -1594,7 +1641,7 @@ Record class (L : {tblattice T}) := Class {
   _ : forall x y, x <=_L y -> ((rank x).+1 < rank y)%N -> exists z, (x <_L z) && (z <_L y)
 }.
 
-Structure pack (phr : phant (rel T)) := Pack {
+Structure pack (phr : phant T) := Pack {
   pack_lattice;
   pack_class : class pack_lattice
 }.
@@ -1602,9 +1649,9 @@ Structure pack (phr : phant (rel T)) := Pack {
 Local Coercion pack_lattice : pack >-> TBLattice.pack.
 Local Coercion pack_class : pack >-> class.
 
-Variable (phr : phant (rel T)) (gl : pack phr).
+Variable (phr : phant T) (gl : pack phr).
 
-Canonical porder_of := TBLattice.porder_of gl. 
+Canonical porder_of := TBLattice.porder_of gl.
 
 End ClassDef.
 Module Exports.
