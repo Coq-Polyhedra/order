@@ -339,7 +339,8 @@ Definition DualOrderClass := Order.Class (Order.dfoo (Order.pack_class r))
                                         (Order.dbar (Order.pack_class r))
                                         (Order.foo (Order.pack_class r))
                                         (Order.bar (Order.pack_class r)).
-Canonical DualOrderPack := @Order.Pack _ (Phant _) (dleo r) (dlto r) (leo r) (lto r) DualOrderClass.
+Canonical DualOrderPack :=
+  @Order.Pack _ (Phant _) (dleo r) (dlto r) (leo r) (lto r) DualOrderClass.
 
 End DualOrder.
 
@@ -425,15 +426,15 @@ Context {T : eqType}.
 Set Primitive Projections.
 Record class (r : {porder T}) := Class {
   meet : T -> T -> T;
-  _ : commutative meet;
-  _ : associative meet;
-  _ : idempotent meet;
-  _ : forall x y, (x <=_r y) = (meet x y == x);
+  meetC: commutative meet;
+  meetA : associative meet;
+  meetxx : idempotent meet;
+  leEmeet : forall x y, (x <=_r y) = (meet x y == x);
   djoin : T -> T -> T;
-  _ : commutative djoin;
-  _ : associative djoin;
-  _ : idempotent djoin;
-  _ : forall x y, (x <=_(r^~) y) = (djoin y x == y) (* check *)
+  djoinC : commutative djoin;
+  djoinA : associative djoin;
+  djoinxx : idempotent djoin;
+  leEdjoin : forall x y, (x <=_(r^~) y) = (djoin y x == y) (* check *)
 }.
 
 Structure pack (phr : phant T) := Pack {
@@ -460,11 +461,8 @@ Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
 Notation meet r := (@meet_of _ (Phant _) r _ id).
-Notation "{ 'meetSemiLattice' T }" := (pack (Phant (rel T)))
+Notation "{ 'meetSemiLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'meetSemiLattice'  T }").
-Notation MeetClass meetC meetA meetxx leEmeet :=
-  (Class meetC meetA meetxx leEmeet).
-Notation MeetPack cla := (Pack (Phant _)cla).
 End Exports.
 End Meet.
 
@@ -560,54 +558,54 @@ Lemma leI2 x y z t : x <= z -> y <= t -> x `&` y <= z `&` t.
 Proof. by move=> xz yt; rewrite lexI !leIx2 ?xz ?yt ?orbT. Qed.
 End MeetTheory.
 
-(*Module Join.
+(* ===================================================================== *)
+
+Module Join.
 
 Section ClassDef.
+Context {T : eqType}.
 
-Variable (T: eqType).
-
-Definition upper_bound (r:rel T) (m : T -> T -> T) :=
-  forall x y, r x (m x y) && r y (m x y).
-
-Definition lowest (r : rel T) (m : T -> T -> T) :=
-  forall x y w, r x w -> r y w -> r (m x y) w.
-
-Record class (r: {porder T}) := Class
-{
+Set Primitive Projections.
+Record class (r : {porder T}) := Class {
   join : T -> T -> T;
-  _ : upper_bound (leo r) join;
-  _ : lowest (leo r) join
+  joinC : commutative join;
+  joinA : associative join;
+  joinxx : idempotent join;
+  leEjoin : forall x y, (x <=_r y) = (join y x == y);
+  dmeet : T -> T -> T;
+  dmeetC : commutative dmeet;
+  dmeetA : associative dmeet;
+  dmeetxx : idempotent dmeet;
+  leEdmeet : forall x y, (x <=_(r^~) y) = (dmeet x y == x) (* check *)
 }.
 
-Structure pack (phr : phant T) := Pack
-{
+Structure pack (phr : phant T) := Pack {
   pack_order;
   pack_class : class pack_order
 }.
+Unset Primitive Projections.
+
 Local Coercion pack_order: pack >-> Order.pack.
 
 Variables (phr : phant T) (mr : pack phr).
 
 Canonical order_of :=
-  Order.Pack _ phr
-    (Order.pack_le _ _ mr) (Order.pack_lt _ _ mr)
-    (Order.pack_class _ _ mr).
+  Order.Pack phr (Order.pack_class mr).
 
 Definition join_of (r : {porder T}) :=
-  fun (pr : pack phr) & phant_id (pack_order _ pr) r =>
-  join (pack_order _ pr) (pack_class _ pr).
+  fun (pr : pack phr) & phant_id (pack_order pr) r =>
+  join (pack_class pr).
 
 End ClassDef.
 Module Exports.
-Notation upper_bound := (upper_bound _).
-Notation lowest := (lowest _).
-Notation join r := (join_of _ (Phant _) r _ id).
+
+Notation join r := (@join_of _ (Phant _) r _ id).
 Coercion pack_order : pack >-> Order.pack.
+Coercion pack_class : pack >-> class.
 Canonical order_of.
-Notation "{ 'join_order' T }" := (pack T (Phant _))
-  (at level 0, format "{ 'join_order'  T }").
-Notation JoinClass ro up lowe := (Class _ ro _ up lowe).
-Notation JoinPack cla := (Pack _ (Phant _) _ cla).
+Notation "{ 'joinSemiLattice' T }" := (pack (Phant T))
+  (at level 0, format "{ 'joinSemiLattice'  T }").
+
 
 End Exports.
 
@@ -615,6 +613,149 @@ End Join.
 Include Join.Exports.
 
 Section JoinTheory.
+
+Context {T: eqType} (r: {joinSemiLattice T}).
+
+Local Notation "x `|` y" := (join r x y).
+Local Notation "x <= y" := (x <=_r y).
+
+Lemma joinC : commutative (join r).
+Proof. by case: r => ? []. Qed.
+
+Lemma joinA : associative (join r).
+Proof. by case: r => ? []. Qed.
+
+Lemma joinxx : idempotent (join r).
+Proof. by case: r => ? []. Qed.
+
+Lemma leEjoin x y : (x <= y) = (y `|` x == y).
+Proof. by case: r => ? []. Qed.
+
+Lemma joinAC : right_commutative (join r).
+Proof. by move=> x y z; rewrite -!joinA [X in _ `|` X]joinC. Qed.
+
+Lemma joinCA : left_commutative (join r).
+Proof. by move=> x y z; rewrite !joinA [X in X `|` _]joinC. Qed.
+
+Lemma joinACA : interchange (join r) (join r).
+Proof. by move=> x y z t; rewrite !joinA [X in X `|` _]joinAC. Qed.
+
+Lemma joinKI y x : x `|` (x `|` y) = x `|` y.
+Proof. by rewrite joinA joinxx. Qed.
+
+Lemma joinIK y x : (x `|` y) `|` y = x `|` y.
+Proof. by rewrite -joinA joinxx. Qed.
+
+Lemma joinKIC y x : x `|` (y `|` x) = x `|` y.
+Proof. by rewrite joinC joinIK joinC. Qed.
+
+Lemma joinIKC y x : y `|` x `|` y = x `|` y.
+Proof. by rewrite joinAC joinC joinxx. Qed.
+
+Lemma leUx x y z : (y `|` z <= x) = (y <= x) && (z <= x).
+Proof.
+Admitted.
+
+Lemma lexUl x y z : x <= y -> x <= y `|` z.
+Proof.
+Admitted.
+
+Lemma lexUr x y z : x <= z -> x <= y `|` z.
+Proof.
+Admitted.
+
+Lemma lexU2 x y z : (x <= y) || (x <= z) -> x <= y `|` z.
+Proof. by case/orP => [/lexUl|/lexUr]. Qed.
+
+Lemma leUr x y : x <= y `|` x.
+Proof. by rewrite lexU2 ?lexx ?orbT. Qed.
+
+Lemma leUl x y : x <= x `|` y.
+Proof. by rewrite lexU2 ?lexx ?orbT. Qed.
+
+Lemma join_idPr {x y} : reflect (y `|` x = x) (y <= x).
+Proof.
+Admitted.
+
+
+Lemma join_idPl {x y} : reflect (x `|` y = x) (y <= x).
+Proof. by rewrite joinC; apply/join_idPr. Qed.
+
+Lemma join_l x y : y <= x -> x `|` y = x.
+Proof. exact/join_idPl. Qed.
+
+Lemma join_r x y : x <= y -> x `|` y = y.
+Proof. exact/join_idPr. Qed.
+
+Lemma leUidl x y : (x `|` y <= x) = (y <= x).
+Proof.
+Admitted.
+
+Lemma leUidr x y : (y `|` x <= x) = (y <= x).
+Proof.
+Admitted.
+
+Lemma eq_joinl x y : (x `|` y == x) = (y <= x).
+Proof.
+Admitted.
+
+Lemma eq_joinr x y : (x `|` y == y) = (x <= y).
+Proof.
+Admitted.
+
+Lemma leU2 x y z t : x <= z -> y <= t -> x `|` y <= z `|` t.
+Proof.
+Admitted.
+
+End JoinTheory.
+
+Section DualMeet.
+
+Context {T: eqType}.
+Variable (m : {meetSemiLattice T}).
+
+Definition DualMeetClass := Join.Class
+  (Meet.djoinC m) (Meet.djoinA m) (Meet.djoinxx m) (Meet.leEdjoin m)
+  (Meet.meetC m) (Meet.meetA m) (Meet.meetxx m) (Meet.leEmeet m).
+Canonical DualMeetPack := Join.Pack (Phant _) DualMeetClass.
+
+End DualMeet.
+
+Section DualJoin.
+
+Context {T: eqType}.
+Variable (j: {joinSemiLattice T}).
+
+Definition DualJoinClass := Meet.Class
+  (Join.dmeetC j) (Join.dmeetA j) (Join.dmeetxx j) (Join.leEdmeet j)
+  (Join.joinC j) (Join.joinA j) (Join.joinxx j) (Join.leEjoin j).
+Canonical DualJoinPack := Meet.Pack (Phant _) DualJoinClass.
+
+End DualJoin.
+
+Notation "L ^~m" := (DualMeetPack L) (at level 8, format "L ^~m").
+Notation "L ^~j" := (DualJoinPack L) (at level 8, format "L ^~j").
+
+Section MeetJoinDualTest.
+
+Context {T: eqType}.
+Variable (m : {meetSemiLattice T}) (j : {joinSemiLattice T}).
+
+Goal (m^~m)^~j = m.
+Proof. by []. Qed.
+
+Goal (j^~j)^~m = j.
+Proof. by []. Qed.
+
+Goal meet (j^~j) = Join.dmeet j.
+Proof. by []. Qed.
+
+Goal join (m^~m) = Meet.djoin m.
+Proof. by []. Qed.
+
+End MeetJoinDualTest.
+
+(*Section JoinTheory.
 
 Variable (T:eqType) (r :{join_order T}).
 
@@ -649,7 +790,7 @@ End JoinTheory.*)
 
 Context (disp : unit) (R : meetSemilatticeType disp).
 
-Lemma num_max : upper_bound (@Order.le _ R) (@Order.meet _ R).
+Lemma num_max : upper_bound (@Order.le _ R) (@Order(join _ R).
 Admitted.
 
 
@@ -672,6 +813,7 @@ End NumJoin.*)
 
 (* ==================================================================== *)
 Module Lattice.
+
 Section ClassDef.
 
 Context {T : eqType}.
