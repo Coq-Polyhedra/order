@@ -429,7 +429,9 @@ Record class (r : {porder T}) := Class {
   meetC: commutative meet;
   meetA : associative meet;
   meetxx : idempotent meet;
-  leEmeet : forall x y, (x <=_r y) = (meet x y == x)
+  leEmeet : forall x y, (x <=_r y) = (meet x y == x);
+  top : T;
+  lex1 : forall x, x <=_r top
 }.
 
 Structure pack (phr : phant T) := Pack {
@@ -448,6 +450,7 @@ Canonical porder_of :=
 Definition meet_of (r : {porder T}) :=
   fun (pr : pack phr) & phant_id (pack_order pr) r =>
   meet (pack_class pr).
+
 End ClassDef.
 
 (* -------------------------------------------------------------------- *)
@@ -455,6 +458,7 @@ Module Exports.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
+Notation top := top.
 Notation meet r := (@meet_of _ (Phant _) r _ id).
 Notation "{ 'meetSemiLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'meetSemiLattice'  T }").
@@ -469,6 +473,7 @@ Context {T: eqType} (r: {meetSemiLattice T}).
 
 Local Notation "x `&` y" := (meet r x y).
 Local Notation "x <= y" := (x <=_r y).
+Local Notation top := (top r).
 
 Lemma meetC : commutative (meet r).
 Proof. by case: r => ? []. Qed.
@@ -551,6 +556,23 @@ Proof. by rewrite meetC eq_meetl. Qed.
 
 Lemma leI2 x y z t : x <= z -> y <= t -> x `&` y <= z `&` t.
 Proof. by move=> xz yt; rewrite lexI !leIx2 ?xz ?yt ?orbT. Qed.
+
+
+Lemma lex1 : forall x, x <= top.
+Proof.
+by case: r => ? [].
+Qed.
+
+Lemma meet1x : left_id top (meet r).
+Proof.
+by move=> x; apply/eqP; rewrite meetC -leEmeet lex1.
+Qed.
+
+Lemma meetx1 : right_id top (meet r).
+Proof.
+by move=> x; apply/eqP; rewrite -leEmeet lex1.
+Qed.
+
 End MeetTheory.
 
 (* ===================================================================== *)
@@ -566,7 +588,9 @@ Record class (r : {porder T}) := Class {
   joinC : commutative join;
   joinA : associative join;
   joinxx : idempotent join;
-  leEjoin : forall x y, (x <=_r y) = (join y x == y)
+  leEjoin : forall x y, (x <=_r y) = (join y x == y);
+  bot : T;
+  le0x : forall x, bot <=_r x 
 }.
 
 Structure pack (phr : phant T) := Pack {
@@ -593,6 +617,7 @@ End ClassDef.
 Module Exports.
 
 Notation join r := (@join_of _ (Phant _) r _ id).
+Notation bot := bot.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Canonical order_of.
@@ -613,6 +638,7 @@ Context {T: eqType} (r: {joinSemiLattice T}).
 
 Local Notation "x `|` y" := (join r x y).
 Local Notation "x <= y" := (x <=_r y).
+Local Notation bot := (bot r).
 
 Lemma joinC : commutative (join r).
 Proof. by case: r => ? []. Qed.
@@ -702,6 +728,21 @@ Lemma leU2 x y z t : x <= z -> y <= t -> x `|` y <= z `|` t.
 Proof.
 Admitted.
 
+Lemma le0x : forall x, bot <=_r x.
+Proof.
+by case: r => ? [].
+Qed.
+
+Lemma joinx0 : right_id bot (join r).
+Proof.
+by move=> x; apply/eqP; rewrite -leEjoin le0x.
+Qed.
+
+Lemma join0x : left_id bot (join r).
+Proof.
+by move=> x; apply/eqP; rewrite joinC -leEjoin le0x.
+Qed.
+
 End JoinTheory.
 
 (* =================================================================== *)
@@ -729,10 +770,12 @@ Unset Primitive Projections.
 
 Local Coercion pack_order : pack >-> Order.pack.
 Local Coercion pack_class : pack >-> class.
+Local Coercion meet_class : class >-> Meet.class.
 
 Variable (phr : phant T) (m : pack phr).
 
 Canonical order_of := Order.Pack phr (Order.pack_class m).
+Canonical meet_of := Meet.Pack phr m.
 
 End ClassDef.
 
@@ -740,14 +783,30 @@ End ClassDef.
 
 Module Exports.
 
+Canonical order_of.
+Canonical meet_of.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
+Coercion meet_class : class >-> Meet.class.
+Coercion meet_of : pack >-> Meet.pack.
 Notation "{ 'meetSemiLattice_' T }" := (pack (Phant T))
   (at level 0, format "{ 'meetSemiLattice_'  T  }").
 
 End Exports.
 End DMeet.
 Include DMeet.Exports.
+
+(* ===================================================================== *)
+
+Section DMeetTest.
+
+Context {T: eqType}.
+Variable (m: {meetSemiLattice_ T}).
+
+Goal forall x, meet m (top m) x == x.
+Proof. by move=> x; rewrite meet1x. Qed.
+
+End DMeetTest.
 
 (* ===================================================================== *)
 
@@ -774,10 +833,13 @@ Unset Primitive Projections.
 
 Local Coercion pack_order : pack >-> Order.pack.
 Local Coercion pack_class : pack >-> class.
+Local Coercion join_class : class >-> Join.class.
 
 Variable (phr : phant T) (m : pack phr).
 
 Canonical order_of := Order.Pack phr (Order.pack_class m).
+Canonical join_of := Join.Pack phr m.
+
 
 End ClassDef.
 
@@ -785,8 +847,12 @@ End ClassDef.
 
 Module Exports.
 
+Canonical order_of.
+Canonical join_of.
+Coercion join_of: pack >-> Join.pack.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
+Coercion join_class : class >-> Join.class.
 Notation "{ 'joinSemiLattice_' T }" := (pack (Phant T))
   (at level 0, format "{ 'joinSemiLattice_'  T  }").
 
@@ -839,149 +905,13 @@ Proof. by []. Qed.
 Goal forall x, x <=_(m ^~m) x.
 Proof. exact: lexx. Qed.
 
+Goal forall x y,  (join j x y) <=_m bot j.
+Proof. Admitted.
+
 End MeetJoinDualTest.
 
-(* ===================================================================== *)
-
-Module SemiLattice.
-
-Section ClassDef.
-Context {T: eqType}.
-
-Inductive class :=
-|MeetS : { meetSemiLattice_ T } -> class
-|JoinS : { joinSemiLattice_ T } -> class.
-
-Structure pack (phr : phant T) := Pack
-{
-  pack_lat : class
-}.
-
-Local Coercion pack_lat : pack >-> class.
-
-Variable (phr : phant T) (mj: pack phr).
-
-Definition order_of_class (mjc : class) : {porder T} := match mjc with
-  |MeetS m => DMeet.order_of m
-  |JoinS j => DJoin.order_of j
-end.
-
-Canonical order_of := Order.Pack phr (Order.pack_class (order_of_class mj)).
-
-End ClassDef.
-
-(* ---------------------------------------------------------------------- *)
-
-Module Exports.
-
-Coercion order_of : pack >-> Order.pack.
-Notation MeetS := MeetS.
-Notation JoinS := JoinS.
-Notation "{ 'semiLattice' T }" := (pack (Phant T))
-  (at level 0, format "{ 'semiLattice'  T }").
-
-
-End Exports.
-
-End SemiLattice.
-Include SemiLattice.Exports.
-
-(* ===================================================================== *)
-
-Section SemiLatticeTest.
-Context {T: eqType}.
-Variable (L: { semiLattice T}).
-
-Goal forall x, x <=_L x.
-Proof. exact: lexx. Qed.
-
-End SemiLatticeTest.
-
-(* ===================================================================== *)
-
-Section SemiLatticeDual.
-Context {T: eqType}.
-Variable (L: {semiLattice T}).
-
-Definition semiLatticeDual := match SemiLattice.pack_lat L with
-  |MeetS m => SemiLattice.Pack (Phant _) (JoinS m^~m)
-  |JoinS j => SemiLattice.Pack (Phant _) (MeetS j^~j)
-end. 
-
-End SemiLatticeDual.
-Notation "L '^~L'" := (semiLatticeDual L) (at level 8, format "L '^~L'").
-
 (* ==================================================================== *)
-
-Section SemiLatticeDualTest.
-Context {T: eqType}.
-Variable (L: {semiLattice T}).
-
-Goal L = (L^~L)^~L.
-Proof. by case: L; case. Qed.
-
-End SemiLatticeDualTest.
-
-(* ==================================================================== *)
-
-(*Section JoinTheory.
-
-Variable (T:eqType) (r :{join_order T}).
-
-Lemma join_order_is_order : order (leo r).
-Proof.
-exact: orderP.
-Qed.
-
-Lemma upper_boundP : upper_bound (leo r) (join r).
-Proof.
-by case: r => ? [].
-Qed.
-
-Lemma lowestP : lowest (leo r) (join r).
-Proof.
-by case : r => ? [].
-Qed.
-
-Lemma joinC_ex : forall x y : T, (join r x y) <=_r (join r y x).
-Proof.
-move => x y.
-case/andP : (upper_boundP y x) => y_leq_join.
-move/(lowestP x y) => lowestxy.
-by apply: lowestxy.
-Qed.
-
-Lemma joinC : commutative (join r).
-Admitted.
-End JoinTheory.*)
-
-(*Section NumJoin.
-
-Context (disp : unit) (R : meetSemilatticeType disp).
-
-Lemma num_max : upper_bound (@Order.le _ R) (@Order(join _ R).
-Admitted.
-
-
-Lemma num_low : lowest (@Order.le _ R) (@Order.meet _ R).
-Admitted.
-
-Definition join_class_num := JoinClass (pack_num _ R) num_max num_low.
-Canonical join_pack_num := JoinPack join_class_num.
-
-Lemma neq_join_irr : forall x y, ~~ ((join [leo: <=%O] x y) < (join [leo: <=%O] y x))%O.
-Proof.
-move => x y.
-have ->: (join [leo: <=%O] x y) = (join [leo: <=%O] y x).
-- apply/(le_anti _ [leo: <=%O])/andP; rewrite /=.
-  split; [exact : joinC_ex | exact : joinC_ex].
-by rewrite ltxx.
-Qed.
-
-End NumJoin.*)
-
-(* ==================================================================== *)
-Module Lattice.
+(*Module Lattice.
 
 Section ClassDef.
 
@@ -1034,14 +964,6 @@ Local Notation "x `&` y" := (meet r x y).
 Local Notation "x `|` y" := (join r x y).
 Local Notation "x <= y" := (x <=_r y).
 
-Lemma joinC : commutative (join r).
-Proof. by case: r => ? []. Qed.
-
-Lemma joinA : associative (join r).
-Proof. by case: r => ? []. Qed.
-
-Lemma joinxx : idempotent (join r).
-Proof. by case: r => ? []. Qed.
 
 Lemma joinKI y x : x `&` (x `|` y) = x.
 Proof. by case: r => ? []. Qed.
@@ -1067,47 +989,6 @@ Proof. by rewrite meetC meetUK. Qed.
 Lemma joinIKC x y : (y `|` x) `&` y = y.
 Proof. by rewrite joinC joinIK. Qed.
 
-Lemma leEjoin x y : (x <= y) = (x `|` y == y).
-Proof.
-by rewrite leEmeet; apply/eqP/eqP => <-; rewrite (joinKI, meetUK).
-Qed.
-
-Lemma joinAC : right_commutative (join r).
-Proof. by move=> x y z; rewrite -!joinA [X in _ `|` X]joinC. Qed.
-
-Lemma joinCA : left_commutative (join r).
-Proof. by move=> x y z; rewrite !joinA [X in X `|` _]joinC. Qed.
-
-Lemma joinACA : interchange (join r) (join r).
-Proof. by move=> x y z t; rewrite !joinA [X in X `|` _]joinAC. Qed.
-
-Lemma leUx x y z : (x `|` y <= z) = (x <= z) && (y <= z).
-Proof.
-rewrite !leEjoin; apply/eqP/andP => [<-|[/eqP<- /eqP<-]].
-- by rewrite !joinA joinxx eqxx [_ `|` y]joinAC joinxx [_ `|` x]joinC eqxx.
-- by rewrite [y `|` _]joinCA [x `|` (_ `|` _)]joinA joinA joinxx.
-Qed.
-
-Lemma lexUl x y z : x <= y -> x <= y `|` z.
-Proof. by rewrite !leEjoin joinA => /eqP->. Qed.
-
-Lemma lexUr x y z : x <= z -> x <= y `|` z.
-Proof. by rewrite !leEjoin joinCA => /eqP->. Qed.
-
-Lemma lexU2 x y z : (x <= y) || (x <= z) -> x <= y `|` z.
-Proof. by case/orP => [/lexUl|/lexUr]. Qed.
-
-Lemma leUr x y : x <= y `|` x.
-Proof. by apply/lexUr/lexx. Qed.
-
-Lemma leUl x y : x <= x `|` y.
-Proof. by apply/lexUl/lexx. Qed.
-
-Lemma join_idPl x y : reflect (x `|` y = y) (x <= y).
-Proof. rewrite leEjoin; apply/eqP. Qed.
-
-Lemma join_idPr x y : reflect (y `|` x = y) (x <= y).
-Proof. by rewrite joinC; apply/join_idPl. Qed.
 End LatticeTheory.
 
 (* ==================================================================== *)
@@ -1217,46 +1098,13 @@ Notation "[ 'tblattice' 'of' r ]" :=
 End Exports.
 
 End TBLattice.
-Include TBLattice.Exports.
+Include TBLattice.Exports.*)
 
-(* -------------------------------------------------------------------- *)
-Section TBLatticeTheory.
-Context {T : eqType} (L : {tblattice T}).
 
-Lemma le0x : forall x, bottom L <=_L x.
-Proof.
-by case: L => ? [].
-Qed.
-
-Lemma lex1 : forall x, x <=_L top L.
-Proof.
-by case: L => ? [].
-Qed.
-
-Lemma joinx0 : right_id (bottom L) (join L).
-Proof.
-by move=> x; apply/eqP; rewrite joinC -leEjoin le0x.
-Qed.
-
-Lemma join0x : left_id (bottom L) (join L).
-Proof.
-by move=> x; apply/eqP; rewrite -leEjoin le0x.
-Qed.
-
-Lemma meet1x : left_id (top L) (meet L).
-Proof.
-by move=> x; apply/eqP; rewrite meetC -leEmeet lex1.
-Qed.
-
-Lemma meetx1 : right_id (top L) (meet L).
-Proof.
-by move=> x; apply/eqP; rewrite -leEmeet lex1.
-Qed.
-End TBLatticeTheory.
 
 (* ==================================================================== *)
 
-Section DualTBLattice.
+(*Section DualTBLattice.
 
 Context {T: eqType} (L : {tblattice T}).
 
@@ -1283,21 +1131,19 @@ Proof.
 by [].
 Qed.
 
-
-
-End DualTBLattice.
+End DualTBLattice.*)
 
 (* ==================================================================== *)
 Section BigOps.
-Context {T : eqType} (L : {tblattice T}).
+Context {T : eqType} (m : { meetSemiLattice_ T}) (j: {joinSemiLattice_ T}).
 
-Canonical join_monoid := Monoid.Law (joinA L) (join0x L) (joinx0 L).
-Canonical join_comonoid := Monoid.ComLaw (joinC L).
-Canonical meet_monoid := Monoid.Law (meetA L) (meet1x L) (meetx1 L).
-Canonical meet_comonoid := Monoid.ComLaw (meetC L).
+Canonical join_monoid := Monoid.Law (joinA j) (join0x j) (joinx0 j).
+Canonical join_comonoid := Monoid.ComLaw (joinC j).
+Canonical meet_monoid := Monoid.Law (meetA m) (meet1x m) (meetx1 m).
+Canonical meet_comonoid := Monoid.ComLaw (meetC m).
 
 Lemma meet_max_seq {I : eqType} (r : seq I) (P : pred I) (F : I -> T) (x : I) :
-  x \in r -> P x -> \big[meet L/top L]_(i <- r | P i) F i <=_L F x.
+  x \in r -> P x -> \big[meet m/top m]_(i <- r | P i) F i <=_m F x.
 Proof.
 move=> xr Px; rewrite (perm_big _ (perm_to_rem xr)) /=.
 by rewrite big_cons /= Px; apply/leIl.
@@ -1305,18 +1151,18 @@ Qed.
 
 Lemma meetsP_seq {I : eqType}  (r : seq I) (P : pred I) (F : I -> T) (x : T) :
   reflect
-    (forall i, i \in r -> P i -> x <=_L F i)
-    (x <=_L \big[meet L/top L]_(i <- r | P i) F i).
+    (forall i, i \in r -> P i -> x <=_m F i)
+    (x <=_m \big[meet m/top m]_(i <- r | P i) F i).
 Proof.
 have ->:
-  x <=_L \big[meet L/top L]_(i <- r | P i) F i
-    = \big[andb/true]_(i <- r | P i) (x <=_L F i).
+  x <=_m \big[meet m/top m]_(i <- r | P i) F i
+    = \big[andb/true]_(i <- r | P i) (x <=_m F i).
 - by elim/big_rec2: _ => [|i b y Pi <-]; rewrite 1?(lex1, lexI).
 by rewrite big_all_cond; apply: (iffP allP) => h i ir; apply/implyP/h.
 Qed.
 
 Lemma join_min_seq {I : eqType} (r : seq I) (P : pred I) (F : I -> T) (x : I) :
-  x \in r -> P x -> F x <=_L \big[join L/bottom L]_(i <- r | P i) F i.
+  x \in r -> P x -> F x <=_j \big[join j/bot j]_(i <- r | P i) F i.
 Proof.
 move=> xr Px; rewrite (perm_big _ (perm_to_rem xr)) /=.
 by rewrite big_cons /= Px; rewrite leUl.
@@ -1324,12 +1170,12 @@ Qed.
 
 Lemma joinsP_seq {I : eqType}  (r : seq I) (P : pred I) (F : I -> T) (x : T) :
   reflect
-    (forall i, i \in r -> P i -> F i <=_L x)
-    (\big[join L/bottom L]_(i <- r | P i) F i <=_L x).
+    (forall i, i \in r -> P i -> F i <=_j x)
+    (\big[join j/bot j]_(i <- r | P i) F i <=_j x).
 Proof.
 have ->:
-  \big[join L/bottom L]_(i <- r | P i) F i <=_L x
-    = \big[andb/true]_(i <- r | P i) (F i <=_L x).
+  \big[join j/bot j]_(i <- r | P i) F i <=_j x
+    = \big[andb/true]_(i <- r | P i) (F i <=_j x).
 - by elim/big_rec2: _ => [|i b y Pi <-]; rewrite 1?(le0x, leUx).
 by rewrite big_all_cond; apply: (iffP allP) => h i ir; apply/implyP/h.
 Qed.
@@ -1351,6 +1197,8 @@ Proof. by move=> /rwP Pb /rwP Qc; apply: (iffP implyP); intuition. Qed.
 
 Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
   (at level 4, right associativity, format "''imply_[' view1 ,  view2 ]").
+
+(* ===================================================================== *)
 
 Section SubLattices.
 Context {T : choiceType} (L : {lattice T}).
