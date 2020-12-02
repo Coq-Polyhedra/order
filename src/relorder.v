@@ -429,12 +429,7 @@ Record class (r : {porder T}) := Class {
   meetC: commutative meet;
   meetA : associative meet;
   meetxx : idempotent meet;
-  leEmeet : forall x y, (x <=_r y) = (meet x y == x);
-  djoin : T -> T -> T;
-  djoinC : commutative djoin;
-  djoinA : associative djoin;
-  djoinxx : idempotent djoin;
-  leEdjoin : forall x y, (x <=_(r^~) y) = (djoin y x == y) (* check *)
+  leEmeet : forall x y, (x <=_r y) = (meet x y == x)
 }.
 
 Structure pack (phr : phant T) := Pack {
@@ -571,12 +566,7 @@ Record class (r : {porder T}) := Class {
   joinC : commutative join;
   joinA : associative join;
   joinxx : idempotent join;
-  leEjoin : forall x y, (x <=_r y) = (join y x == y);
-  dmeet : T -> T -> T;
-  dmeetC : commutative dmeet;
-  dmeetA : associative dmeet;
-  dmeetxx : idempotent dmeet;
-  leEdmeet : forall x y, (x <=_(r^~) y) = (dmeet x y == x) (* check *)
+  leEjoin : forall x y, (x <=_r y) = (join y x == y)
 }.
 
 Structure pack (phr : phant T) := Pack {
@@ -597,6 +587,9 @@ Definition join_of (r : {porder T}) :=
   join (pack_class pr).
 
 End ClassDef.
+
+(* ------------------------------------------------------------------- *)
+
 Module Exports.
 
 Notation join r := (@join_of _ (Phant _) r _ id).
@@ -611,6 +604,8 @@ End Exports.
 
 End Join.
 Include Join.Exports.
+
+(* ===================================================================== *)
 
 Section JoinTheory.
 
@@ -709,37 +704,131 @@ Admitted.
 
 End JoinTheory.
 
+(* =================================================================== *)
+
+Module DMeet.
+Section ClassDef.
+
+Context {T: eqType}.
+
+Set Primitive Projections.
+
+Record class (r: {porder T}) := Class
+{
+  meet_class : Meet.class r;
+  djoin_class : Join.class r^~
+}.
+
+Structure pack (phr: phant T) := Pack
+{
+  pack_order;
+  pack_class : class pack_order
+}.
+
+Unset Primitive Projections.
+
+Local Coercion pack_order : pack >-> Order.pack.
+Local Coercion pack_class : pack >-> class.
+
+Variable (phr : phant T) (m : pack phr).
+
+Canonical order_of := Order.Pack phr (Order.pack_class m).
+
+End ClassDef.
+
+(* -------------------------------------------------------------------- *)
+
+Module Exports.
+
+Coercion pack_order : pack >-> Order.pack.
+Coercion pack_class : pack >-> class.
+Notation "{ 'meetSemiLattice_' T }" := (pack (Phant T))
+  (at level 0, format "{ 'meetSemiLattice_'  T  }").
+
+End Exports.
+End DMeet.
+Include DMeet.Exports.
+
+(* ===================================================================== *)
+
+Module DJoin.
+Section ClassDef.
+
+Context {T: eqType}.
+
+Set Primitive Projections.
+
+Record class (r: {porder T}) := Class
+{
+  join_class : Join.class r;
+  dmeet_class : Meet.class r^~
+}.
+
+Structure pack (phr: phant T) := Pack
+{
+  pack_order;
+  pack_class : class pack_order
+}.
+
+Unset Primitive Projections.
+
+Local Coercion pack_order : pack >-> Order.pack.
+Local Coercion pack_class : pack >-> class.
+
+Variable (phr : phant T) (m : pack phr).
+
+Canonical order_of := Order.Pack phr (Order.pack_class m).
+
+End ClassDef.
+
+(* ------------------------------------------------------------------- *)
+
+Module Exports.
+
+Coercion pack_order : pack >-> Order.pack.
+Coercion pack_class : pack >-> class.
+Notation "{ 'joinSemiLattice_' T }" := (pack (Phant T))
+  (at level 0, format "{ 'joinSemiLattice_'  T  }").
+
+End Exports.
+End DJoin.
+Include DJoin.Exports.
+
+(* ==================================================================== *)
+
 Section DualMeet.
 
 Context {T: eqType}.
-Variable (m : {meetSemiLattice T}).
+Variable (m : {meetSemiLattice_ T}).
 
-Definition DualMeetClass := Join.Class
-  (Meet.djoinC m) (Meet.djoinA m) (Meet.djoinxx m) (Meet.leEdjoin m)
-  (Meet.meetC m) (Meet.meetA m) (Meet.meetxx m) (Meet.leEmeet m).
-Canonical DualMeetPack := Join.Pack (Phant _) DualMeetClass.
-
+Definition DualMeetClass :=
+  DJoin.Class (DMeet.djoin_class m) (DMeet.meet_class m).
+Canonical DualMeetPack := DJoin.Pack (Phant T) DualMeetClass.
 End DualMeet.
+
+Notation "L ^~m" := (DualMeetPack L) (at level 8).
+
+(* ===================================================================== *)
 
 Section DualJoin.
 
 Context {T: eqType}.
-Variable (j: {joinSemiLattice T}).
+Variable (j: {joinSemiLattice_ T}).
 
-Definition DualJoinClass := Meet.Class
-  (Join.dmeetC j) (Join.dmeetA j) (Join.dmeetxx j) (Join.leEdmeet j)
-  (Join.joinC j) (Join.joinA j) (Join.joinxx j) (Join.leEjoin j).
-Canonical DualJoinPack := Meet.Pack (Phant _) DualJoinClass.
+Definition DualJoinClass :=
+  DMeet.Class (DJoin.dmeet_class j) (DJoin.join_class j).
+Canonical DualJoinPack := DMeet.Pack (Phant _) DualJoinClass.
 
 End DualJoin.
 
-Notation "L ^~m" := (DualMeetPack L) (at level 8, format "L ^~m").
 Notation "L ^~j" := (DualJoinPack L) (at level 8, format "L ^~j").
+
+(* ===================================================================== *)
 
 Section MeetJoinDualTest.
 
 Context {T: eqType}.
-Variable (m : {meetSemiLattice T}) (j : {joinSemiLattice T}).
+Variable (m : {meetSemiLattice_ T}) (j : {joinSemiLattice_ T}).
 
 Goal (m^~m)^~j = m.
 Proof. by []. Qed.
@@ -747,13 +836,93 @@ Proof. by []. Qed.
 Goal (j^~j)^~m = j.
 Proof. by []. Qed.
 
-Goal meet (j^~j) = Join.dmeet j.
-Proof. by []. Qed.
-
-Goal join (m^~m) = Meet.djoin m.
-Proof. by []. Qed.
+Goal forall x, x <=_(m ^~m) x.
+Proof. exact: lexx. Qed.
 
 End MeetJoinDualTest.
+
+(* ===================================================================== *)
+
+Module SemiLattice.
+
+Section ClassDef.
+Context {T: eqType}.
+
+Inductive class :=
+|MeetS : { meetSemiLattice_ T } -> class
+|JoinS : { joinSemiLattice_ T } -> class.
+
+Structure pack (phr : phant T) := Pack
+{
+  pack_lat : class
+}.
+
+Local Coercion pack_lat : pack >-> class.
+
+Variable (phr : phant T) (mj: pack phr).
+
+Definition order_of_class (mjc : class) : {porder T} := match mjc with
+  |MeetS m => DMeet.order_of m
+  |JoinS j => DJoin.order_of j
+end.
+
+Canonical order_of := Order.Pack phr (Order.pack_class (order_of_class mj)).
+
+End ClassDef.
+
+(* ---------------------------------------------------------------------- *)
+
+Module Exports.
+
+Coercion order_of : pack >-> Order.pack.
+Notation MeetS := MeetS.
+Notation JoinS := JoinS.
+Notation "{ 'semiLattice' T }" := (pack (Phant T))
+  (at level 0, format "{ 'semiLattice'  T }").
+
+
+End Exports.
+
+End SemiLattice.
+Include SemiLattice.Exports.
+
+(* ===================================================================== *)
+
+Section SemiLatticeTest.
+Context {T: eqType}.
+Variable (L: { semiLattice T}).
+
+Goal forall x, x <=_L x.
+Proof. exact: lexx. Qed.
+
+End SemiLatticeTest.
+
+(* ===================================================================== *)
+
+Section SemiLatticeDual.
+Context {T: eqType}.
+Variable (L: {semiLattice T}).
+
+Definition semiLatticeDual := match SemiLattice.pack_lat L with
+  |MeetS m => SemiLattice.Pack (Phant _) (JoinS m^~m)
+  |JoinS j => SemiLattice.Pack (Phant _) (MeetS j^~j)
+end. 
+
+End SemiLatticeDual.
+Notation "L '^~L'" := (semiLatticeDual L) (at level 8, format "L '^~L'").
+
+(* ==================================================================== *)
+
+Section SemiLatticeDualTest.
+Context {T: eqType}.
+Variable (L: {semiLattice T}).
+
+Goal L = (L^~L)^~L.
+Proof. by case: L; case. Qed.
+
+End SemiLatticeDualTest.
+
+(* ==================================================================== *)
 
 (*Section JoinTheory.
 
@@ -818,24 +987,13 @@ Section ClassDef.
 
 Context {T : eqType}.
 
-Record class (r : {meetSemiLattice T}) := Class {
-  join : T -> T -> T;
-  _ : commutative join;
-  _ : associative join;
-  _ : idempotent join;
-  _ : forall y x, meet r x (join x y) = x;
-  _ : forall y x, join x (meet r x y) = x;
-  _ : forall y x, (y <=_r x) = ((join x y) == x)
-}.
-
 Structure pack (phr : phant T) := Pack {
-  pack_order;
-  pack_class : class pack_order
+  pack_meet : {meetSemiLattice T};
+  pack_join : {joinSemiLattice T};
+  _ : (Meet.pack_order pack_meet = Join.pack_order pack_join)
 }.
 
 Variables (phr : phant T) (mjr : pack phr).
-Local Coercion pack_order : pack >-> Meet.pack.
-Local Coercion pack_class : pack >-> class.
 
 Canonical porder_of := Order.Pack phr (Order.class_of (Meet.pack_order mjr)).
 
