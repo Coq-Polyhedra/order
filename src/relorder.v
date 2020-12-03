@@ -1200,7 +1200,70 @@ Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
 
 (* ===================================================================== *)
 
-Section SubLattices.
+Module SubLattice.
+Section ClassDef.
+
+Context {T : choiceType}.
+
+Definition stable (K:{fset T}) (f : T -> T -> T) :=
+  forall (x y: T), x \in K -> y \in K -> f x y \in K.
+  
+Record class (K: {fset T}):= Class
+{
+  r : {porder T};
+  meet_class : DMeet.class r;
+  join_class : DJoin.class r;
+  stable_meet : stable K (Meet.meet meet_class);
+  stable_join : stable K (Join.join join_class) 
+}.
+
+Structure pack := Pack
+{
+  elements :> {fset T};
+  el_class : class elements
+}.
+
+End ClassDef.
+
+
+(* ---------------------------------------------------------------------- *)
+
+Module Exports.
+
+End Exports.
+
+End SubLattice.
+Include SubLattice.Exports.
+
+Section MeetSubLattice.
+
+Context {T:choiceType} (m: {meetSemiLattice_ T}) (K : {fset T}).
+Hypothesis stable_meet : SubLattice.stable K (meet m).
+Variable bot:T.
+Hypothesis bot_is_here : forall x, bot <=_m x.
+
+Definition fjoin (x y: T) :=
+  \big[meet m/top m]_(i <- K | (x <=_m i) && (y <=_m i)) i.
+
+Lemma fjoinC : commutative fjoin.
+Proof. Admitted.
+
+Lemma fjoinA : associative fjoin.
+Proof. Admitted.
+
+Lemma fjoinxx : idempotent fjoin.
+Proof. Admitted.
+
+Lemma leEfjoin : forall x y : T, x <=_m y = (fjoin y x == y).
+Proof. Admitted. (* ? *)
+
+Lemma leEfjoin_dual : forall x y : T, x <=_(m^~m) y = (fjoin x y == x).
+Proof. Admitted.
+
+Lemma fjoin_stable : SubLattice.stable K fjoin.
+
+
+(*Section SubLattices.
 Context {T : choiceType} (L : {lattice T}).
 
 Definition stable (E : {fset T}) :=
@@ -1246,7 +1309,7 @@ Proof. by []. Qed.
 
 Definition inE := (in_subLatticeE, inE).
 
-End SubLattices.
+End SubLattices.*)
 
 (* ==================================================================== *)
 Section SubLatticesTheory.
