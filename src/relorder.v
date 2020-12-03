@@ -140,7 +140,9 @@ Notation "{ 'porder' T }" := (pack (Phant T))
 Notation "<=: r" := (leo r) (at level 2, r at level 1, format "<=: r").
 Notation "<: r" := (lto r) (at level 2, r at level 1, format "<: r").
 Notation "x <=_ r y" := (<=:r x y) (at level 65, r at level 2, format "x  <=_ r  y").
+Notation "x >=_ r y" := (y <=_r x) (at level 65, r at level 2, only parsing).
 Notation "x <_ r y" := (<:r x y) (at level 65, r at level 2, format "x  <_ r  y").
+Notation "x >_ r y" := (y <_r x) (at level 65, r at level 2, only parsing).
 Notation "x <=_ r0 y <=_ r1 z" := ((x <=_r0 y) && (y <=_r1 z))
   (at level 70, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <=_ r1  z").
 Notation "x <_ r0 y <_ r1 z" := ((x <_r0 y) && (y <_r1 z))
@@ -1200,28 +1202,51 @@ Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
 
 (* ===================================================================== *)
 
-Module SubLattice.
+Module PreLattice.
 Section ClassDef.
 
 Context {T : choiceType}.
 
-Definition stable (K:{fset T}) (f : T -> T -> T) :=
-  forall (x y: T), x \in K -> y \in K -> f x y \in K.
+Set Primitive Projections.
   
-Record class (K: {fset T}):= Class
+Record class (r : {porder T}) := Class
 {
-  r : {porder T};
-  meet_class : DMeet.class r;
-  join_class : DJoin.class r;
-  stable_meet : stable K (Meet.meet meet_class);
-  stable_join : stable K (Join.join join_class) 
+  pre_join : {fset T} -> T;
+  pre_meet : {fset T} -> T;
+  foo1 : forall S, forall x, x \in S -> x <=_r pre_join S;
+  foo2 : forall S, forall z, (forall x, x \in S -> x <=_r z) -> pre_join S <=_r z;
+  foo3 : forall S, forall x, x \in S -> x >=_r pre_meet S;
+  foo4 : forall S, forall z, (forall x, x \in S -> x >=_r z) -> pre_meet S >=_r z;
+  pre_djoin : {fset T} -> T;
+  pre_dmeet : {fset T} -> T;
+  bar1 : forall S, forall x, x \in S -> x <=_(r^~) pre_djoin S;
+  bar2 : forall S, forall z, (forall x, x \in S -> x <=_(r^~) z) -> pre_djoin S <=_(r^~) z;
+  bar3 : forall S, forall x, x \in S -> x >=_(r^~) pre_dmeet S;
+  bar4 : forall S, forall z, (forall x, x \in S -> x >=_(r^~) z) -> pre_dmeet S >=_(r^~) z
+  (*pre_join : {fset T} -> T -> T -> T;
+  pre_meet : {fset T} -> T -> T -> T;
+  _ : forall S, forall x y, x <=_r pre_join S x y;
+  _ : forall S, forall x y, y <=_r pre_join S x y; 
+  _ : forall S, forall x y z, z \in S -> x <=_r z -> y <=_r z -> pre_join S x y <=_r z;
+  _ : forall S, forall x y, x >=_r pre_meet S x y;
+  _ : forall S, forall x y, y >=_r pre_meet S x y; 
+  _ : forall S, forall x y z, z \in S -> x >=_r z -> y >=_r z -> pre_meet S x y >=_r z
+  *)
 }.
 
-Structure pack := Pack
+Structure pack (phr : phant T) := Pack
 {
-  elements :> {fset T};
-  el_class : class elements
+  pack_order : {porder T};
+  pack_class : class pack_order
 }.
+
+Unset Primitive Projections.
+
+Local Coercion pack_order : pack >-> Order.pack.
+
+Variable (phr : phant T) (m : pack phr).
+
+Canonical order_of := Order.Pack phr (Order.pack_class m).
 
 End ClassDef.
 
@@ -1230,37 +1255,118 @@ End ClassDef.
 
 Module Exports.
 
+Canonical order_of.
+Coercion pack_order : pack >-> Order.pack.
+Coercion pack_class : pack >-> class.
+Notation "{ 'preLattice' T }" := (pack (Phant T))
+  (at level 0, format "{ 'preLattice'  T }").
+Notation pre_join := pre_join.
+Notation pre_meet := pre_meet.
+
 End Exports.
 
+End PreLattice.
+Include PreLattice.Exports.
+
+Section DualPreLattice.
+
+
+End DualPreLattice.
+
+(* ====================================================================== *)
+
+Section SubLattice.
+
+Context {T : choiceType} (L: {preLattice T}).
+
+Definition stable (S : {fset T}) :=
+  [forall x : S, [forall y : S,
+    pre_meet L [fset z in S | (z >=_L (fsval x)) && (z >=_L (fsval y))] \in S]] &&
+  [forall x : S, [forall y : S,
+    pre_join L [fset z in S | (z <=_L (fsval x)) && (z <=_L (fsval y))] \in S]].
+  (*   [forall x : S, [forall y : S, pre_meet L S (val x) (val y) \in S]]
+  && [forall x : S, [forall y : S, pre_join L S (val x) (val y) \in S]]*)
+
+(*Lemma stableP (S : {fset T}) :
+  reflect
+    [/\ forall x y, x \in S -> y \in S -> (pre_meet L S x y) \in S
+    & forall x y, x \in S -> y \in S -> (pre_join L S x y) \in S]
+    (stable S).
+Proof. apply/andPP; apply/(iffP idP).
+- move/forallP => /= stableH x y.
+  case : (in_fsetP) => u // _ _; case: (in_fsetP) => v // _ _.
+  by move/forallP: (stableH u); apply.
+- move=> stableH; apply/forallP => /= x; apply/forallP => /= y.
+  apply: stableH; exact: fsvalP.
+- move/forallP => /= stableH x y.
+  case : (in_fsetP) => u // _ _; case: (in_fsetP) => v // _ _.
+  by move/forallP: (stableH u); apply.
+- move=> stableH; apply/forallP => /= x; apply/forallP => /= y.
+  apply: stableH; exact: fsvalP.
+Qed.*)
+
+Record subLattice :=
+  SubLattice { elements :> {fset T}; _ : stable elements }.
+
+Canonical subLattice_subType := Eval hnf in [subType for elements].
+
+Definition subLattice_eqMixin := Eval hnf in [eqMixin of subLattice by <:].
+Canonical  subLattice_eqType  := Eval hnf in EqType subLattice subLattice_eqMixin.
+  
+Definition subLattice_choiceMixin := [choiceMixin of subLattice by <:].
+Canonical  subLattice_choiceType  :=
+  Eval hnf in ChoiceType subLattice subLattice_choiceMixin.
+  
+Coercion mem_subLattice (S: subLattice) : {pred T} :=
+  fun x : T => (x \in (elements S)).
+Canonical subLattice_predType := PredType mem_subLattice.
+  
+Lemma in_subLatticeE (S: subLattice) x : (x \in S) = (x \in elements S).
+Proof. by []. Qed.
+  
+Definition inE := (in_subLatticeE, inE).
+
+Definition fmeet (S : subLattice) x y :=
+  pre_join L [fset z in S | (z <=_L x) && (z <=_L y)].
+Definition fjoin (S : subLattice) x y:=
+  pre_meet L [fset z in S | (z >=_L x) && (z >=_L y)].
+
+Definition ftop (S : subLattice) := pre_join L S.
+Definition fbot (S : subLattice) := pre_meet L S.
+
 End SubLattice.
-Include SubLattice.Exports.
 
-Section MeetSubLattice.
+Notation "'\fmeet_' S" := (fmeet S) (at level 8).
+Notation "'\fjoin_' S" := (fjoin S) (at level 8).
+Notation "'\ftop_' S" := (ftop S) (at level 8).
+Notation "'\fbot_' S" := (fbot S) (at level 8).
 
-Context {T:choiceType} (m: {meetSemiLattice_ T}) (K : {fset T}).
-Hypothesis stable_meet : SubLattice.stable K (meet m).
-Variable bot:T.
-Hypothesis bot_is_here : forall x, bot <=_m x.
+Section SubLatticeTheory.
 
-Definition fjoin (x y: T) :=
-  \big[meet m/top m]_(i <- K | (x <=_m i) && (y <=_m i)) i.
+Context {T: choiceType} (L : {preLattice T}).
+Implicit Type (S : subLattice L).
 
-Lemma fjoinC : commutative fjoin.
+Lemma mem_fjoin S x y:
+  x \in S -> y \in S -> \fjoin_S x y \in S.
 Proof. Admitted.
 
-Lemma fjoinA : associative fjoin.
+Lemma mem_fmeet S x y:
+  x \in S -> y \in S -> \fmeet_S x y \in S.
 Proof. Admitted.
 
-Lemma fjoinxx : idempotent fjoin.
+Lemma lefUl S x y : x \in S -> y \in S -> x <=_L \fjoin_S x y.
 Proof. Admitted.
 
-Lemma leEfjoin : forall x y : T, x <=_m y = (fjoin y x == y).
-Proof. Admitted. (* ? *)
-
-Lemma leEfjoin_dual : forall x y : T, x <=_(m^~m) y = (fjoin x y == x).
+Lemma lefUr S : {in S&, forall x y, y <=_L \fjoin_S x y} .
 Proof. Admitted.
 
-Lemma fjoin_stable : SubLattice.stable K fjoin.
+(*TODO : whole theory*)
+
+End SubLatticeTheory.
+
+
+
+
 
 
 (*Section SubLattices.
