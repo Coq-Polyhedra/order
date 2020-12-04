@@ -1211,26 +1211,26 @@ Set Primitive Projections.
   
 Record class (r : {porder T}) := Class
 {
-  pre_join : {fset T} -> T;
-  pre_meet : {fset T} -> T;
-  foo1 : forall S, forall x, x \in S -> x <=_r pre_join S;
-  foo2 : forall S, forall z, (forall x, x \in S -> x <=_r z) -> pre_join S <=_r z;
-  foo3 : forall S, forall x, x \in S -> x >=_r pre_meet S;
-  foo4 : forall S, forall z, (forall x, x \in S -> x >=_r z) -> pre_meet S >=_r z;
+  lub : {fset T} -> T;
+  glb : {fset T} -> T;
+  foo1 : forall S, forall x, x \in S -> x <=_r lub S;
+  foo2 : forall S, forall z, (forall x, x \in S -> x <=_r z) -> lub S <=_r z;
+  foo3 : forall S, forall x, x \in S -> x >=_r glb S;
+  foo4 : forall S, forall z, (forall x, x \in S -> x >=_r z) -> glb S >=_r z;
   pre_djoin : {fset T} -> T;
   pre_dmeet : {fset T} -> T;
   bar1 : forall S, forall x, x \in S -> x <=_(r^~) pre_djoin S;
   bar2 : forall S, forall z, (forall x, x \in S -> x <=_(r^~) z) -> pre_djoin S <=_(r^~) z;
   bar3 : forall S, forall x, x \in S -> x >=_(r^~) pre_dmeet S;
   bar4 : forall S, forall z, (forall x, x \in S -> x >=_(r^~) z) -> pre_dmeet S >=_(r^~) z
-  (*pre_join : {fset T} -> T -> T -> T;
-  pre_meet : {fset T} -> T -> T -> T;
-  _ : forall S, forall x y, x <=_r pre_join S x y;
-  _ : forall S, forall x y, y <=_r pre_join S x y; 
-  _ : forall S, forall x y z, z \in S -> x <=_r z -> y <=_r z -> pre_join S x y <=_r z;
-  _ : forall S, forall x y, x >=_r pre_meet S x y;
-  _ : forall S, forall x y, y >=_r pre_meet S x y; 
-  _ : forall S, forall x y z, z \in S -> x >=_r z -> y >=_r z -> pre_meet S x y >=_r z
+  (*lub : {fset T} -> T -> T -> T;
+  glb : {fset T} -> T -> T -> T;
+  _ : forall S, forall x y, x <=_r lub S x y;
+  _ : forall S, forall x y, y <=_r lub S x y; 
+  _ : forall S, forall x y z, z \in S -> x <=_r z -> y <=_r z -> lub S x y <=_r z;
+  _ : forall S, forall x y, x >=_r glb S x y;
+  _ : forall S, forall x y, y >=_r glb S x y; 
+  _ : forall S, forall x y z, z \in S -> x >=_r z -> y >=_r z -> glb S x y >=_r z
   *)
 }.
 
@@ -1260,18 +1260,58 @@ Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Notation "{ 'preLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
-Notation pre_join := pre_join.
-Notation pre_meet := pre_meet.
+Notation lub := lub.
+Notation glb := glb.
 
 End Exports.
 
 End PreLattice.
 Include PreLattice.Exports.
 
-Section DualPreLattice.
+Section PreLatticeTheory.
+
+Context {T: choiceType} (L : {preLattice T}).
+
+Lemma lub1 a: lub L [fset a] = a.
+Proof.
+apply:(@le_anti _ L); rewrite PreLattice.foo1 ?inE ?eq_refl // andbT.
+rewrite PreLattice.foo2 // => x; rewrite !inE => /eqP ->; exact: lexx.
+Qed.
+
+Lemma glb1 a : glb L [fset a] = a.
+Proof.
+apply:(@le_anti _ L); rewrite PreLattice.foo3 ?inE ?eq_refl //=.
+rewrite PreLattice.foo4 // => x; rewrite !inE => /eqP ->; exact: lexx.
+Qed.
+
+Lemma glb_desc A B : A `<=` B -> glb L A >=_L glb L B.
+Proof.
+move/fsubsetP => AsubB; apply:PreLattice.foo4 => x /AsubB.
+exact:PreLattice.foo3.
+Qed.
+
+Lemma lub_incr A B : A `<=` B -> lub L A <=_L lub L B.
+Proof.
+move/fsubsetP => AsubB; apply:PreLattice.foo2 => x /AsubB.
+exact:PreLattice.foo1.
+Qed.
+
+Lemma glbU1 A a : glb L [fset a; (glb L A)] = glb L (A `|` [fset a]) .
+Proof.
+apply/(@le_anti _ L)/andP; split.
+- apply: PreLattice.foo4 => x; rewrite !inE; case/orP.
+  + move/(PreLattice.foo3 L) => glbAlex; apply:(le_trans _ glbAlex).
+    by apply/PreLattice.foo3; rewrite !inE eq_refl orbT.
+  + by move/eqP => ->; apply/PreLattice.foo3; rewrite !inE eq_refl.
+- apply: PreLattice.foo4 => x; rewrite !inE; case/orP.
+  + by move/eqP => ->; apply:PreLattice.foo3; rewrite !inE eq_refl orbT.
+  + move/eqP => ->. apply: PreLattice.foo4 => y yA; apply:PreLattice.foo3.
+    by rewrite !inE yA.
+Qed.
 
 
-End DualPreLattice.
+
+End PreLatticeTheory.
 
 (* ====================================================================== *)
 
@@ -1280,30 +1320,26 @@ Section SubLattice.
 Context {T : choiceType} (L: {preLattice T}).
 
 Definition stable (S : {fset T}) :=
+  [forall x : S, [forall y : S, glb L [fset (fsval x); (fsval y)] \in S]]
+  && [forall x : S, [forall y : S, lub L [fset (fsval x); (fsval y)] \in S]].
+  (*[forall x : S, [forall y : S,
+    glb L [fset z in S | (z >=_L (fsval x)) && (z >=_L (fsval y))] \in S]] &&
   [forall x : S, [forall y : S,
-    pre_meet L [fset z in S | (z >=_L (fsval x)) && (z >=_L (fsval y))] \in S]] &&
-  [forall x : S, [forall y : S,
-    pre_join L [fset z in S | (z <=_L (fsval x)) && (z <=_L (fsval y))] \in S]].
-  (*   [forall x : S, [forall y : S, pre_meet L S (val x) (val y) \in S]]
-  && [forall x : S, [forall y : S, pre_join L S (val x) (val y) \in S]]*)
+    lub L [fset z in S | (z <=_L (fsval x)) && (z <=_L (fsval y))] \in S]].*)
 
-(*Lemma stableP (S : {fset T}) :
-  reflect
-    [/\ forall x y, x \in S -> y \in S -> (pre_meet L S x y) \in S
-    & forall x y, x \in S -> y \in S -> (pre_join L S x y) \in S]
+Lemma stableP (S : {fset T}) :
+  reflect (forall x y, x \in S -> y \in S ->
+    glb L [fset x; y] \in S /\ lub L [fset x;y] \in S)
     (stable S).
-Proof. apply/andPP; apply/(iffP idP).
-- move/forallP => /= stableH x y.
-  case : (in_fsetP) => u // _ _; case: (in_fsetP) => v // _ _.
-  by move/forallP: (stableH u); apply.
-- move=> stableH; apply/forallP => /= x; apply/forallP => /= y.
-  apply: stableH; exact: fsvalP.
-- move/forallP => /= stableH x y.
-  case : (in_fsetP) => u // _ _; case: (in_fsetP) => v // _ _.
-  by move/forallP: (stableH u); apply.
-- move=> stableH; apply/forallP => /= x; apply/forallP => /= y.
-  apply: stableH; exact: fsvalP.
-Qed.*)
+Proof.
+apply/(iffP idP).
+- case/andP => + + x y xS yS.
+  by do 2 move/forallP/(_ [`xS])/forallP/(_ [`yS]) => ->.
+- by move=> stableH; apply/andP; split;
+    apply/forallP => /= x; apply/forallP => /= y;
+    case:(stableH (fsval x) (fsval y) (fsvalP x) (fsvalP y)).
+Qed.
+
 
 Record subLattice :=
   SubLattice { elements :> {fset T}; _ : stable elements }.
@@ -1326,13 +1362,13 @@ Proof. by []. Qed.
   
 Definition inE := (in_subLatticeE, inE).
 
-Definition fmeet (S : subLattice) x y :=
-  pre_join L [fset z in S | (z <=_L x) && (z <=_L y)].
+Definition fmeet (S: subLattice) x y :=
+  glb L [fset x; y].
 Definition fjoin (S : subLattice) x y:=
-  pre_meet L [fset z in S | (z >=_L x) && (z >=_L y)].
+  lub L [fset x; y].
 
-Definition ftop (S : subLattice) := pre_join L S.
-Definition fbot (S : subLattice) := pre_meet L S.
+Definition ftop (S : subLattice) := lub L S.
+Definition fbot (S : subLattice) := glb L S.
 
 End SubLattice.
 
@@ -1347,32 +1383,25 @@ Context {T: choiceType} (L : {preLattice T}) (S : subLattice L).
 
 Lemma mem_fjoin : {in S &, forall x y, \fjoin_S x y \in S}.
 Proof.
-move=> x y; rewrite /fjoin !inE; case: S => /= S0 stableS xinS yinS.
-have ->: [fset z | z in SubLattice stableS & (x <=_L z) && (y <=_L z)]
-  = [fset z | z in S0 & (x <=_L z) && (y <=_L z)].
-by apply/eqP/fset_eqP => z; rewrite !inE /=.
-by case/andP: stableS => /forallP /(_ [` xinS]) /forallP /(_ [`yinS]).
+move=> x y; rewrite !inE /fjoin /=; case: S => /= elts + xS yS.
+by case/stableP/(_ x y xS yS).
 Qed.
 
 Lemma mem_fmeet : {in S &, forall x y, \fmeet_S x y \in S}.
 Proof.
-move=> x y; rewrite /fmeet !inE; case: S => /= S0 stableS xinS yinS.
-have ->: [fset z | z in SubLattice stableS & (x >=_L z) && (y >=_L z)]
-  = [fset z | z in S0 & (x >=_L z) && (y >=_L z)].
-by apply/eqP/fset_eqP => z; rewrite !inE /=.
-by case/andP: stableS => _ /forallP /(_ [` xinS]) /forallP /(_ [`yinS]).
+move=> x y; rewrite !inE /fmeet /=; case: S => /= elts + xS yS.
+by case/stableP/(_ x y xS yS).
 Qed.
 
 Lemma fmeetC : {in S &, commutative (\fmeet_S)}.
 Proof.
-move=> x y _ _; rewrite /fmeet; congr pre_join; apply/eqP/fset_eqP => z.
-by rewrite !inE [X in _ && X]andbC.
+move=> x y _ _; rewrite /fmeet; congr glb; apply/eqP/fset_eqP => z.
+by rewrite !inE orbC.
 Qed.
 
-Lemma leIfr : {in S &, forall x y, \fmeet_S y x <=_L x}.
+Lemma leIfr : {in S &, forall x y, \fmeet_S x y <=_L y}.
 Proof.
-move=> x y xS yS; rewrite PreLattice.foo2 // => z.
-by rewrite !inE => /and3P [].
+by move=> x y xS yS; rewrite /fmeet PreLattice.foo3 // !inE eq_refl orbT.
 Qed.
 
 Lemma leIfl : {in S &, forall x y, \fmeet_S x y <=_L x}.
@@ -1384,17 +1413,17 @@ Lemma lefI :
   {in S & &, forall x y z, (x <=_L \fmeet_S y z) = (x <=_L y) && (x <=_L z)}.
 Proof.
 move=> x y z xS yS zS; apply/(sameP idP)/(iffP idP).
-- by case/andP => xley xlez; rewrite PreLattice.foo1 // !inE xS xley xlez.
-- move=> xlem; apply/andP; split; rewrite (le_trans xlem) //.
-    exact: leIfl.
-  exact: leIfr.
+- case/andP=> xley xlez; rewrite PreLattice.foo4 //.
+  by move=> t; rewrite !inE; case/orP;move/eqP => ->.
+- move=> xlem.
+  by rewrite (le_trans xlem (leIfl yS zS)) (le_trans xlem (leIfr yS zS)).
 Qed.
+
 
 Lemma lefIl : {in S & &, forall x y z, y <=_L x -> \fmeet_S y z <=_L x}.
 Proof.
 move=> x y z xS yS zS ylex.
-rewrite PreLattice.foo2 // => t; rewrite !inE => /and3P [_ tley _].
-exact: (le_trans tley).
+by rewrite (le_trans (leIfl yS zS) ylex).
 Qed.
 
 Lemma lefIr : {in S & &, forall x y z, z <=_L x -> \fmeet_S y z <=_L x}.
@@ -1500,26 +1529,26 @@ move=> xS yS zS tS xlez ylet.
 by rewrite lefI ?mem_fmeet // lefIl // lefIr.
 Qed.
 
-
-Lemma lef1 : {in S, forall x, x <=_L \ftop_S}.
-Proof. by move=> x xS; rewrite /ftop PreLattice.foo1. Qed.
-
-Lemma mem_ftop : S != fset0 :> {fset _} -> \ftop_S \in S.
+Lemma mem_fbot: S != fset0 :> {fset _} -> \fbot_S \in S.
 Proof.
-rewrite !inE /ftop; case: S => /= S0 /andP [_ + S0Prop0]; move: S0Prop0.
-case/fset0Pn => a /mem_fset1U <-.
-elim/fset_ind : S0.
-- rewrite fsetU0; have a_in_a: a \in [fset a] by rewrite inE.
-do 2 move/forallP => /= /(_ [`a_in_a]) /=.
-congr (pre_join L _ \in [fset a]).
-apply/eqP/fset_eqP => x; rewrite !inE andbb.
-apply: andb_idr; move/eqP => ->; exact: lexx.
-- move=> /= b S0 bnS0 Hind.
+rewrite /fbot.
+have: forall S', S' `<=` S -> S'!= fset0 -> glb L S' \in S.
+- move=> S' + /fset0Pn [a] /mem_fset1U; move=> + S'eq.
+  rewrite -{}S'eq.
+  elim/fset_ind: S'.
+  + rewrite fsetU0 => /fsubsetP a_sub_S.
+    have ->: [fset a] = [fset a; a] by
+      apply/eqP/fset_eqP => t; rewrite !inE orbb.
+    by apply/mem_fmeet; apply/a_sub_S; rewrite inE.
+  + move=> b /= S'' bnS'' Hind /fsubsetP abS''_subS.
+    have a_in_S: a \in S by apply: abS''_subS; rewrite !inE eq_refl.
+    have b_in_S: b \in S by apply: abS''_subS; rewrite !inE eq_refl orbT.  
+    rewrite fsetUCA fsetUC -glbU1 mem_fmeet //.
+    apply/Hind/fsubsetP=> z zaS''; apply/abS''_subS.
+    by rewrite fsetUCA inE zaS'' orbT.
+by move/(_ S) => + Sprop; move/(_ (fsubset_refl S) Sprop).
+Qed.
 
-
-Lemma meetx1 : right_id top (meet r).
-Proof.
-by move=> x; apply/eqP; rewrite -leEmeet lex1.
 
 (*TODO : whole theory*)
 
