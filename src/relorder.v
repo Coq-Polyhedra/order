@@ -1223,19 +1223,20 @@ Set Primitive Projections.
   
 Record class (r : {porder T}) := Class
 {
+  foo : forall x y, x <=_r y = y <=_(r^~) x;
+  bar : forall x y, x <=_(r^~) y = y <=_r x;
   lub : {fset T} -> T;
   glb : {fset T} -> T;
-  (*TODO : new names*)
   lub_sup : forall S, forall x, x \in S -> x <=_r lub S;
   lub_min : forall S, forall z, (forall x, x \in S -> x <=_r z) -> lub S <=_r z;
-  glb_inf : forall S, forall x, x \in S -> x >=_r glb S;
-  glb_max : forall S, forall z, (forall x, x \in S -> x >=_r z) -> glb S >=_r z;
-  pre_djoin : {fset T} -> T;
+  glb_inf : forall S, forall x, x \in S -> x <=_(r^~) glb S;
+  glb_max : forall S, forall z, (forall x, x \in S -> x <=_(r^~) z) -> glb S <=_(r^~) z
+  (*pre_djoin : {fset T} -> T;
   pre_dmeet : {fset T} -> T;
   bar1 : forall S, forall x, x \in S -> x <=_(r^~) pre_djoin S;
   bar2 : forall S, forall z, (forall x, x \in S -> x <=_(r^~) z) -> pre_djoin S <=_(r^~) z;
   bar3 : forall S, forall x, x \in S -> x >=_(r^~) pre_dmeet S;
-  bar4 : forall S, forall z, (forall x, x \in S -> x >=_(r^~) z) -> pre_dmeet S >=_(r^~) z
+  bar4 : forall S, forall z, (forall x, x \in S -> x >=_(r^~) z) -> pre_dmeet S >=_(r^~) z*)
   (*lub : {fset T} -> T -> T -> T;
   glb : {fset T} -> T -> T -> T;
   _ : forall S, forall x y, x <=_r lub S x y;
@@ -1281,72 +1282,15 @@ End Exports.
 End PreLattice.
 Include PreLattice.Exports.
 
-Section PreLatticeTheory.
-
-Context {T: choiceType} (L : {preLattice T}).
-
-Lemma lub1 a: lub L [fset a] = a.
-Proof.
-apply:(@le_anti _ L); rewrite PreLattice.lub_sup ?inE ?eq_refl // andbT.
-rewrite PreLattice.lub_min // => x; rewrite !inE => /eqP ->; exact: lexx.
-Qed.
-
-Lemma glb1 a : glb L [fset a] = a.
-Proof.
-apply:(@le_anti _ L); rewrite PreLattice.glb_inf ?inE ?eq_refl //=.
-rewrite PreLattice.glb_max // => x; rewrite !inE => /eqP ->; exact: lexx.
-Qed.
-
-(* TOOD : homo and mono notations*)
-Lemma glb_desc A B : A `<=` B -> glb L A >=_L glb L B.
-Proof.
-move/fsubsetP => AsubB; apply:PreLattice.glb_max => x /AsubB.
-exact:PreLattice.glb_inf.
-Qed.
-
-Lemma lub_incr A B : A `<=` B -> lub L A <=_L lub L B.
-Proof.
-move/fsubsetP => AsubB; apply:PreLattice.lub_min => x /AsubB.
-exact:PreLattice.lub_sup.
-Qed.
-
-Lemma glbU1 A a : glb L [fset a; (glb L A)] = glb L (A `|` [fset a]).
-Proof.
-apply/(@le_anti _ L)/andP; split.
-- apply: PreLattice.glb_max => x; rewrite !inE; case/orP.
-  + move/(PreLattice.glb_inf L) => glbAlex; apply:(le_trans _ glbAlex).
-    by apply/PreLattice.glb_inf; rewrite !inE eq_refl orbT.
-  + by move/eqP => ->; apply/PreLattice.glb_inf; rewrite !inE eq_refl.
-- apply: PreLattice.glb_max => x; rewrite !inE; case/orP.
-  + by move/eqP => ->; apply:PreLattice.glb_inf; rewrite !inE eq_refl orbT.
-  + move/eqP => ->. apply: PreLattice.glb_max => y yA; apply:PreLattice.glb_inf.
-    by rewrite !inE yA.
-Qed.
-
-Lemma lubU1 A a: lub L [fset a; lub L A] = lub L (A `|`[fset a]).
-Proof.
-apply/(@le_anti _ L)/andP; split.
-- apply: PreLattice.lub_min => x; rewrite !inE; case/orP => /eqP ->.
-  + by apply: PreLattice.lub_sup; rewrite !inE eq_refl orbT.
-  + by apply: PreLattice.lub_min => y yA; apply: PreLattice.lub_sup; rewrite !inE yA.
-- apply: PreLattice.lub_min => x; rewrite !inE; case/orP.
-  + move/(PreLattice.lub_sup L) => xlelubA.
-    by apply/(le_trans xlelubA)/PreLattice.lub_sup; rewrite !inE eq_refl orbT.
-  + by move/eqP => ->; apply:PreLattice.lub_sup; rewrite !inE eq_refl.
-Qed.
-
-End PreLatticeTheory.
-
 Section DualPreLattice.
 
 Context {T: choiceType}.
 Variable (L : {preLattice T}).
 
 Definition DualPreLatticeClass := PreLattice.Class
-    (PreLattice.bar1 L) (PreLattice.bar2 L)
-    (PreLattice.bar3 L) (PreLattice.bar4 L)
-    (PreLattice.lub_sup L) (PreLattice.lub_min L)
-    (PreLattice.glb_inf L) (PreLattice.glb_max L).
+    (PreLattice.bar L) (PreLattice.foo L)
+    (PreLattice.glb_inf L) (PreLattice.glb_max L)
+    (PreLattice.lub_sup L) (PreLattice.lub_min L).
 
 Canonical DualPreLatticePack :=
   PreLattice.Pack (Phant T) DualPreLatticeClass.
@@ -1356,46 +1300,86 @@ End DualPreLattice.
 Notation "L '^~pl'" := (DualPreLatticePack L)
   (at level 8, format "L '^~pl'").
 
-Section DualPreLatticeTest.
+Section PreLatticeTheory.
 
 Context {T: choiceType}.
-Variable (L : {preLattice T}).
+Implicit Type L: {preLattice T}.
 
-Goal (L^~pl)^~pl = L.
-Proof. by []. Qed.
+Lemma PLledualE L x y: x <=_(L^~pl) y = y <=_L x.
+Proof. by case: L => /= r [^ r]; rewrite rfoo. Qed.
 
-End DualPreLatticeTest.
+Lemma glb_inf_le L: forall S, forall x, x \in S -> x >=_L (glb L S).
+Proof. move=> /= S x xS; rewrite -PLledualE; exact:PreLattice.glb_inf. Qed.
+
+Lemma glb_max_le L: forall S, forall z, (forall x, x \in S -> x >=_L z) ->
+  glb L S >=_L z.
+Proof.
+move=> S z z_inf; rewrite -PLledualE; apply: PreLattice.glb_max.
+by move=> x /z_inf; rewrite -PLledualE.
+Qed.
+
+Lemma lub1 (L: {preLattice T}) a: lub L [fset a] = a.
+Proof.
+apply:(@le_anti _ L); rewrite PreLattice.lub_sup ?inE ?eq_refl // andbT.
+rewrite PreLattice.lub_min // => x; rewrite !inE => /eqP ->; exact: lexx.
+Qed.
+
+Lemma glb1 (L : {preLattice T}) a : glb L [fset a] = a.
+Proof. exact: (lub1 L^~pl). Qed.
+
+Lemma glb_desc L A B: A `<=` B -> glb L B <=_L glb L A.
+Proof. move/fsubsetP => AsubB; apply/glb_max_le => x /AsubB; exact: glb_inf_le. Qed.
+
+Lemma lub_incr L A B : A `<=` B -> lub L A <=_L lub L B.
+Proof. by move/(glb_desc L^~pl); rewrite PLledualE /=. Qed.
+
+Lemma glbU1 L A a : glb L [fset a; (glb L A)] = glb L (A `|` [fset a]).
+Proof.
+apply/(@le_anti _ L)/andP; split.
+- apply: glb_max_le => x; rewrite !inE; case/orP.
+  + move/(glb_inf_le L) => glbAlex; apply:(le_trans _ glbAlex).
+    by apply/glb_inf_le; rewrite !inE eq_refl orbT.
+  + by move/eqP => ->; apply/glb_inf_le; rewrite !inE eq_refl.
+- apply: glb_max_le => x; rewrite !inE; case/orP.
+  + by move/eqP => ->; apply: glb_inf_le; rewrite !inE eq_refl orbT.
+  + move/eqP => ->; apply: glb_max_le => y yA; apply: glb_inf_le.
+    by rewrite !inE yA.
+Qed.
+
+Lemma lubU1 L A a: lub L [fset a; lub L A] = lub L (A `|`[fset a]).
+Proof. exact:(glbU1 L^~pl). Qed.
+
+End PreLatticeTheory.
 
 (* ====================================================================== *)
 
 Section SubLattice.
 
-Context {T : choiceType} (L: {preLattice T}).
+Context {T : choiceType}.
 
-Definition stable (S : {fset T}) :=
-  [forall x : S, [forall y : S, glb L [fset (fsval x); (fsval y)] \in S]]
-  && [forall x : S, [forall y : S, lub L [fset (fsval x); (fsval y)] \in S]].
+Definition stable (L: {preLattice T}) (S : {fset T}) :=
+  [forall x : S, [forall y : S, glb L [fset (fsval x); (fsval y)] \in S]].
   (*[forall x : S, [forall y : S,
     glb L [fset z in S | (z >=_L (fsval x)) && (z >=_L (fsval y))] \in S]] &&
   [forall x : S, [forall y : S,
     lub L [fset z in S | (z <=_L (fsval x)) && (z <=_L (fsval y))] \in S]].*)
 
-Lemma stableP (S : {fset T}) :
+Lemma stableP (L: {preLattice T}) (S : {fset T}) :
   reflect (forall x y, x \in S -> y \in S ->
-    glb L [fset x; y] \in S /\ lub L [fset x;y] \in S)
-    (stable S).
+    glb L [fset x; y] \in S)
+    (stable L S).
 Proof.
 apply/(iffP idP).
-- case/andP => + + x y xS yS.
-  by do 2 move/forallP/(_ [`xS])/forallP/(_ [`yS]) => ->.
-- by move=> stableH; apply/andP; split;
-    apply/forallP => /= x; apply/forallP => /= y;
-    case:(stableH (fsval x) (fsval y) (fsvalP x) (fsvalP y)).
+- by move => + x y xS yS; move/forallP/(_ [`xS])/forallP/(_ [`yS]).
+- move=> stableH; apply/forallP => x; apply/forallP => y.
+  apply: stableH; exact: fsvalP.
 Qed.
 
+Variable (L: {preLattice T}).
 
 Record subLattice :=
-  SubLattice { elements :> {fset T}; _ : stable elements }.
+  SubLattice { elements :> {fset T};
+  _ : stable L elements && stable (L^~pl) elements }.
 
 Canonical subLattice_subType := Eval hnf in [subType for elements].
 
@@ -1420,7 +1404,7 @@ Definition inE := (in_subLatticeE, inE).
 Definition fmeet (S: subLattice) x y :=
   glb L [fset x; y].
 Definition fjoin (S : subLattice) x y:=
-  lub L [fset x; y].
+  glb (L^~pl) [fset x; y].
 
 Definition ftop (S : subLattice) := lub L S.
 Definition fbot (S : subLattice) := glb L S.
@@ -1432,71 +1416,92 @@ Notation "'\fjoin_' S" := (fjoin S) (at level 8, format "'\fjoin_' S").
 Notation "'\ftop_' S" := (ftop S) (at level 8, format "'\ftop_' S").
 Notation "'\fbot_' S" := (fbot S) (at level 8, format "'\fbot_' S").
 
+Section SubLatticeDual.
+
+Context {T: choiceType} (L: {preLattice T}) (S: subLattice L).
+
+Lemma stableDual : (stable L^~pl S) && (stable L S).
+Proof. by case: S => S0 stableS0; rewrite andbC. Qed.
+
+Canonical SubLatticeDual := SubLattice stableDual.
+
+End SubLatticeDual.
+
+Notation "S ^~s" := (SubLatticeDual S)
+  (at level 8, format "S ^~s").
+
 Section SubLatticeTheory.
 
-Context {T: choiceType} (L : {preLattice T}) (S : subLattice L).
+Context {T: choiceType}.
+Implicit Type L : {preLattice T}.
 
-Lemma mem_fjoin : {in S &, forall x y, \fjoin_S x y \in S}.
+Lemma dual_fjoinE L (S: subLattice L) : \fjoin_(S^~s) = \fmeet_S.
+Proof. by []. Qed.
+
+Lemma dual_fmeetE L (S: subLattice L) : \fmeet_(S^~s) = \fjoin_S.
+Proof. by []. Qed.
+
+Lemma mem_fjoin L (S: subLattice L): {in S &, forall x y, \fjoin_S x y \in S}.
 Proof.
 move=> x y; rewrite !inE /fjoin /=; case: S => /= elts + xS yS.
-by case/stableP/(_ x y xS yS).
+by case/andP => _ /stableP/(_ x y xS yS).
 Qed.
 
-Lemma mem_fmeet : {in S &, forall x y, \fmeet_S x y \in S}.
-Proof.
-move=> x y; rewrite !inE /fmeet /=; case: S => /= elts + xS yS.
-by case/stableP/(_ x y xS yS).
-Qed.
+Lemma mem_fmeet L (S : subLattice L) : {in S &, forall x y, \fmeet_S x y \in S}.
+Proof. exact: (@mem_fjoin _ S^~s). Qed.
 
-Lemma fmeetC : {in S &, commutative (\fmeet_S)}.
+Lemma fmeetC L (S : subLattice L) : {in S &, commutative (\fmeet_S)}.
 Proof.
 move=> x y _ _; rewrite /fmeet; congr glb; apply/eqP/fset_eqP => z.
 by rewrite !inE orbC.
 Qed.
 
-Lemma leIfr : {in S &, forall x y, \fmeet_S x y <=_L y}.
+Lemma leIfr L (S : subLattice L) : {in S &, forall x y, \fmeet_S x y <=_L y}.
 Proof.
-by move=> x y xS yS; rewrite /fmeet PreLattice.glb_inf // !inE eq_refl orbT.
+by move=> x y xS yS; rewrite /fmeet glb_inf_le // !inE eq_refl orbT.
 Qed.
 
-Lemma leIfl : {in S &, forall x y, \fmeet_S x y <=_L x}.
+Lemma leIfl L (S : subLattice L) : {in S &, forall x y, \fmeet_S x y <=_L x}.
 Proof.
 by move=> x y xS yS; rewrite fmeetC ?leIfr.
 Qed.
 
-Lemma lefI :
+Lemma lefI L (S : subLattice L) :
   {in S & &, forall x y z, (x <=_L \fmeet_S y z) = (x <=_L y) && (x <=_L z)}.
 Proof.
 move=> x y z xS yS zS; apply/(sameP idP)/(iffP idP).
-- case/andP=> xley xlez; rewrite PreLattice.glb_max //.
+- case/andP=> xley xlez; rewrite glb_max_le //.
   by move=> t; rewrite !inE; case/orP;move/eqP => ->.
 - move=> xlem.
   by rewrite (le_trans xlem (leIfl yS zS)) (le_trans xlem (leIfr yS zS)).
 Qed.
 
 
-Lemma lefIl : {in S & &, forall x y z, y <=_L x -> \fmeet_S y z <=_L x}.
+Lemma lefIl L (S : subLattice L) :
+  {in S & &, forall x y z, y <=_L x -> \fmeet_S y z <=_L x}.
 Proof.
 move=> x y z xS yS zS ylex.
 by rewrite (le_trans (leIfl yS zS) ylex).
 Qed.
 
-Lemma lefIr : {in S & &, forall x y z, z <=_L x -> \fmeet_S y z <=_L x}.
+Lemma lefIr L (S : subLattice L) :
+  {in S & &, forall x y z, z <=_L x -> \fmeet_S y z <=_L x}.
 Proof. move=> x y z xS yS zS zlex; rewrite fmeetC //; exact: lefIl.
 Qed.
 
-Lemma fmeetA : {in S & &, associative (\fmeet_S) }.
+Lemma fmeetA L (S : subLattice L) : {in S & &, associative (\fmeet_S) }.
 Proof.
 move=> x y z xinS yinS zinS; rewrite /fmeet [X in _ = glb L X]fset2C !glbU1.
 by congr glb; apply/eqP/fset_eqP => t; rewrite !inE orbC orbA.
 Qed.
 
-Lemma fmeetxx : {in S, idempotent (\fmeet_S)}.
+Lemma fmeetxx L (S : subLattice L) : {in S, idempotent (\fmeet_S)}.
 Proof.
 by move=> x xS; rewrite /fmeet fset2xx glb1.
 Qed.
 
-Lemma leEfmeet : {in S &, forall x y, (x <=_L y) = (\fmeet_S x y == x)}.
+Lemma leEfmeet L (S : subLattice L) :
+  {in S &, forall x y, (x <=_L y) = (\fmeet_S x y == x)}.
 Proof.
 move=> x y xS yS.
 apply/(sameP idP)/(iffP idP).
@@ -1505,72 +1510,88 @@ apply/(sameP idP)/(iffP idP).
   by rewrite lexx xley.
 Qed.
 
-Lemma fmeetAC : {in S & &, right_commutative (\fmeet_S)}.
+Lemma fmeetAC L (S : subLattice L) :
+  {in S & &, right_commutative (\fmeet_S)}.
 Proof.
 move=> x y z xS yS zS.
 by rewrite -fmeetA // [X in \fmeet_S _ X]fmeetC // fmeetA.
 Qed.
 
-Lemma fmeetCA : {in S & &, left_commutative (\fmeet_S)}.
+Lemma fmeetCA L (S : subLattice L) :
+  {in S & &, left_commutative (\fmeet_S)}.
 Proof.
 move=> x y z xS yS zS.
 by rewrite fmeetA // [X in \fmeet_S X _]fmeetC // -fmeetA.
 Qed.
 
 
-Lemma fmeetACA : forall x y z t, x \in S -> y \in S -> z \in S -> t \in S ->
-  \fmeet_S (\fmeet_S x y) (\fmeet_S z t) = \fmeet_S (\fmeet_S x z) (\fmeet_S y t).
+Lemma fmeetACA L (S : subLattice L) :
+  forall x y z t, x \in S -> y \in S -> z \in S -> t \in S ->
+  \fmeet_S (\fmeet_S x y) (\fmeet_S z t) =
+  \fmeet_S (\fmeet_S x z) (\fmeet_S y t).
 Proof. 
 move=> x y z t xS yS zS tS.
 by rewrite !fmeetA ?mem_fmeet // [X in \fmeet_S X _]fmeetAC.
 Qed.
 
-Lemma fmeetKI : {in S &, forall x y, \fmeet_S x (\fmeet_S x y) = \fmeet_S x y}.
+Lemma fmeetKI L (S : subLattice L) :
+  {in S &, forall x y, \fmeet_S x (\fmeet_S x y) = \fmeet_S x y}.
 Proof. by move=> x y xS yS; rewrite fmeetA ?fmeetxx. Qed.
 
-Lemma fmeetIK : {in S &, forall x y, \fmeet_S (\fmeet_S x y) y = \fmeet_S x y}.
+Lemma fmeetIK L (S : subLattice L) :
+  {in S &, forall x y, \fmeet_S (\fmeet_S x y) y = \fmeet_S x y}.
 Proof. by move=> x y xS yS; rewrite -fmeetA ?fmeetxx. Qed.
 
-Lemma fmeetKIC : {in S &, forall x y, \fmeet_S x (\fmeet_S y x) = \fmeet_S x y}.
+Lemma fmeetKIC L (S : subLattice L) :
+  {in S &, forall x y, \fmeet_S x (\fmeet_S y x) = \fmeet_S x y}.
 Proof. by move=> ? ? ? ?; rewrite fmeetC ?mem_fmeet ?fmeetIK // fmeetC. Qed.
 
-Lemma fmeetIKC : {in S &, forall x y, \fmeet_S (\fmeet_S y x) y = \fmeet_S x y}.
+Lemma fmeetIKC L (S : subLattice L) :
+  {in S &, forall x y, \fmeet_S (\fmeet_S y x) y = \fmeet_S x y}.
 Proof. by move=> ? ? ? ?; rewrite fmeetC ?mem_fmeet ?fmeetKI // fmeetC. Qed.
 
-Lemma leIf2 : {in S & &, forall x y z, (y <=_L x) || (z <=_L x) ->
+Lemma leIf2 L (S : subLattice L) :
+  {in S & &, forall x y z, (y <=_L x) || (z <=_L x) ->
   \fmeet_S y z <=_L x}.
 Proof. 
 move=> x y z xS yS zS /orP [ylex | zlex]; [exact: lefIl | exact: lefIr].
 Qed.
 
 
-Lemma fmeet_idPl {x y}: x \in S -> y \in S ->
+Lemma fmeet_idPl L (S : subLattice L) {x y} : x \in S -> y \in S ->
   reflect (\fmeet_S x y = x) (x <=_L y).
-Proof. move=> xS yS; rewrite leEfmeet //; exact: eqP. Qed.
+Proof. move=> xS yS; rewrite (leEfmeet xS yS) //; exact: eqP. Qed.
 
-Lemma fmeet_idPr {x y} : x \in S -> y \in S ->
+Lemma fmeet_idPr L (S : subLattice L) {x y} : x \in S -> y \in S ->
   reflect (\fmeet_S y x = x) (x <=_L y).
 Proof. by move=> xS yS; rewrite fmeetC //; apply/fmeet_idPl. Qed.
 
-Lemma fmeet_l : {in S &, forall x y, x <=_L y -> \fmeet_S x y = x}.
+Lemma fmeet_l L (S : subLattice L) :
+  {in S &, forall x y, x <=_L y -> \fmeet_S x y = x}.
 Proof. move=> x y xS yS; exact/fmeet_idPl. Qed.
 
-Lemma fmeet_r : {in S &, forall x y, y <=_L x -> \fmeet_S x y = y}.
+Lemma fmeet_r L (S : subLattice L) :
+  {in S &, forall x y, y <=_L x -> \fmeet_S x y = y}.
 Proof. move=> x y xS yS; exact/fmeet_idPr. Qed.
 
-Lemma lefIidl : {in S &, forall x y, (x <=_L \fmeet_S x y) = (x <=_L y)}.
-Proof. by move=> x y xS yS; rewrite !leEfmeet ?mem_fmeet ?fmeetKI. Qed.
+Lemma lefIidl L (S : subLattice L) :
+  {in S &, forall x y, (x <=_L \fmeet_S x y) = (x <=_L y)}.
+Proof. by move=> x y xS yS; rewrite !(leEfmeet xS) ?mem_fmeet ?fmeetKI. Qed.
 
-Lemma lefIidr : {in S &, forall x y, (x <=_L \fmeet_S y x) = (x <=_L y)}.
-Proof. by move=> x y xS yS; rewrite !leEfmeet ?mem_fmeet ?fmeetKIC. Qed.
+Lemma lefIidr L (S : subLattice L) :
+  {in S &, forall x y, (x <=_L \fmeet_S y x) = (x <=_L y)}.
+Proof. by move=> x y xS yS; rewrite !(leEfmeet xS) ?mem_fmeet ?fmeetKIC. Qed.
 
-Lemma eq_fmeetl : {in S &, forall x y, (\fmeet_S x y == x) = (x <=_L y)}.
+Lemma eq_fmeetl L (S : subLattice L) :
+  {in S &, forall x y, (\fmeet_S x y == x) = (x <=_L y)}.
 Proof. by move=> ????; apply/esym/leEfmeet. Qed.
 
-Lemma eq_fmeetr : {in S &, forall x y, (\fmeet_S x y == y) = (y <=_L x)}.
+Lemma eq_fmeetr L (S: subLattice L) :
+  {in S &, forall x y, (\fmeet_S x y == y) = (y <=_L x)}.
 Proof. by move=> ????; rewrite fmeetC ?eq_fmeetl. Qed.
 
-Lemma lefI2 x y z t : x \in S -> y \in S -> z \in S -> t \in S ->
+Lemma lefI2 L (S : subLattice L) x y z t :
+  x \in S -> y \in S -> z \in S -> t \in S ->
   x <=_L z -> y <=_L t -> \fmeet_S x y <=_L \fmeet_S z t.
 Proof.
 move=> xS yS zS tS xlez ylet.
@@ -1579,123 +1600,162 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 
-Lemma fjoinC : {in S &, commutative (\fjoin_S)}.
-Proof.
-move=> x y xS yS; rewrite /fjoin; congr lub; apply/eqP/fset_eqP => z.
-by rewrite !inE orbC.
+Lemma fjoinC L (S : subLattice L) : {in S &, commutative (\fjoin_S)}.
+Proof. exact: (@fmeetC _ S^~s). Qed.
+
+Lemma lefUr L (S: subLattice L) : {in S &, forall x y, x <=_L \fjoin_S y x}.
+Proof. 
+move: (@leIfr _ S^~s) => + y x yS xS; move/(_ x y xS yS).
+by rewrite PLledualE.
 Qed.
 
-Lemma lefUr : {in S &, forall x y, x <=_L \fjoin_S y x}.
-Proof. by move=> x y xS yS; rewrite PreLattice.lub_sup // !inE eq_refl orbT. Qed.
+Lemma lefUl L (S : subLattice L) : {in S &, forall x y, x <=_L \fjoin_S x y}.
+Proof.
+move: (@leIfl _ S^~s) => + x y xS yS; move/(_ x y xS yS).
+by rewrite PLledualE.
+Qed.
 
-Lemma lefUl : {in S &, forall x y, x <=_L \fjoin_S x y}.
-Proof. by move=> x y xS yS; rewrite fjoinC // lefUr. Qed.
-
-Lemma leUf : {in S & &, forall x y z,
+Lemma leUf L (S : subLattice L) : {in S & &, forall x y z,
   (\fjoin_S y z <=_L x) = (y <=_L x) && (z <=_L x)}.
 Proof.
-move=> x y z xS yS zS; apply/(sameP idP)/(iffP idP).
-- case/andP => ylex zlex; apply: PreLattice.lub_min => t; rewrite !inE.
-  by case/orP => /eqP ->.
-- by move=> jlex; rewrite (le_trans (lefUl yS zS) jlex)
-    (le_trans (lefUr zS yS) jlex).
+move:(@lefI _ S^~s) => + x y z xS yS zS; move/(_ x y z xS yS zS).
+by rewrite !PLledualE.
 Qed.
 
-Lemma fjoinA : {in S & &, associative (\fjoin_S)}.
+Lemma fjoinA L (S : subLattice L) : {in S & &, associative (\fjoin_S)}.
+Proof. exact: (@fmeetA _ S^~s). Qed.
+
+Lemma fjoinxx L (S : subLattice L) : {in S, idempotent (\fjoin_S)}.
+Proof. exact: (@fmeetxx _ S^~s). Qed.
+
+Lemma leEfjoin L (S : subLattice L) :
+  {in S &, forall x y, (x <=_L y) = (\fjoin_S y x == y)}.
 Proof.
-move=> x y z xS yS zS; rewrite /fjoin [X in _ = lub L X]fset2C !lubU1.
-by congr lub; apply/eqP/fset_eqP => t; rewrite !inE orbC orbA.
+move: (@leEfmeet _ S^~s) => + y x yS xS; move/(_ x y xS yS).
+by rewrite PLledualE.
 Qed.
 
-Lemma fjoinxx : {in S, idempotent (\fjoin_S)}.
-Proof. by move=> x xS; rewrite /fjoin fset2xx lub1. Qed.
+Lemma fjoinAC L (S : subLattice L) :
+  {in S & &, right_commutative (\fjoin_S)}.
+Proof. exact: (@fmeetAC _ S^~s). Qed.
 
-Lemma leEfjoin : {in S &, forall x y, (x <=_L y) = (\fjoin_S y x == y)}.
-Proof.
-move=> x y xS yS; apply/(sameP idP)/(iffP idP).
-- by move/eqP => <-; rewrite lefUr.
-- move=> xley; apply/eqP/(@le_anti _ L).
-  by rewrite lefUl // leUf // lexx xley.
-Qed.
+Lemma fjoinCA L (S : subLattice L) :
+  {in S & &, left_commutative (\fjoin_S)}.
+Proof. exact: (@fmeetCA _ S^~s). Qed.
 
-Lemma fjoinAC : {in S & &, right_commutative (\fjoin_S)}.
-Proof. move=> x y z xS yS zS.
-  by rewrite -!fjoinA // [X in _ = \fjoin_S _ X]fjoinC.
-Qed.
-
-Lemma fjoinCA : {in S & &, left_commutative (\fjoin_S)}.
-Proof. 
-move=> x y z xS yS zS.
-by rewrite !fjoinA // [X in \fjoin_S X _]fjoinC.
-Qed.
-
-Lemma fjoinACA x y z t: x \in S -> y \in S -> z \in S -> t \in S ->
+Lemma fjoinACA L (S : subLattice L) x y z t :
+  x \in S -> y \in S -> z \in S -> t \in S ->
   \fjoin_S (\fjoin_S x y) (\fjoin_S z t) =
   \fjoin_S (\fjoin_S x z) (\fjoin_S y t).
+Proof. exact: (@fmeetACA _ S^~s). Qed.
+
+Lemma fjoinKI L (S: subLattice L) :
+  {in S &, forall x y, \fjoin_S x (\fjoin_S x y) = \fjoin_S x y}.
+Proof. exact: (@fmeetKI _ S^~s). Qed.
+
+Lemma fjoinIK L (S : subLattice L) :
+  {in S &, forall x y, \fjoin_S (\fjoin_S x y) y = \fjoin_S x y}.
+Proof. exact: (@fmeetIK _ S^~s). Qed.
+
+Lemma fjoinKIC L (S : subLattice L) :
+  {in S &, forall x y, \fjoin_S x (\fjoin_S y x) = \fjoin_S x y}.
+Proof. exact: (@fmeetKIC _ S^~s). Qed.
+
+Lemma fjoinIKC L (S : subLattice L) :
+  {in S &, forall x y, \fjoin_S (\fjoin_S y x) y = \fjoin_S x y}.
+Proof. exact: (@fmeetIKC _ S^~s). Qed.
+
+Lemma leUfl L (S: subLattice L) :
+  {in S & &, forall x y z, x <=_L y -> x <=_L \fjoin_S y z}.
 Proof.
-move=> xS yS zS tS.
-by rewrite !fjoinA ?mem_fjoin // [X in \fjoin_S X _]fjoinAC.
+move: (@lefIl _ S^~s) => + x y z xS yS zS; move/(_ x y z xS yS zS).
+by rewrite !PLledualE.
 Qed.
 
-Lemma fjoinKI : {in S &, forall x y, \fjoin_S x (\fjoin_S x y) = \fjoin_S x y}.
-Proof. by move=> x y xS yS; rewrite fjoinA ?fjoinxx. Qed.
+Lemma leUfr L (S : subLattice L) :
+  {in S & &, forall x y z, x <=_L z -> x <=_L \fjoin_S y z}.
+Proof.
+move: (@lefIr _ S^~s) => + x y z xS yS zS; move/(_ x y z xS yS zS).
+by rewrite !PLledualE.
+Qed.
 
-Lemma fjoinIK : {in S &, forall x y, \fjoin_S (\fjoin_S x y) y = \fjoin_S x y}.
-Proof. by move=> x y xS yS; rewrite -fjoinA ?fjoinxx. Qed.
-
-Lemma fjoinKIC : {in S &, forall x y, \fjoin_S x (\fjoin_S y x) = \fjoin_S x y}.
-Proof. by move=> x y xS yS; rewrite [X in \fjoin_S _ X]fjoinC ?fjoinKI. Qed.
-
-Lemma fjoinIKC : {in S &, forall x y, \fjoin_S (\fjoin_S y x) y = \fjoin_S x y}.
-Proof. by move=> x y xS yS; rewrite fjoinAC ?fjoinxx // fjoinC. Qed.
-
-Lemma leUfl : {in S & &, forall x y z, x <=_L y -> x <=_L \fjoin_S y z}.
-Proof. move=> x y z xS yS zS xley; apply/(le_trans xley); exact: lefUl. Qed.
-
-Lemma leUfr : {in S & &, forall x y z, x <=_L z -> x <=_L \fjoin_S y z}.
-Proof. move=> x y z xS yS zS xlez; apply/(le_trans xlez); exact: lefUr. Qed.
-
-Lemma lefU2 : {in S & &, forall x y z, (x <=_L y) || (x <=_L z) ->
+Lemma lefU2 L (S : subLattice L) :
+  {in S & &, forall x y z, (x <=_L y) || (x <=_L z) ->
   x <=_L \fjoin_S y z}.
-Proof. by move=> x y z xS yS zS; case/orP => [/leUfl|/leUfr]; apply. Qed.
+Proof.
+move: (@leIf2 _ S^~s) => + x y z xS yS zS; move/(_ x y z xS yS zS).
+by rewrite !PLledualE.
+Qed.
 
-Lemma fjoin_idPr {x y}: x \in S -> y \in S ->
+Lemma fjoin_idPr L (S : subLattice L) {x y}: x \in S -> y \in S ->
   reflect (\fjoin_S y x = x) (y <=_L x).
-Proof. move=> xS yS; rewrite leEfjoin // fjoinC //; exact: eqP. Qed.
+Proof.
+move: (@fmeet_idPr _ S^~s) => + xS yS; move/(_ x y xS yS).
+by rewrite PLledualE.
+Qed.
 
 
-Lemma fjoin_idPl {x y} : x \in S -> y \in S ->
+Lemma fjoin_idPl L (S: subLattice L) {x y} : x \in S -> y \in S ->
   reflect (\fjoin_S x y = x) (y <=_L x).
-Proof. move=> xS yS; rewrite fjoinC //; exact: fjoin_idPr. Qed.
+Proof.
+move: (@fmeet_idPl _ S^~s)=> + xS yS; move/(_ x y xS yS).
+by rewrite PLledualE.
+Qed.
 
-Lemma fjoin_l : {in S &, forall x y, y <=_L x -> \fjoin_S x y = x}.
-Proof. move=> x y xS yS; exact/fjoin_idPl. Qed.
+Lemma fjoin_l L (S : subLattice L) :
+  {in S &, forall x y, y <=_L x -> \fjoin_S x y = x}.
+Proof.
+move: (@fmeet_l _ S^~s)=> + x y xS yS; move/(_ x y xS yS).
+by rewrite PLledualE.
+Qed.
 
-Lemma fjoin_r : {in S &, forall x y, x <=_L y -> \fjoin_S x y = y}.
-Proof. move=> x y xS yS; exact/fjoin_idPr. Qed.
+Lemma fjoin_r L (S : subLattice L) :
+  {in S &, forall x y, x <=_L y -> \fjoin_S x y = y}.
+Proof.
+move: (@fmeet_r _ S^~s) => + x y xS yS; move/(_ x y xS yS).
+by rewrite PLledualE.
+Qed.
 
-Lemma leUfidl : {in S &, forall x y, (\fjoin_S x y <=_L x) = (y <=_L x)}.
-Proof. by move=> x y xS yS; rewrite leUf ?lexx. Qed.
+Lemma leUfidl L (S: subLattice L) :
+  {in S &, forall x y, (\fjoin_S x y <=_L x) = (y <=_L x)}.
+Proof.
+move: (@lefIidl _ S^~s) => + x y xS yS; move/(_ x y xS yS).
+by rewrite !PLledualE.
+Qed.
 
-Lemma leUfidr : {in S &, forall x y, (\fjoin_S y x <=_L x) = (y <=_L x)}.
-Proof. by move=> x y xS yS; rewrite leUf ?lexx ?andbT. Qed.
+Lemma leUfidr L (S : subLattice L) :
+  {in S &, forall x y, (\fjoin_S y x <=_L x) = (y <=_L x)}.
+Proof.
+move: (@lefIidr _ S^~s) => + x y xS yS; move/(_ x y xS yS).
+by rewrite !PLledualE.
+Qed.
 
-Lemma eq_fjoinl : {in S &, forall x y, (\fjoin_S x y == x) = (y <=_L x)}.
-Proof. by move=> x y xS yS; rewrite leEfjoin. Qed.
+Lemma eq_fjoinl L (S : subLattice L) :
+  {in S &, forall x y, (\fjoin_S x y == x) = (y <=_L x)}.
+Proof.
+move: (@eq_fmeetl _ S^~s) => + x y xS yS; move/(_ x y xS yS). 
+by rewrite PLledualE.
+Qed.
 
-Lemma eq_fjoinr : {in S &, forall x y, (\fjoin_S x y == y) = (x <=_L y)}.
-Proof. by move=> x y xS yS; rewrite leEfjoin // fjoinC. Qed.
+Lemma eq_fjoinr L (S : subLattice L) :
+  {in S &, forall x y, (\fjoin_S x y == y) = (x <=_L y)}.
+Proof.
+move: (@eq_fmeetr _ S^~s) => + x y xS yS; move/(_ x y xS yS).
+by rewrite PLledualE. 
+Qed.
 
-Lemma leUf2 x y z t : x \in S -> y \in S -> z \in S -> t \in S ->
+Lemma leUf2 L (S: subLattice L) x y z t :
+  x \in S -> y \in S -> z \in S -> t \in S ->
   x <=_L z -> y <=_L t -> \fjoin_S x y <=_L \fjoin_S z t.
 Proof.
-move=> xS yS zS tS xlez ylet.
-by rewrite leUf ?mem_fjoin // {1}leUfl ?leUfr. 
+move: (@lefI2 _ S^~s) => + xS yS zS tS; move/(_ z t x y zS tS xS yS).
+by rewrite !PLledualE. 
 Qed.
 
 (* -------------------------------------------------------------------- *)
 
-Lemma mem_fbot: S != fset0 :> {fset _} -> \fbot_S \in S.
+Lemma mem_fbot L (S : subLattice L) : S != fset0 :> {fset _} ->
+  \fbot_S \in S.
 Proof.
 rewrite /fbot.
 have: forall S', S' `<=` S -> S'!= fset0 -> glb L S' \in S.
@@ -1712,67 +1772,40 @@ have: forall S', S' `<=` S -> S'!= fset0 -> glb L S' \in S.
 by move/(_ S) => + Sprop; move/(_ (fsubset_refl S) Sprop).
 Qed.
 
-Lemma mem_ftop : S != fset0 :> {fset _} -> \ftop_S \in S.
+Lemma mem_ftop L (S : subLattice L) : S != fset0 :> {fset _} ->
+  \ftop_S \in S.
+Proof. exact: (@mem_fbot _ S^~s). Qed.
+
+Lemma le0f L (S : subLattice L) : S != fset0 :> {fset _} ->
+  {in S, forall x, \fbot_S <=_L x}.
+Proof. move=> Sprop0 x xS; exact: glb_inf_le. Qed.
+
+Lemma fjoinf0 L (S : subLattice L) : S != fset0 :> {fset _} ->
+  {in S, right_id \fbot_S (\fjoin_S)}.
+Proof. by move=> Sprop0 x xS; apply/eqP; rewrite eq_fjoinl ?le0f ?mem_fbot. Qed.
+
+Lemma fjoin0f L (S : subLattice L): S != fset0 :> {fset _} ->
+  {in S, left_id \fbot_S (\fjoin_S)}.
+Proof. by move=> Sprop0 x xS; apply/eqP; rewrite eq_fjoinr ?le0f ?mem_fbot. Qed.
+
+Lemma lef1 L (S : subLattice L) : S != fset0 :> {fset _} ->
+  {in S, forall x, x <=_L \ftop_S}.
 Proof.
-rewrite /ftop.
-have: forall S', S' `<=` S -> S' != fset0 -> lub L S' \in S.
-- move=> S' + /fset0Pn [a] /mem_fset1U; move=> + S'eq.
-  rewrite -{}S'eq; elim/fset_ind: S'.
-  + rewrite fsetU0 => /fsubsetP a_sub_S; rewrite -fset2xx.
-    by apply/mem_fjoin; apply/a_sub_S; rewrite inE.
-  + move=> b /= S'' bnS'' Hind /fsubsetP abS''_subS.
-    have a_in_S: a \in S by apply: abS''_subS; rewrite !inE eq_refl.
-    have b_in_S: b \in S by apply: abS''_subS; rewrite !inE eq_refl orbT.  
-    rewrite fsetUCA fsetUC -lubU1 mem_fjoin //.
-    apply/Hind/fsubsetP=> z zaS''; apply/abS''_subS.
-    by rewrite fsetUCA inE zaS'' orbT.
-by move/(_ S) => + Sprop; move/(_ (fsubset_refl S) Sprop).
+move: (@le0f _ S^~s) => + Sprop0 x xS; move/(_ Sprop0 x xS).
+by rewrite PLledualE.
 Qed.
 
-Hypothesis Sprop0 : S != fset0 :> {fset _}.
+Lemma fmeetf1 L (S : subLattice L) : S != fset0 :> {fset _} ->
+  {in S, right_id \ftop_S (\fmeet_S)}.
+Proof. exact: (@fjoinf0 _ S^~s). Qed.
 
-Lemma le0f : {in S, forall x, \fbot_S <=_L x}.
-Proof. by move=> x xS; apply: PreLattice.glb_inf. Qed.
-
-Lemma fjoinf0 : {in S, right_id \fbot_S (\fjoin_S)}.
-Proof. by move=> x xS; apply/eqP; rewrite eq_fjoinl ?le0f ?mem_fbot. Qed.
-
-Lemma fjoin0f : {in S, left_id \fbot_S (\fjoin_S)}.
-Proof. by move=> x xS; apply/eqP; rewrite eq_fjoinr ?le0f ?mem_fbot. Qed.
-
-Lemma lef1 : {in S, forall x, x <=_L \ftop_S}.
-Proof. by move=> x xS; apply: PreLattice.lub_sup. Qed.
-
-Lemma fmeetf1 : {in S, right_id \ftop_S (\fmeet_S)}.
-Proof. by move=> x xS; apply/eqP; rewrite eq_fmeetl ?lef1 ?mem_ftop. Qed.
-
-Lemma fmeet1f : {in S, left_id \ftop_S (\fmeet_S)}.
-Proof. by move=> x xS; apply/eqP; rewrite eq_fmeetr ?lef1 ?mem_ftop. Qed.
+Lemma fmeet1f L (S : subLattice L) : S != fset0 :> {fset _} ->
+  {in S, left_id \ftop_S (\fmeet_S)}.
+Proof. exact: (@fjoin0f _ S^~s). Qed.
 
 End SubLatticeTheory.
 
 (* ---------------------------------------------------------------------- *) 
-(*
-Section SubLatticePred.
-
-Print pred_key.
-
-Context {T: choiceType} (L: {preLattice T}) (S: subLattice L).
-Structure subLatticePred := SubLatticePred {Spred :> pred_key S}.
-
-Canonical predSub := (SubLatticePred (DefaultPredKey S)).
-Variable kS : keyed_pred predSub.
-
-Goal forall x, x \in kS.
-Admitted.
-
-Goal \big[\fjoin_S / \fbot_S]_(i in kS) (val i) =
-  \big[\fjoin_S / \fbot_S]_(i <- S) i.
-Set Printing Coercions.
-Admitted.
-
-End SubLatticePred.
-*)
 
 Section SubLatticeLattice.
 
@@ -1802,11 +1835,17 @@ move=> x; apply/eqP; rewrite -val_eqE /=.
 by rewrite fjoinxx ?fsvalP.
 Qed.
 
+Check @Join.Class.
 
 
 End SubLatticeLattice.
 
-(*
+Section Foo.
+
+Context {T: choiceType} (L : {preLattice T}) (S: subLattice L).
+Hypothesis Sprop0 : S != fset0 :> {fset _}.
+
+
 Lemma foobar_top : {in S, forall t, (forall x, x \in S -> x <=_L t) -> t = \ftop_S}.
 Proof.
 move=> t tS ttop; apply/(@le_anti _ L).
@@ -1819,17 +1858,19 @@ Lemma foobar_big : forall S1 S2, S1 `<=` S -> S2 `<=`S -> perm_eq S1 S2 ->
 Proof.
 Admitted.
 
+Check big_morph.
+
   
 
 Lemma ftopE : \ftop_S = \big[\fjoin_S / \fbot_S]_(i <- S) i.
 Proof.
 symmetry; apply/foobar_top.
-- rewrite big_seq; apply: (@big_ind _ (fun x => x \in S)) => //.
+- rewrite big_seq; elim/big_ind:  _ => //.
   + exact: mem_fbot.
   + exact: mem_fjoin.
-- move=> x /mem_fset1U <-.
+- move=> x.
 Admitted.
-*) 
+
 
 
 
