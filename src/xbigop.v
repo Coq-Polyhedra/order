@@ -1,19 +1,13 @@
 From mathcomp Require Import all_ssreflect.
 
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.
+
 
 Section BigOpSub.
 
-Parameter (T : eqType).
-Parameter x0 : T.
-Parameter op : T -> T -> T.
-Parameter P : pred T.
-Parameter Q : pred T.
+Context {T : eqType} {x0 : T} {op : T -> T -> T} {P Q : pred T}.
 
 Hypothesis hc : forall x y, Q x -> Q y -> op x y = op y x.
-Hypothesis ha : forall x y z, Q x -> Q y -> Q x -> op x (op y z) = op (op x y) z.
+Hypothesis ha : forall x y z, Q x -> Q y -> Q z -> op x (op y z) = op (op x y) z.
 Hypothesis hs : forall x y, Q x -> Q y -> Q (op x y).
 Hypothesis PQ : forall x, P x -> Q x.
 Hypothesis Q0 : Q x0.
@@ -37,7 +31,7 @@ elim: r; rewrite ?in_nil // => a l Hind; rewrite inE; case/orP.
   + by move/eqP => <-; rewrite big_cons => _ ->.
   + move=> aneqx x_in_l Px; rewrite !big_cons; case/boolP: (P a).
     - move/PQ => Qa; rewrite Hind //; have Qx: (Q x) by apply: PQ.
-      by rewrite ha // [X in op X _]hc // ha.
+      by rewrite ha ?big_stable // [X in op X _]hc // ha ?big_stable.
     - move=> _; exact: Hind.
 Qed. 
 
@@ -61,7 +55,7 @@ elim: r.
   move: (perm_to_rem a_in_s) => eq_srm.
   move: (perm_trans eq_rs eq_srm); rewrite perm_cons.
   move/Hind => NHind; rewrite big_cons; case/boolP: (P a).
-  + by move=> Pa; rewrite (big_mem_sub a_in_s) // NHind.
+  + by move=> Pa; rewrite (big_mem_sub s a a_in_s) // NHind.
   + by move=> nPa; rewrite NHind -big_nmem_sub.
 Qed.
   

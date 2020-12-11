@@ -1,5 +1,6 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
+Require Import xbigop.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -1807,39 +1808,6 @@ End SubLatticeTheory.
 
 (* ---------------------------------------------------------------------- *) 
 
-Section SubLatticeLattice.
-
-Context {T: choiceType} (L: {preLattice T}) (S: subLattice L).
-Hypothesis Sprop0 : S != fset0 :> {fset _}.
-Definition fjoinS (x y : S) := [` mem_fjoin (fsvalP x) (fsvalP y) ].
-Definition fmeetS (x y : S) := [` mem_fmeet (fsvalP x) (fsvalP y) ].
-Definition fbotS := [` (mem_fbot Sprop0) ].
-Definition ftopS := [` (mem_ftop Sprop0) ].
-
-
-Lemma fjoinSC : commutative fjoinS.
-Proof.
-move=> x y; apply/eqP; rewrite -val_eqE /=.
-by rewrite fjoinC ?fsvalP.
-Qed.
-
-Lemma fjoinSA : associative fjoinS.
-Proof.
-move=> x y z; apply/eqP.
-by rewrite -val_eqE /= fjoinA ?fsvalP.
-Qed.
-
-Lemma fjoinSxx : idempotent fjoinS.
-Proof.
-move=> x; apply/eqP; rewrite -val_eqE /=.
-by rewrite fjoinxx ?fsvalP.
-Qed.
-
-Check @Join.Class.
-
-
-End SubLatticeLattice.
-
 Section Foo.
 
 Context {T: choiceType} (L : {preLattice T}) (S: subLattice L).
@@ -1852,13 +1820,20 @@ move=> t tS ttop; apply/(@le_anti _ L).
 by rewrite lef1 //=; apply/ttop; rewrite mem_ftop.
 Qed.
 
-Lemma foobar_big : forall S1 S2, S1 `<=` S -> S2 `<=`S -> perm_eq S1 S2 ->
+Lemma foobar_big : forall (S1 S2 : seq T),
+  (forall x, x \in S2 -> x \in S) -> perm_eq S1 S2 ->
   \big[\fjoin_S / \fbot_S]_(i <- S1) i =
   \big[\fjoin_S / \fbot_S]_(i <- S2) i.
 Proof.
-Admitted.
-
-Check big_morph.
+move=> S1 S2 S2sub eq_S1_S2.
+rewrite !big_seq; move: (perm_mem eq_S1_S2) => mem_S1_S2.
+rewrite (eq_bigl (fun x => x \in S2)); last by exact: mem_S1_S2.
+apply: (@big_perm_sub _ \fbot_S \fjoin_S _ (fun x => x \in S)) => //.
+- exact: fjoinC.
+- exact: fjoinA.
+- exact: mem_fjoin.
+- exact: mem_fbot.
+Qed.
 
   
 
@@ -1868,8 +1843,14 @@ symmetry; apply/foobar_top.
 - rewrite big_seq; elim/big_ind:  _ => //.
   + exact: mem_fbot.
   + exact: mem_fjoin.
-- move=> x.
-Admitted.
+- move=> x x_in_S; move: (perm_to_rem x_in_S) => eqS_xS'.
+  rewrite (foobar_big _ eqS_xS') ?big_cons ?lefUl // ?big_seq.
+    apply: big_stable;
+      [exact: mem_fjoin |exact: mem_rem |exact: mem_fbot].
+  move=> y; rewrite !inE; case/orP; [by move/eqP => -> |exact: mem_rem].
+Qed.
+
+
 
 
 
