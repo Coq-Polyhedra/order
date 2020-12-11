@@ -11,25 +11,6 @@ Import GRing.Theory Num.Theory.
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
 
-(* Stupid test on primitive projections *)
-Section StupidTest.
-
-Record foo := Foo { bar1 : nat; bar2: nat }.
-
-Goal forall r: foo, r = Foo (bar1 r) (bar2 r).
-move => r. Fail done.
-Admitted.
-
-Set Primitive Projections.
-Record foo' := Foo' { bar1' : nat; bar2': nat }.
-Unset Primitive Projections.
-
-Goal forall r: foo', r = Foo' (bar1' r) (bar2' r).
-move => r. done.
-Qed.
-
-End StupidTest.
-
 Section FSetLemmas.
 
 Context {T: choiceType}.
@@ -98,34 +79,31 @@ Section ClassDef.
 
 Context {T: eqType}.
 
-Definition axiom (r : rel T) :=
-  [/\ reflexive r, antisymmetric r & transitive r].
-
 Definition strict (lt le: rel T) :=
   forall x y, lt x y = (x != y) && (le x y).
 
 Set Primitive Projections.
 
-Record class (le lt dle dlt: rel T) := Class {
-  foo : axiom le;
-  bar : strict lt le;
-  dfoo : axiom dle;
-  dbar : strict dlt dle;
+Record class (le: rel T) := Class {
+  lexx : reflexive le;
+  le_anti : forall x y, le x y -> le y x -> x = y;
+  le_trans : transitive le;
+  (*ostrict : strict lt le;*)
 }.
 
 (*TODO : Confirm that the phantom is required*)
 Structure pack (phr : phant T) := Pack {
-  pack_le; pack_lt;
-  pack_dle; pack_dlt;
-  pack_class : class pack_le pack_lt pack_dle pack_dlt;
+  pack_le;
+  pack_class : class pack_le;
+  pack_lt := fun x y => if (pack_le x y) then (x != y) else false
 }.
 
 Unset Primitive Projections.
 
 Variable (phr : phant T) (r : pack phr).
 
-Definition class_of := let: Pack _ _ _ _ c as r0 := r
-  return (class (pack_le r0) (pack_lt r0) (pack_dle r0) (pack_dlt r0)) in c.
+Definition class_of := let: Pack _ c as r0 := r
+  return (class (pack_le r0)) in c.
 
 Definition pack_of_le (r : rel T) :=
   fun (ro : pack phr) & phant_id (pack_le ro) r =>
@@ -139,15 +117,13 @@ End ClassDef.
 
 (* -------------------------------------------------------------------- *)
 Module Exports.
+Coercion pack_class : pack >-> class.
 Notation lto r := (pack_lt r).
 Notation leo r := (pack_le r).
-Notation dleo r := (pack_dle r).
-Notation dlto r := (pack_dlt r).
-Notation axiom le := (axiom le).
 Notation class_of := class_of.
-Notation strict lt le := (strict lt le).
-Notation OrderClass := Class.
-Notation OrderPack cla := (Pack (Phant _) cla).
+(*Notation strict lt le := (strict lt le).*)
+(*Notation OrderClass := Class.
+Notation OrderPack cla := (Pack (Phant _) cla).*)
 Notation "{ 'porder' T }" := (pack (Phant T))
   (at level 0, format "{ 'porder'  T }").
 Notation "<=: r" := (leo r) (at level 2, r at level 1, format "<=: r").
@@ -174,6 +150,56 @@ End Order.
 
 Include Order.Exports.
 
+(* ================================================================ *)
+
+Section DualOrder.
+
+Context (T: eqType).
+
+Definition dual_rel (r: rel T) := fun y x => r x y.
+
+Definition dual_refl (r : rel T) (hr : reflexive r)
+  : reflexive (dual_rel r) := hr.
+
+Definition dual_anti (r : rel T) (ha : forall x y, r x y -> r y x -> x = y):
+   forall x y, (dual_rel r) x y -> (dual_rel r) y x -> x = y :=
+   fun x y yx xy=> ha x y xy yx. 
+
+Definition dual_trans (r : rel T) (ht: transitive r) :
+  transitive (dual_rel r) := fun y x z drxy dryz => ht _ _ _ dryz drxy.
+
+
+Variable (r : {porder T}).
+
+
+Definition DualOrderClass := @Order.Class T (dual_rel <=:r)
+  (dual_refl (Order.lexx r)) (dual_anti (Order.le_anti r))
+  (dual_trans (Order.le_trans r)). 
+Canonical DualOrderPack := Order.Pack (Phant T) DualOrderClass.
+  
+End DualOrder.
+
+Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
+
+Section DualOrderTest.
+Context {T: eqType}.
+Variable (r : {porder T}).
+
+Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
+Proof. by []. Qed.
+
+Lemma lt_dual_inv x y: x <_((r^~)^~) y = x <_r y.
+Proof. by []. Qed.
+
+Check erefl r : (r^~)^~ = r.
+Goal r = (r^~)^~.
+Proof. by []. Qed.
+
+Goal [leo: (<=:((r^~)^~))] = r.
+Proof. by []. Qed.
+
+End DualOrderTest.
+
 (* ==================================================================== *)
 Section OrderTheory.
 
@@ -186,21 +212,20 @@ Local Notation "x < y < z"   := ((x < y) && (y < z)).
 Local Notation "x < y <= z"  := ((x < y) && (y <= z)).
 Local Notation "x <= y < z"  := ((x <= y) && (y < z)).
 
-
-Lemma orderP : axiom (<=:r).
-Proof. by case: r => le ? ? ? []. Qed.
-
 Lemma lexx : reflexive (<=:r).
-Proof. by case: orderP. Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma le_anti : antisymmetric (<=:r).
-Proof. by case: orderP. Qed.
+Proof. case: r => le [_ ha _] /= x y /andP []; exact: ha. Qed.
 
 Lemma le_trans : transitive (<=:r).
-Proof. by case: orderP. Qed.
+Proof. by case: r => ? []. Qed.
 
 Lemma ostrict: forall (x y : T), (x < y) = (x != y) && (x <= y).
-Proof. by move=> x y; case: r => le lt ? ? []. Qed.
+Proof. 
+move=> x y; rewrite /Order.pack_lt.
+by case: (x <= y); rewrite ?andbT ?andbF.
+Qed.
 
 Lemma ltxx x : x < x = false.
 Proof. by rewrite ostrict eq_refl lexx. Qed.
@@ -342,42 +367,6 @@ case/ex_min_elt => x x_in_K min_x.
 by apply/fset0Pn; exists x; apply/mem_minsetP.
 Qed.
 End FsetOrderTheory.
-
-(* ==================================================================== *)
-
-Section DualOrder.
-
-Context (T: eqType).
-Variable (r : {porder T}).
-
-Definition DualOrderClass := Order.Class (Order.dfoo (Order.pack_class r))
-                                        (Order.dbar (Order.pack_class r))
-                                        (Order.foo (Order.pack_class r))
-                                        (Order.bar (Order.pack_class r)).
-Canonical DualOrderPack :=
-  @Order.Pack _ (Phant _) (dleo r) (dlto r) (leo r) (lto r) DualOrderClass.
-
-End DualOrder.
-
-Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
-
-Section DualOrderTest.
-Context {T: eqType}.
-Variable (r : {porder T}).
-
-Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
-Proof. by []. Qed.
-
-Lemma lt_dual_inv x y: x <_((r^~)^~) y = x <_r y.
-Proof. by []. Qed.
-
-Goal r = (r^~)^~.
-Proof. by []. Qed.
-
-Goal [leo: (<=:((r^~)^~))] = r.
-Proof. by []. Qed.
-
-End DualOrderTest.
 
 (* ==================================================================== *)
 (*Module TotalOrder.
@@ -607,6 +596,10 @@ Record class (r : {porder T}) := Class {
   bot : T;
   le0x : forall x, bot <=_r x 
 }.
+
+Variable m : {meetSemiLattice T}.
+Let c := Meet.pack_class m. 
+Check (@Class _ c.(Meet.meetC) c.(Meet.meetA) c.(Meet.meetxx)).
 
 Structure pack (phr : phant T) := Pack {
   pack_order;
@@ -1843,12 +1836,11 @@ symmetry; apply/foobar_top.
 - rewrite big_seq; elim/big_ind:  _ => //.
   + exact: mem_fbot.
   + exact: mem_fjoin.
-- move=> x x_in_S; move: (perm_to_rem x_in_S) => eqS_xS'.
-  rewrite (foobar_big _ eqS_xS') ?big_cons ?lefUl // ?big_seq.
-    apply: big_stable;
-      [exact: mem_fjoin |exact: mem_rem |exact: mem_fbot].
-  move=> y; rewrite !inE; case/orP; [by move/eqP => -> |exact: mem_rem].
-Qed.
+- move=> x x_in_S; rewrite big_seq.
+  rewrite (@big_mem_sub _ _ _ _ (mem S) _ _ _ _ _ _ x x_in_S x_in_S) => //.
+  + rewrite lefUl //; apply: big_stable.
+Admitted.
+
 
 
 
