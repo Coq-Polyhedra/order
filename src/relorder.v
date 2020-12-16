@@ -674,54 +674,50 @@ Lemma leEjoin x y : (x <= y) = (y `|` x == y).
 Proof. by case: r => ? []. Qed.
 
 Lemma joinAC : right_commutative (join r).
-Proof. by move=> x y z; rewrite -!joinA [X in _ `|` X]joinC. Qed.
+Proof. exact: (@meetAC _ r^~j). Qed.
 
 Lemma joinCA : left_commutative (join r).
-Proof. by move=> x y z; rewrite !joinA [X in X `|` _]joinC. Qed.
+Proof. exact (@meetCA _ r^~j). Qed.
 
 Lemma joinACA : interchange (join r) (join r).
-Proof. by move=> x y z t; rewrite !joinA [X in X `|` _]joinAC. Qed.
+Proof. exact: (@meetACA _ r^~j). Qed.
 
 Lemma joinKI y x : x `|` (x `|` y) = x `|` y.
-Proof. by rewrite joinA joinxx. Qed.
+Proof. exact: (@meetKI _ r^~j). Qed.
 
 Lemma joinIK y x : (x `|` y) `|` y = x `|` y.
-Proof. by rewrite -joinA joinxx. Qed.
+Proof. exact: (@meetIK _ r^~j). Qed.
 
 Lemma joinKIC y x : x `|` (y `|` x) = x `|` y.
-Proof. by rewrite joinC joinIK joinC. Qed.
+Proof. exact: (@meetKIC _ r^~j). Qed.
 
 Lemma joinIKC y x : y `|` x `|` y = x `|` y.
-Proof. by rewrite joinAC joinC joinxx. Qed.
+Proof. exact: (@meetIKC _ r^~j). Qed.
 
 Lemma leUx x y z : (y `|` z <= x) = (y <= x) && (z <= x).
-Proof.
-Admitted.
+Proof. exact: (@lexI _ r^~j). Qed.
 
 Lemma lexUl x y z : x <= y -> x <= y `|` z.
-Proof.
-Admitted.
+Proof. exact: (@leIxl _ r^~j). Qed.
 
 Lemma lexUr x y z : x <= z -> x <= y `|` z.
-Proof.
-Admitted.
+Proof. exact: (@leIxr _ r^~j). Qed.
 
 Lemma lexU2 x y z : (x <= y) || (x <= z) -> x <= y `|` z.
-Proof. by case/orP => [/lexUl|/lexUr]. Qed.
+Proof. exact: (@leIx2 _ r^~j). Qed.
 
 Lemma leUr x y : x <= y `|` x.
-Proof. by rewrite lexU2 ?lexx ?orbT. Qed.
+Proof. exact: (@leIr _ r^~j). Qed.
 
 Lemma leUl x y : x <= x `|` y.
-Proof. by rewrite lexU2 ?lexx ?orbT. Qed.
+Proof. exact: (@leIl _ r^~j). Qed.
 
 Lemma join_idPr {x y} : reflect (y `|` x = x) (y <= x).
-Proof.
-Admitted.
+Proof. exact: (@meet_idPr _ r^~j). Qed.
 
 
 Lemma join_idPl {x y} : reflect (x `|` y = x) (y <= x).
-Proof. by rewrite joinC; apply/join_idPr. Qed.
+Proof. exact: (@meet_idPl _ r^~j). Qed.
 
 Lemma join_l x y : y <= x -> x `|` y = x.
 Proof. exact/join_idPl. Qed.
@@ -730,43 +726,30 @@ Lemma join_r x y : x <= y -> x `|` y = y.
 Proof. exact/join_idPr. Qed.
 
 Lemma leUidl x y : (x `|` y <= x) = (y <= x).
-Proof.
-Admitted.
+Proof. exact: (@leIidl _ r^~j). Qed.
 
 Lemma leUidr x y : (y `|` x <= x) = (y <= x).
-Proof.
-Admitted.
+Proof. exact: (@leIidr _ r^~j). Qed.
 
 Lemma eq_joinl x y : (x `|` y == x) = (y <= x).
-Proof.
-Admitted.
+Proof. exact: (@eq_meetl _ r^~j). Qed.
 
 Lemma eq_joinr x y : (x `|` y == y) = (x <= y).
-Proof.
-Admitted.
+Proof. exact: (@eq_meetr _ r^~j). Qed.
 
 Lemma leU2 x y z t : x <= z -> y <= t -> x `|` y <= z `|` t.
-Proof.
-Admitted.
+Proof. exact: (@leI2 _ r^~j). Qed.
 
 Lemma le0x : forall x, bot <=_r x.
-Proof.
-by case: r => ? [].
-Qed.
+Proof. exact:(@lex1 _ r^~j). Qed.
 
 Lemma joinx0 : right_id bot (join r).
-Proof.
-by move=> x; apply/eqP; rewrite -leEjoin le0x.
-Qed.
+Proof. exact: (@meetx1 _ r^~j). Qed.
 
 Lemma join0x : left_id bot (join r).
-Proof.
-by move=> x; apply/eqP; rewrite joinC -leEjoin le0x.
-Qed.
+Proof. exact: (@meet1x _ r^~j). Qed.
 
 End JoinTheory.
-
-(* =================================================================== *)
 
 
 (* ==================================================================== *)
@@ -1838,48 +1821,6 @@ Proof.
 by move: (@intv0E _ S^~s b a); rewrite -dual_intv.
 Qed.
 
-
-(*
-(* -------------------------------------------------------------------- *)
-Lemma atom_minset L (S:subLattice L) a b :
-     a \in (S : {fset _}) -> b \in (S : {fset _}) -> a <=_L b
-  -> atom [<a; b>]_S =i minset L ([<a; b>]_S `\ a).
-Proof.
-move=> aS bS le_ab x; apply/atomP/idP.
-- case; rewrite intv0E // => x_ab lt_ax min_x.
-  have in_x: x \in [< a; b >]_S `\ a.
-  - by rewrite 2!in_fsetE x_ab andbT; apply/negbT/(gt_eqF lt_ax).
-  apply/mem_minsetP => // y; rewrite 2!in_fsetE => /andP[ne_ya in_y].
-  by apply: min_x => //; rewrite lt_neqAle ne_ya /=; case/in_intervalP: in_y.
-- case/mem_minsetE; rewrite 2!in_fsetE => /andP[nz_xa in_x] min_x; split=> //.
-  - by rewrite intv0E // lt_neqAle nz_xa /=; case/intervalP: in_x.
-  - move=> y in_y; rewrite intv0E // => lt_ay; apply: min_x.
-    by rewrite 2!in_fsetE in_y andbT (gt_eqF lt_ay).
-Qed.
-
-(* -------------------------------------------------------------------- *)
-Lemma sub_atomic_top L (S : subLattice L) (x : T) :
-  x \in S -> 'bot_S <_L x ->
-    exists2 a, atom S a & ([< x ; subtop S>]_S `<=` ([< a; subtop S >]_S))%fset.
-Proof.
-move=> xS lt0x; have nz_S: S != fset0 :> {fset _} by apply/fset0Pn; exists x.
-have [a]: exists y, atom [< 'bot_S; x >]_S y.
-- have: minset L ([<'bot_S; x>]_S `\ 'bot_S) != fset0.
-  - apply/minset_neq0/fset0Pn; exists x; rewrite in_fsetD1.
-    by rewrite (gt_eqF lt0x) /= intervalE xS lexx ltW.
-  case/fset0Pn=> a ha; exists a; rewrite -atom_minset // in ha *.
-  - by apply: subbot_stable. - by apply: ltW.
-case/atomP; rewrite intv0E ?(subbot_leE, subbot_stable) //.
-case/in_intervalP=> aS le0a le_ax lt0a min_a; exists a; last first.
-- by apply/sub_interval => //;  rewrite ?(subtop_leE, subtop_stable).
-- apply/atomP; split=> // y yS lt0y; case/boolP: (_ <_L _) => //= lt_ya.
-  have: y \in ([<subbot S; x>]_S : {fset _}).
-  - apply/in_intervalP; split=> //; first by apply: subbot_leE.
-    by apply/ltW/(lt_le_trans lt_ya).
-  by move/min_a => /(_ lt0y) /negbTE <-.
-Qed.
-*)
-
 Lemma sub_atomic L (S: subLattice L) x:
   x \in S -> \fbot_S <_L x ->
   exists y, atom S y /\ y <=_L x.
@@ -1973,35 +1914,36 @@ Proof.
 move=> x_in_S PS.
 set Q := fun (S' : subLattice L^~pl) => P S'^~s.
 move: (@ind_incr _ Q).
-rewrite /Q => H.
+rewrite /Q => Qincr.
 have inv_S: S = (S^~s)^~s by exact/val_inj. 
 rewrite inv_S -(@dual_intv _ S^~s).
-apply: H; rewrite -?inv_S //.
+apply: Qincr; rewrite -?inv_S //.
 move=> S' y atomS' PS'.
 rewrite dual_intv.
 exact: P_decr.
 Qed.
-(* From ind_incr, using the dual ordering *)
+
 End IndDecr.
 
 (* -------------------------------------------------------------------- *)
 Section Ind.
-Context (L : {tblattice T}).
+Context (L : {preLattice T}).
 Variable (P : subLattice L -> Prop).
 
 Hypothesis (P_incr : forall (S: subLattice L), forall x,
-  atom S x -> P S -> P [<x; 'top_S>]_S).
+  atom S x -> P S -> P [<x; \ftop_S>]_S).
 Hypothesis (P_decr : forall (S:subLattice L), forall x,
-  coatom S x -> P S -> P [<'bot_S; x>]_S).
+  coatom S x -> P S -> P [<\fbot_S; x>]_S).
 
 Lemma ind_id (S : subLattice L) (x y : T) :
   x \in S -> y \in S -> x <=_L y -> P S -> P [<x; y>]_S.
 Proof.
-move=> xS yS le_xy PS; have h: P [< x; 'top_S >]_S by apply: ind_incr.
-suff: P [< 'bot_[< x; 'top_S >]_S; y >]_[< x; 'top_S >]_S.
-- by rewrite intv0E ?subtop_leE // mono_interval // (lexx, subtop_leE).
+move=> xS yS le_xy PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
+have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
+suff: P [< \fbot_[< x; \ftop_S >]_S; y >]_[< x; \ftop_S >]_S.
+- by rewrite intv0E ?lef1 // mono_interval // ?lexx ?lef1.
 apply: ind_decr => //; apply/in_intervalP; split=> //.
-by rewrite subtop_leE.
+by rewrite lef1.
 Qed.
 End Ind.
 
