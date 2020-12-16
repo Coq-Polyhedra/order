@@ -11,6 +11,38 @@ Import GRing.Theory Num.Theory.
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
 
+Set Primitive Projections.
+
+(*
+Record MyPair (T1 T2 : Type) := { fst : T1; snd : T2; }.
+
+Definition dP {T1 T2 : Type} (xy : MyPair T1 T2) : MyPair T2 T1 :=
+  {| fst := xy.(snd); snd :=  xy.(fst); |}.
+
+Parameter S : forall T1 T2, MyPair T1 T2 -> Type.
+
+Parameter dS : forall (T1 T2 : Type) (L : MyPair T1 T2), S L -> S (dP L).
+
+Parameter dSK : forall (T1 T2 : Type) (L : MyPair T1 T2) (x : S L), dS (dS x) = x.
+
+Parameter o : forall (T1 T2 : Type) (L : MyPair T1 T2), S L -> nat.
+
+Parameter H : forall (T1 T2 : Type) (L : MyPair T1 T2) (x : S L), o x = o (dS x).
+
+Parameter (T1 T2 : Type) (L : MyPair T1 T2).
+
+Lemma dpK (T1 T2 : Type) (L : MyPair T1 T2) : dP (dP L) = L.
+Proof. by []. Qed.
+
+Parameter (y : S L).
+
+Goal 0%N = o (dS (dS y)).
+Proof.
+rewrite {1 2}/dP /=.
+rewrite -H.
+Admitted.
+*)
+
 Section FSetLemmas.
 
 Context {T: choiceType}.
@@ -1072,7 +1104,6 @@ Local Coercion pack_order : pack >-> Order.pack.
 Variable (phr : phant T) (m : pack phr).
 
 Canonical order_of := Order.Pack phr (Order.pack_class m).
-
 End ClassDef.
 
 
@@ -1900,8 +1931,17 @@ by apply/negP => /atomP; rewrite ltxx; case.
 Qed.
 End IndIncr.
 
+
+
 (* -------------------------------------------------------------------- *)
 Section IndDecr.
+Lemma dualK (L : {preLattice T}) (S : subLattice L) : (S^~s)^~s = S.
+Proof. by exact/val_inj. Qed.
+
+Lemma fbot_dual (L : {preLattice T}) (S : subLattice L) :
+  \fbot_(S^~s) = \ftop_S.
+Proof. by []. Qed.
+
 Context (L : {preLattice T}).
 Variable (P : subLattice L -> Prop).
 
@@ -1912,20 +1952,10 @@ Lemma ind_decr (S : subLattice L) (x : T) :
   x \in S -> P S -> P [<\fbot_S; x>]_S.
 Proof.
 move=> x_in_S PS.
-pose Q (S' : subLattice L^~pl) :=  P S'^~s.
-have inv_S: S = (S^~s)^~s by exact/val_inj.
-rewrite inv_S -(dual_intv S^~s).
-rewrite [\fbot__]/(\ftop_(S^~s)).
-apply: (@ind_incr _ _ _ (S^~s)). => //; rewrite /Q.
-
-
-rewrite /Q => Qincr.
-
-rewrite inv_S -(dual_intv S^~s).
-apply: Qincr; rewrite -?inv_S //.
-move=> S' y atomS' PS'.
-rewrite dual_intv.
-exact: P_decr.
+rewrite -[S]dualK -(@dual_intv L^~pl) (@fbot_dual L^~pl).
+apply: (ind_incr (P := fun S' : subLattice L^~pl => P S'^~s)) => //.
+- by move=> S' x' ??; rewrite dual_intv; apply: P_decr.
+- by rewrite dualK.
 Qed.
 
 End IndDecr.
