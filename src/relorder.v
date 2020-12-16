@@ -1912,11 +1912,16 @@ Lemma ind_decr (S : subLattice L) (x : T) :
   x \in S -> P S -> P [<\fbot_S; x>]_S.
 Proof.
 move=> x_in_S PS.
-set Q := fun (S' : subLattice L^~pl) => P S'^~s.
-move: (@ind_incr _ Q).
+pose Q (S' : subLattice L^~pl) :=  P S'^~s.
+have inv_S: S = (S^~s)^~s by exact/val_inj.
+rewrite inv_S -(dual_intv S^~s).
+rewrite [\fbot__]/(\ftop_(S^~s)).
+apply: (@ind_incr _ _ _ (S^~s)). => //; rewrite /Q.
+
+
 rewrite /Q => Qincr.
-have inv_S: S = (S^~s)^~s by exact/val_inj. 
-rewrite inv_S -(@dual_intv _ S^~s).
+
+rewrite inv_S -(dual_intv S^~s).
 apply: Qincr; rewrite -?inv_S //.
 move=> S' y atomS' PS'.
 rewrite dual_intv.
