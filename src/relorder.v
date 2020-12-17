@@ -140,6 +140,10 @@ Notation "x <=_ r0 y <_ r1 z" := ((x <=_r0 y) && (y <_r1 z))
   (at level 70, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <_ r1  z").
 Notation "x <_ r0 y <=_ r1 z" := ((x <_r0 y) && (y <=_r1 z))
   (at level 70, r0 at level 2, r1 at level 2, format "x  <_ r0  y  <=_ r1  z").
+Notation "x >=<_ r y" := ((x <=_r y) || (y <=_r x))
+  (at level 70, r at level 2, no associativity, format "x  >=<_ r  y").
+Notation "x ><_ r y" := (~~ ( x >=<_r y ))
+  (at level 70, r at level 2, no associativity, format "x  ><_ r  y").
 Notation "[ 'leo:' r ]" := (@pack_of_le _ (Phant _) r _ id)
   (at level 0, format "[ 'leo:'  r ]").
 Notation "[ 'lto:' r ]" := (@pack_of_lt _ (Phant _) r _ id)
@@ -212,16 +216,70 @@ Proof. by []. Qed.
 End DualOrderTest.
 
 (* ==================================================================== *)
+Section OrderDef.
+
+Context {T: eqType}.
+Implicit Type (r : {porder T}).
+
+Definition min r x y := if x <_r y then x else y.
+Definition max r x y := if x <_r y then y else x.
+
+Variant compare r (x y : T) :
+  T -> T -> T -> T ->
+  bool -> bool -> bool -> bool -> bool -> bool -> Set :=
+  | CompareLt of x <_r y : compare r x y
+    x x y y false false false true false true
+  | CompareGt of y <_r x : compare r x y
+    y y x x false false true false true false
+  | CompareEq of x = y : compare r x y
+    x x x x true true true true false false.
+
+Variant incompare r (x y : T) :
+  T -> T -> T -> T ->
+  bool -> bool -> bool -> bool -> bool -> bool -> bool -> bool ->
+  Set :=
+  | InCompareLt of x <_r y : incompare r x y
+    x x y y false false false true false true true true
+  | InCompareGt of y <_r x : incompare r x y
+    y y x x false false true false true false true true
+  | InCompare of x ><_r y  : incompare r x y
+    x y y x false false false false false false false false
+  | InCompareEq of x = y : incompare r x y
+    x x x x true true true true false false true true.
+
+Variant le_xor_gt r (x y : T) :
+  T -> T -> T -> T -> bool -> bool -> Set :=
+  | LeNotGt of x <=_r y : le_xor_gt r x y x x y y true false
+  | GtNotLe of y <_r x  : le_xor_gt r x y y y x x false true.
+
+Variant lt_xor_ge r (x y : T) :
+  T -> T -> T -> T -> bool -> bool -> Set :=
+  | LtNotGe of x <_r y  : lt_xor_ge r x y x x y y false true
+  | GeNotLt of y <=_r x : lt_xor_ge r x y y y x x true false.
+
+End OrderDef.
+
+
 Section OrderTheory.
 
 Variables ( T: eqType ) (r: {porder T}).
 
-Local Notation "x <= y"      := (x <=_r y).
-Local Notation "x < y"       := (x <_r y).
+Local Notation "x <= y" := (x <=_r y).
+Local Notation "x < y" := (x <_r y).
+Local Notation "x >= y" := (x >=_r y).
+Local Notation "x > y" := (x >_r y).
 Local Notation "x <= y <= z" := ((x <= y) && (y <= z)).
 Local Notation "x < y < z"   := ((x < y) && (y < z)).
 Local Notation "x < y <= z"  := ((x < y) && (y <= z)).
 Local Notation "x <= y < z"  := ((x <= y) && (y < z)).
+Local Notation "x >=< y" := (x >=<_r y).
+Local Notation "x >< y" := (x ><_r y).
+Local Notation compare := (compare r).
+Local Notation incompare := (incompare r).
+Local Notation min := (min r).
+Local Notation max := (max r).
+Local Notation le_xor_gt := (le_xor_gt r).
+Local Notation lt_xor_ge := (lt_xor_ge r).
 
 Lemma lexx : reflexive (<=:r).
 Proof. by case: r => ? ? []. Qed.
@@ -322,6 +380,119 @@ Lemma le_lt_asym x y : x <= y < x = false.
 Proof.
 by rewrite andbC lt_le_asym.
 Qed.
+
+Definition lte_anti := (=^~ eq_le, lt_asym, lt_le_asym, le_lt_asym).
+
+Lemma lt_sorted_uniq_le s : sorted <:r s = uniq s && sorted <=:r s.
+Proof.
+elim: s => // a l Hind.
+apply/(sameP idP)/(iffP idP).
+- case/andP => /= /andP [/memPnC anl uniql].
+  rewrite !path_sortedE; [|exact: lt_trans| exact: le_trans].
+  case/andP => /allP lea sortedle; rewrite Hind uniql sortedle !andbT.
+  by apply/allP => x xl; rewrite lt_def lea ?anl.
+- rewrite /= !path_sortedE; [|exact: le_trans| exact: lt_trans].
+  rewrite Hind; case/and3P => /allP altx uniql sortedle.
+  rewrite uniql sortedle !andbT; apply/andP; split.
+  + by apply/memPn => x xl; rewrite gt_eqF ?altx.
+  + apply/allP => x xl; exact/ltW/altx.
+Qed. 
+
+Lemma le_sorted_eq s1 s2 :
+  sorted <=:r s1 -> sorted <=:r s2 -> perm_eq s1 s2 -> s1 = s2.
+Proof. apply/eq_sorted; [exact: le_trans| exact: le_anti]. Qed.
+
+
+Lemma lt_sorted_eq s1 s2 :
+  sorted <:r s1 -> sorted <:r s2 -> s1 =i s2 -> s1 = s2.
+Proof.
+rewrite !lt_sorted_uniq_le.
+case/andP=> uniqs1 sorteds1 /andP [uniqs2 sorteds2].
+move/uniq_perm; move/(_ uniqs1 uniqs2).
+exact: le_sorted_eq.
+Qed.
+
+Lemma sort_le_id s : sorted <=:r s -> sort <=:r s = s.
+Proof. exact/sorted_sort/le_trans. Qed.
+
+Section Comparable.
+
+Lemma comparable_leNgt x y : x >=< y -> (x <= y) = ~~ (y < x).
+Proof.
+move=> c_xy; apply/idP/idP => [/le_gtF/negP/negP//|]; rewrite lt_neqAle.
+move: c_xy => /orP [] -> //; rewrite andbT negbK => /eqP ->; exact: lexx.
+Qed.
+
+Lemma comparable_ltNge x y : x >=< y -> (x < y) = ~~ (y <= x).
+Proof.
+move=> c_xy; apply/idP/idP => [/lt_geF/negP/negP//|].
+by rewrite lt_neqAle eq_le; move: c_xy => /orP [] -> //; rewrite !andbT.
+Qed.
+
+Lemma comparable_ltgtP x y : x >=< y ->
+  compare x y (min y x) (min x y) (max y x) (max x y)
+  (y == x) (x == y) (x >= y) (x <= y) (x > y) (x < y).
+Proof.
+rewrite /min /max !le_eqVlt [y == x]eq_sym.
+have := (eqVneq x y, (boolP (x < y), boolP (y < x))).
+move=> [[->//|neq_xy /=] [[] xy [] //=]] ; do ?by rewrite ?ltxx; constructor.
+  by rewrite ltxx in xy.
+by rewrite le_gtF // ltW.
+Qed.
+
+Lemma comparable_leP x y : x >=< y ->
+  le_xor_gt x y (min y x) (min x y) (max y x) (max x y) (x <= y) (y < x).
+Proof.
+by move=> /comparable_ltgtP [?|?|->]; constructor; rewrite ?lexx // ltW.
+Qed.
+
+Lemma comparable_ltP x y : x >=< y ->
+  lt_xor_ge x y (min y x) (min x y) (max y x) (max x y) (y <= x) (x < y).
+Proof.
+by move=> /comparable_ltgtP [?|?|->]; constructor; rewrite ?lexx // ltW.
+Qed.
+
+Lemma comparable_sym x y : (y >=< x) = (x >=< y).
+Proof. by rewrite /comparable orbC. Qed.
+
+Lemma comparablexx x : x >=< x.
+Proof. by rewrite /comparable lexx. Qed.
+
+Lemma incomparable_eqF x y : (x >< y) -> (x == y) = false.
+Proof. by apply: contraNF => /eqP ->; rewrite comparablexx. Qed.
+
+Lemma incomparable_leF x y : (x >< y) -> (x <= y) = false.
+Proof. by apply: contraNF; rewrite /comparable => ->. Qed.
+
+Lemma incomparable_ltF x y : (x >< y) -> (x < y) = false.
+Proof. by rewrite lt_neqAle => /incomparable_leF ->; rewrite andbF. Qed.
+
+Lemma comparableP x y : incompare x y
+  (min y x) (min x y) (max y x) (max x y)
+  (y == x) (x == y) (x >= y) (x <= y) (x > y) (x < y)
+  (y >=< x) (x >=< y).
+Proof.
+rewrite ![y >=< _]comparable_sym; have [c_xy|i_xy] := boolP (x >=< y).
+  by case: (comparable_ltgtP c_xy) => ?; constructor.
+have i_yx : y >< x by rewrite comparable_sym.
+rewrite (incomparable_leF i_xy) (incomparable_leF i_yx). 
+rewrite !incomparable_eqF // /min /max !incomparable_ltF //.
+by constructor.
+Qed.
+
+Lemma le_comparable (x y : T) : x <= y -> x >=< y.
+Proof. by case: comparableP. Qed.
+
+Lemma lt_comparable (x y : T) : x < y -> x >=< y.
+Proof. by case: comparableP. Qed.
+
+Lemma ge_comparable (x y : T) : y <= x -> x >=< y.
+Proof. by case: comparableP. Qed.
+
+Lemma gt_comparable (x y : T) : y < x -> x >=< y.
+Proof. by case: comparableP. Qed.
+
+End Comparable.
 
 End OrderTheory.
 
@@ -1942,9 +2113,9 @@ Proof. by exact/val_inj. Qed.
 
 Lemma fbot_dual_r (L : {preLattice T}) (S : subLattice L) :
   \fbot_(S^~s) = \ftop_S.
-Proof. by []. Qed.
-
-Notation dualize := (fun f => (@f, fun L => @f L^~pl)).
+  
+  Notation dualize := (fun f => (@f, fun L => @f L^~pl)).
+  Proof. by []. Qed.
 
 Definition fbot_dual := dualize fbot_dual_r.
 
@@ -1969,7 +2140,7 @@ Close Scope ring_scope.
 Goal 1 = 0 /\
        False /\ (1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False) \/
        1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False.
-Proof. intuition.
+Proof. intuition. Qed.
 
 End IndDecr.
 
