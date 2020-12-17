@@ -184,8 +184,6 @@ Section DualOrderTest.
 Context {T: eqType}.
 Variable (r : {porder T}).
 
-Print Canonical Projections.
-
 Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
 Proof. by []. Qed.
 
@@ -1964,13 +1962,6 @@ apply: (ind_incr (P := fun S' : subLattice L^~pl => P S'^~s)) => //.
 - by rewrite dualK.
 Qed.
 
-Close Scope ring_scope.
-
-Goal 1 = 0 /\
-       False /\ (1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False) \/
-       1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False.
-Proof. intuition.
-
 End IndDecr.
 
 (* -------------------------------------------------------------------- *)
@@ -1998,6 +1989,7 @@ End Ind.
 End SubLatticeInd.
 
 (* ==================================================================== *)
+(*
 Module GradedLattice.
 Section ClassDef.
 Context {T: eqType}.
@@ -2052,6 +2044,7 @@ Proof.
 by case: L => ? [].
 Qed.
 End GLatticeTheory.
+*)
 
 (*==================================================================== *)
 (*

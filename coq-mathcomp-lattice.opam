@@ -1,0 +1,25 @@
+synopsis:     "Coq Library in Lattices"
+description:  "Coq Library in Lattices"
+name:         "coq-mathcomp-lattice"
+version:      "0.1"
+opam-version: "2.0"
+maintainer:   "pierre-yves.strub@polytechnique.edu"
+authors:      [
+  "Xavier Allamigeon <xavier.allamigeon@inria.fr>"
+  "Quentin Canu <quentin.canu@inria.fr>"
+  "Pierre-Yves Strub <pierre-yves.strub@polytechnque.edu>"
+]
+homepage:     "https://github.com/Coq-Polyhedra/order.git"
+bug-reports:  "https://github.com/Coq-Polyhedra/order.git"
+dev-repo:     "git+https://github.com/Coq-Polyhedra/order.git"
+license:      "CECILL-B"
+
+depends: [
+  "coq"                    { >= "8.12" & < "8.13~" }
+  "dune"                   { >= "2.5.0" }
+  "coq-mathcomp-ssreflect" { >= "1.11" & < "1.12~" }
+  "coq-mathcomp-algebra"
+  "coq-mathcomp-finmap"    { >= "1.5" & < "1.6~" }
+]
+
+build: [ "dune" "build" "-p" name "-j" jobs ]

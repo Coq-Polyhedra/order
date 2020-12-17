@@ -1,0 +1,9 @@
+(coq.theory
+  (name lattice)
+  (package coq-mathcomp-lattice)
+  (flags -w -notation-overridden
+         -w -redundant-canonical-projection
+         -w -projection-no-head-constant
+         -w -ambiguous-paths
+         -w -uniform-inheritance))
+(include_subdirs qualified)
