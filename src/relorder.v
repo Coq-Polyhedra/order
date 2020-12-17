@@ -1806,9 +1806,11 @@ apply/in_intervalP; rewrite x_in_S; split=> //;
   by move=> _ _ -> _ ->.
 Qed.
 
-Lemma dual_intv L (S : subLattice L) a b :
+Lemma dual_intv_r L (S : subLattice L) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
 Proof. by apply/eqP/fset_eqP => x; rewrite !inE /= [X in _ && X]andbC. Qed.
+
+Definition dual_intv := (@dual_intv_r, fun L => @dual_intv_r L^~pl).
 
 Lemma mem_intv_dual L (S : subLattice L) a b : 
   [<a; b>]_(S^~s) =i [<b; a>]_S.
@@ -1938,9 +1940,13 @@ Section IndDecr.
 Lemma dualK (L : {preLattice T}) (S : subLattice L) : (S^~s)^~s = S.
 Proof. by exact/val_inj. Qed.
 
-Lemma fbot_dual (L : {preLattice T}) (S : subLattice L) :
+Lemma fbot_dual_r (L : {preLattice T}) (S : subLattice L) :
   \fbot_(S^~s) = \ftop_S.
 Proof. by []. Qed.
+
+Notation dualize := (fun f => (@f, fun L => @f L^~pl)).
+
+Definition fbot_dual := dualize fbot_dual_r.
 
 Context (L : {preLattice T}).
 Variable (P : subLattice L -> Prop).
@@ -1952,11 +1958,18 @@ Lemma ind_decr (S : subLattice L) (x : T) :
   x \in S -> P S -> P [<\fbot_S; x>]_S.
 Proof.
 move=> x_in_S PS.
-rewrite -[S]dualK -(@dual_intv L^~pl) (@fbot_dual L^~pl).
+rewrite -[S]dualK -dual_intv fbot_dual.
 apply: (ind_incr (P := fun S' : subLattice L^~pl => P S'^~s)) => //.
 - by move=> S' x' ??; rewrite dual_intv; apply: P_decr.
 - by rewrite dualK.
 Qed.
+
+Close Scope ring_scope.
+
+Goal 1 = 0 /\
+       False /\ (1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False) \/
+       1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False.
+Proof. intuition.
 
 End IndDecr.
 
