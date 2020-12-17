@@ -1,0 +1,380 @@
+DIGEST 7b9e4244ea64781c1cf6f6b97aa9b7cf
+Frelorder.xbigop
+R29:41 mathcomp.ssreflect.all_ssreflect <> <> lib
+sec 55:62 <> BigOpSub
+R79:84 mathcomp.ssreflect.eqtype Equality.Exports eqType syndef
+binder 75:75 <> T:1
+R93:93 relorder.xbigop <> T:1 var
+binder 88:89 <> x0:2
+R103:106 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R108:111 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R112:112 relorder.xbigop <> T:1 var
+R107:107 relorder.xbigop <> T:1 var
+R102:102 relorder.xbigop <> T:1 var
+binder 97:98 <> op:3
+R122:125 Coq.ssr.ssrbool <> pred def
+R127:127 relorder.xbigop <> T:1 var
+binder 116:116 <> P:4
+binder 118:118 <> Q:5
+var 143:144 BigOpSub hc
+binder 155:155 <> x:6
+binder 157:157 <> y:7
+R163:166 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R170:173 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R180:182 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R174:175 relorder.xbigop <> BigOpSub.op var
+R179:179 relorder.xbigop <> y:7 var
+R177:177 relorder.xbigop <> x:6 var
+R183:184 relorder.xbigop <> BigOpSub.op var
+R188:188 relorder.xbigop <> x:6 var
+R186:186 relorder.xbigop <> y:7 var
+R167:167 relorder.xbigop <> BigOpSub.Q var
+R169:169 relorder.xbigop <> y:7 var
+R160:160 relorder.xbigop <> BigOpSub.Q var
+R162:162 relorder.xbigop <> x:6 var
+var 202:203 BigOpSub ha
+binder 214:214 <> x:9
+binder 216:216 <> y:10
+binder 218:218 <> z:11
+R224:227 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R231:234 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R238:241 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R255:257 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R242:243 relorder.xbigop <> BigOpSub.op var
+R248:249 relorder.xbigop <> BigOpSub.op var
+R253:253 relorder.xbigop <> z:11 var
+R251:251 relorder.xbigop <> y:10 var
+R245:245 relorder.xbigop <> x:9 var
+R258:259 relorder.xbigop <> BigOpSub.op var
+R270:270 relorder.xbigop <> z:11 var
+R262:263 relorder.xbigop <> BigOpSub.op var
+R267:267 relorder.xbigop <> y:10 var
+R265:265 relorder.xbigop <> x:9 var
+R235:235 relorder.xbigop <> BigOpSub.Q var
+R237:237 relorder.xbigop <> z:11 var
+R228:228 relorder.xbigop <> BigOpSub.Q var
+R230:230 relorder.xbigop <> y:10 var
+R221:221 relorder.xbigop <> BigOpSub.Q var
+R223:223 relorder.xbigop <> x:9 var
+var 284:285 BigOpSub hs
+binder 296:296 <> x:13
+binder 298:298 <> y:14
+R304:307 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R311:314 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R315:315 relorder.xbigop <> BigOpSub.Q var
+R318:319 relorder.xbigop <> BigOpSub.op var
+R323:323 relorder.xbigop <> y:14 var
+R321:321 relorder.xbigop <> x:13 var
+R308:308 relorder.xbigop <> BigOpSub.Q var
+R310:310 relorder.xbigop <> y:14 var
+R301:301 relorder.xbigop <> BigOpSub.Q var
+R303:303 relorder.xbigop <> x:13 var
+var 338:339 BigOpSub PQ
+binder 350:350 <> x:16
+R356:359 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R360:360 relorder.xbigop <> BigOpSub.Q var
+R362:362 relorder.xbigop <> x:16 var
+R353:353 relorder.xbigop <> BigOpSub.P var
+R355:355 relorder.xbigop <> x:16 var
+var 376:377 BigOpSub Q0
+R381:381 relorder.xbigop <> BigOpSub.Q var
+R383:384 relorder.xbigop <> BigOpSub.x0 var
+prf 394:403 <> big_stable
+R410:412 mathcomp.ssreflect.seq <> seq syndef
+R414:414 relorder.xbigop <> BigOpSub.T var
+binder 406:406 <> t:19
+R419:419 relorder.xbigop <> BigOpSub.Q var
+R422:426 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R429:429 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R432:434 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R436:439 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R441:443 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R447:448 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R430:431 relorder.xbigop <> BigOpSub.x0 var
+R440:440 relorder.xbigop <> t:19 var
+binder 435:435 <> y:20
+R427:428 relorder.xbigop <> BigOpSub.op var
+R444:444 relorder.xbigop <> BigOpSub.P var
+R446:446 relorder.xbigop <> y:20 var
+R449:449 relorder.xbigop <> y:20 var
+R484:490 mathcomp.ssreflect.bigop <> big_nil thm
+R484:490 mathcomp.ssreflect.bigop <> big_nil thm
+R484:490 mathcomp.ssreflect.bigop <> big_nil thm
+R518:525 mathcomp.ssreflect.bigop <> big_cons thm
+R541:541 relorder.xbigop <> BigOpSub.P var
+R518:525 mathcomp.ssreflect.bigop <> big_cons thm
+R518:525 mathcomp.ssreflect.bigop <> big_cons thm
+R541:541 relorder.xbigop <> BigOpSub.P var
+R541:541 relorder.xbigop <> BigOpSub.P var
+R533:537 Coq.ssr.ssrbool <> boolP thm
+R559:560 relorder.xbigop <> BigOpSub.PQ var
+R562:563 relorder.xbigop <> BigOpSub.hs var
+prf 611:621 <> big_mem_sub
+R628:630 mathcomp.ssreflect.seq <> seq syndef
+R632:632 relorder.xbigop <> BigOpSub.T var
+binder 624:624 <> r:21
+binder 635:635 <> x:22
+R646:649 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R653:660 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R689:691 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R661:665 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R668:668 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R671:673 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R675:678 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R680:682 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R686:687 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R669:670 relorder.xbigop <> BigOpSub.x0 var
+R679:679 relorder.xbigop <> r:21 var
+binder 674:674 <> y:23
+R666:667 relorder.xbigop <> BigOpSub.op var
+R683:683 relorder.xbigop <> BigOpSub.P var
+R685:685 relorder.xbigop <> y:23 var
+R688:688 relorder.xbigop <> y:23 var
+R692:693 relorder.xbigop <> BigOpSub.op var
+R698:702 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R705:705 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R708:710 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R712:716 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R724:727 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R731:732 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R706:707 relorder.xbigop <> BigOpSub.x0 var
+R717:719 mathcomp.ssreflect.seq <> rem def
+R723:723 relorder.xbigop <> r:21 var
+R721:721 relorder.xbigop <> x:22 var
+binder 711:711 <> y:24
+R703:704 relorder.xbigop <> BigOpSub.op var
+R728:728 relorder.xbigop <> BigOpSub.P var
+R730:730 relorder.xbigop <> y:24 var
+R733:733 relorder.xbigop <> y:24 var
+R695:695 relorder.xbigop <> x:22 var
+R650:650 relorder.xbigop <> BigOpSub.P var
+R652:652 relorder.xbigop <> x:22 var
+R640:644 Coq.ssr.ssrbool <> ::bool_scope:x_'\in'_x not
+R639:639 relorder.xbigop <> x:22 var
+R645:645 relorder.xbigop <> r:21 var
+R762:767 mathcomp.ssreflect.seq <> in_nil thm
+R793:795 mathcomp.ssreflect.finset <> inE def
+R762:767 mathcomp.ssreflect.seq <> in_nil thm
+R762:767 mathcomp.ssreflect.seq <> in_nil thm
+R762:767 mathcomp.ssreflect.seq <> in_nil thm
+R762:767 mathcomp.ssreflect.seq <> in_nil thm
+R762:767 mathcomp.ssreflect.seq <> in_nil thm
+R793:795 mathcomp.ssreflect.finset <> inE def
+R793:795 mathcomp.ssreflect.finset <> inE def
+R803:805 Coq.ssr.ssrbool <> orP thm
+R840:846 mathcomp.ssreflect.eqtype <> eq_refl thm
+R848:855 mathcomp.ssreflect.bigop <> big_cons thm
+R818:820 mathcomp.ssreflect.eqtype <> eqP thm
+R840:846 mathcomp.ssreflect.eqtype <> eq_refl thm
+R840:846 mathcomp.ssreflect.eqtype <> eq_refl thm
+R848:855 mathcomp.ssreflect.bigop <> big_cons thm
+R848:855 mathcomp.ssreflect.bigop <> big_cons thm
+R891:894 mathcomp.ssreflect.eqtype <> ::bool_scope:x_'=='_x not
+R891:894 mathcomp.ssreflect.eqtype <> ::bool_scope:x_'=='_x not
+R891:894 mathcomp.ssreflect.eqtype <> ::bool_scope:x_'=='_x not
+R882:886 Coq.ssr.ssrbool <> boolP thm
+R930:937 mathcomp.ssreflect.bigop <> big_cons thm
+R911:913 mathcomp.ssreflect.eqtype <> eqP thm
+R930:937 mathcomp.ssreflect.bigop <> big_cons thm
+R930:937 mathcomp.ssreflect.bigop <> big_cons thm
+R985:992 mathcomp.ssreflect.bigop <> big_cons thm
+R1008:1008 relorder.xbigop <> BigOpSub.P var
+R985:992 mathcomp.ssreflect.bigop <> big_cons thm
+R985:992 mathcomp.ssreflect.bigop <> big_cons thm
+R985:992 mathcomp.ssreflect.bigop <> big_cons thm
+R985:992 mathcomp.ssreflect.bigop <> big_cons thm
+R1008:1008 relorder.xbigop <> BigOpSub.P var
+R1008:1008 relorder.xbigop <> BigOpSub.P var
+R1000:1004 Coq.ssr.ssrbool <> boolP thm
+R1077:1078 relorder.xbigop <> BigOpSub.PQ var
+R1025:1026 relorder.xbigop <> BigOpSub.PQ var
+R1062:1062 relorder.xbigop <> BigOpSub.Q var
+R1077:1078 relorder.xbigop <> BigOpSub.PQ var
+R1098:1099 relorder.xbigop <> BigOpSub.ha var
+R1102:1111 relorder.xbigop <> big_stable thm
+R1122:1123 relorder.xbigop <> BigOpSub.op var
+R1129:1130 relorder.xbigop <> BigOpSub.hc var
+R1135:1136 relorder.xbigop <> BigOpSub.ha var
+R1139:1148 relorder.xbigop <> big_stable thm
+R1098:1099 relorder.xbigop <> BigOpSub.ha var
+R1098:1099 relorder.xbigop <> BigOpSub.ha var
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1102:1111 relorder.xbigop <> big_stable thm
+R1129:1130 relorder.xbigop <> BigOpSub.hc var
+R1122:1123 relorder.xbigop <> BigOpSub.op var
+R1122:1123 relorder.xbigop <> BigOpSub.op var
+R1125:1125 relorder.xbigop <> X:25 var
+R1129:1130 relorder.xbigop <> BigOpSub.hc var
+R1135:1136 relorder.xbigop <> BigOpSub.ha var
+R1135:1136 relorder.xbigop <> BigOpSub.ha var
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+R1139:1148 relorder.xbigop <> big_stable thm
+prf 1193:1204 <> big_nmem_sub
+R1211:1213 mathcomp.ssreflect.seq <> seq syndef
+R1215:1215 relorder.xbigop <> BigOpSub.T var
+binder 1207:1207 <> r:26
+binder 1218:1218 <> x:27
+R1228:1231 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R1238:1243 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R1272:1274 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R1244:1248 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1251:1251 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1254:1256 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1258:1261 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1263:1265 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1269:1270 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1252:1253 relorder.xbigop <> BigOpSub.x0 var
+R1262:1262 relorder.xbigop <> r:26 var
+binder 1257:1257 <> y:28
+R1249:1250 relorder.xbigop <> BigOpSub.op var
+R1266:1266 relorder.xbigop <> BigOpSub.P var
+R1268:1268 relorder.xbigop <> y:28 var
+R1271:1271 relorder.xbigop <> y:28 var
+R1275:1279 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1282:1282 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1285:1287 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1289:1292 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1300:1302 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1306:1307 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1283:1284 relorder.xbigop <> BigOpSub.x0 var
+R1293:1295 mathcomp.ssreflect.seq <> rem def
+R1299:1299 relorder.xbigop <> r:26 var
+R1297:1297 relorder.xbigop <> x:27 var
+binder 1288:1288 <> y:29
+R1280:1281 relorder.xbigop <> BigOpSub.op var
+R1303:1303 relorder.xbigop <> BigOpSub.P var
+R1305:1305 relorder.xbigop <> y:29 var
+R1308:1308 relorder.xbigop <> y:29 var
+R1232:1234 Coq.ssr.ssrbool <> ::bool_scope:'~~'_x not
+R1235:1235 relorder.xbigop <> BigOpSub.P var
+R1237:1237 relorder.xbigop <> x:27 var
+R1222:1226 Coq.ssr.ssrbool <> ::bool_scope:x_'\in'_x not
+R1221:1221 relorder.xbigop <> x:27 var
+R1227:1227 relorder.xbigop <> r:26 var
+R1336:1341 mathcomp.ssreflect.seq <> in_nil thm
+R1367:1369 mathcomp.ssreflect.finset <> inE def
+R1336:1341 mathcomp.ssreflect.seq <> in_nil thm
+R1336:1341 mathcomp.ssreflect.seq <> in_nil thm
+R1336:1341 mathcomp.ssreflect.seq <> in_nil thm
+R1336:1341 mathcomp.ssreflect.seq <> in_nil thm
+R1336:1341 mathcomp.ssreflect.seq <> in_nil thm
+R1367:1369 mathcomp.ssreflect.finset <> inE def
+R1367:1369 mathcomp.ssreflect.finset <> inE def
+R1377:1379 Coq.ssr.ssrbool <> orP thm
+R1411:1418 mathcomp.ssreflect.bigop <> big_cons thm
+R1423:1429 mathcomp.ssreflect.eqtype <> eq_refl thm
+R1439:1439 relorder.xbigop <> BigOpSub.P var
+R1392:1394 mathcomp.ssreflect.eqtype <> eqP thm
+R1411:1418 mathcomp.ssreflect.bigop <> big_cons thm
+R1411:1418 mathcomp.ssreflect.bigop <> big_cons thm
+R1423:1429 mathcomp.ssreflect.eqtype <> eq_refl thm
+R1423:1429 mathcomp.ssreflect.eqtype <> eq_refl thm
+R1439:1439 relorder.xbigop <> BigOpSub.P var
+R1439:1439 relorder.xbigop <> BigOpSub.P var
+R1470:1477 mathcomp.ssreflect.bigop <> big_cons thm
+R1497:1500 mathcomp.ssreflect.eqtype <> ::bool_scope:x_'=='_x not
+R1470:1477 mathcomp.ssreflect.bigop <> big_cons thm
+R1470:1477 mathcomp.ssreflect.bigop <> big_cons thm
+R1497:1500 mathcomp.ssreflect.eqtype <> ::bool_scope:x_'=='_x not
+R1497:1500 mathcomp.ssreflect.eqtype <> ::bool_scope:x_'=='_x not
+R1488:1492 Coq.ssr.ssrbool <> boolP thm
+R1535:1535 relorder.xbigop <> BigOpSub.P var
+R1517:1519 mathcomp.ssreflect.eqtype <> eqP thm
+R1535:1535 relorder.xbigop <> BigOpSub.P var
+R1535:1535 relorder.xbigop <> BigOpSub.P var
+R1570:1577 mathcomp.ssreflect.bigop <> big_cons thm
+R1587:1587 relorder.xbigop <> BigOpSub.P var
+R1570:1577 mathcomp.ssreflect.bigop <> big_cons thm
+R1570:1577 mathcomp.ssreflect.bigop <> big_cons thm
+R1587:1587 relorder.xbigop <> BigOpSub.P var
+R1587:1587 relorder.xbigop <> BigOpSub.P var
+prf 1619:1630 <> big_perm_sub
+R1637:1639 mathcomp.ssreflect.seq <> seq syndef
+R1641:1641 relorder.xbigop <> BigOpSub.T var
+binder 1633:1633 <> r:30
+R1656:1658 mathcomp.ssreflect.seq <> seq syndef
+R1660:1660 relorder.xbigop <> BigOpSub.T var
+binder 1653:1653 <> s:31
+R1674:1679 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R1708:1710 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R1680:1684 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1687:1687 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1690:1692 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1694:1697 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1699:1701 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1705:1706 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1688:1689 relorder.xbigop <> BigOpSub.x0 var
+R1698:1698 relorder.xbigop <> r:30 var
+binder 1693:1693 <> x:32
+R1685:1686 relorder.xbigop <> BigOpSub.op var
+R1702:1702 relorder.xbigop <> BigOpSub.P var
+R1704:1704 relorder.xbigop <> x:32 var
+R1707:1707 relorder.xbigop <> x:32 var
+R1711:1715 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1718:1718 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1721:1723 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1725:1728 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1730:1732 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1736:1737 mathcomp.ssreflect.bigop <> ::big_scope:'\big'_'['_x_'/'_x_']_'_'('_x_'<-'_x_'|'_x_')'_x not
+R1719:1720 relorder.xbigop <> BigOpSub.x0 var
+R1729:1729 relorder.xbigop <> s:31 var
+binder 1724:1724 <> x:33
+R1716:1717 relorder.xbigop <> BigOpSub.op var
+R1733:1733 relorder.xbigop <> BigOpSub.P var
+R1735:1735 relorder.xbigop <> x:33 var
+R1738:1738 relorder.xbigop <> x:33 var
+R1663:1669 mathcomp.ssreflect.seq <> perm_eq def
+R1673:1673 relorder.xbigop <> s:31 var
+R1671:1671 relorder.xbigop <> r:30 var
+R1780:1787 mathcomp.ssreflect.seq <> perm_sym thm
+R1780:1787 mathcomp.ssreflect.seq <> perm_sym thm
+R1780:1787 mathcomp.ssreflect.seq <> perm_sym thm
+R1795:1803 mathcomp.ssreflect.seq <> perm_nilP thm
+R1846:1853 mathcomp.ssreflect.seq <> perm_mem thm
+R1846:1853 mathcomp.ssreflect.seq <> perm_mem thm
+R1846:1853 mathcomp.ssreflect.seq <> perm_mem thm
+R1918:1920 mathcomp.ssreflect.finset <> inE def
+R1922:1928 mathcomp.ssreflect.eqtype <> eq_refl thm
+R1890:1894 Coq.ssr.ssrbool <> ::bool_scope:x_'\in'_x not
+R1918:1920 mathcomp.ssreflect.finset <> inE def
+R1918:1920 mathcomp.ssreflect.finset <> inE def
+R1918:1920 mathcomp.ssreflect.finset <> inE def
+R1922:1928 mathcomp.ssreflect.eqtype <> eq_refl thm
+R1922:1928 mathcomp.ssreflect.eqtype <> eq_refl thm
+R1940:1950 mathcomp.ssreflect.seq <> perm_to_rem thm
+R1940:1950 mathcomp.ssreflect.seq <> perm_to_rem thm
+R1940:1950 mathcomp.ssreflect.seq <> perm_to_rem thm
+R1980:1989 mathcomp.ssreflect.seq <> perm_trans thm
+R2014:2022 mathcomp.ssreflect.seq <> perm_cons thm
+R1980:1989 mathcomp.ssreflect.seq <> perm_trans thm
+R1980:1989 mathcomp.ssreflect.seq <> perm_trans thm
+R2014:2022 mathcomp.ssreflect.seq <> perm_cons thm
+R2014:2022 mathcomp.ssreflect.seq <> perm_cons thm
+R2055:2062 mathcomp.ssreflect.bigop <> big_cons thm
+R2078:2078 relorder.xbigop <> BigOpSub.P var
+R2055:2062 mathcomp.ssreflect.bigop <> big_cons thm
+R2055:2062 mathcomp.ssreflect.bigop <> big_cons thm
+R2078:2078 relorder.xbigop <> BigOpSub.P var
+R2078:2078 relorder.xbigop <> BigOpSub.P var
+R2070:2074 Coq.ssr.ssrbool <> boolP thm
+R2111:2121 relorder.xbigop <> big_mem_sub thm
+R2111:2121 relorder.xbigop <> big_mem_sub thm
+R2111:2121 relorder.xbigop <> big_mem_sub thm
+R2179:2190 relorder.xbigop <> big_nmem_sub thm
+R2179:2190 relorder.xbigop <> big_nmem_sub thm
+R2179:2190 relorder.xbigop <> big_nmem_sub thm
+R2205:2212 relorder.xbigop BigOpSub <> sec
