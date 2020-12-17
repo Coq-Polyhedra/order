@@ -11,8 +11,6 @@ Import GRing.Theory Num.Theory.
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
 
-Set Primitive Projections.
-
 (*
 Record MyPair (T1 T2 : Type) := { fst : T1; snd : T2; }.
 
@@ -187,8 +185,6 @@ Notation "r ^~" := (DualOrderPack r) (at level 8, format "r ^~").
 Section DualOrderTest.
 Context {T: eqType}.
 Variable (r : {porder T}).
-
-Print Canonical Projections.
 
 Lemma le_dual_inv x y: x <=_((r^~)^~) y = x <=_r y.
 Proof. by []. Qed.
@@ -2135,13 +2131,6 @@ apply: (ind_incr (P := fun S' : subLattice L^~pl => P S'^~s)) => //.
 - by rewrite dualK.
 Qed.
 
-Close Scope ring_scope.
-
-Goal 1 = 0 /\
-       False /\ (1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False) \/
-       1 = 1 /\ (true = true /\ True) /\ true = true /\ True \/ true = true /\ False.
-Proof. intuition. Qed.
-
 End IndDecr.
 
 (* -------------------------------------------------------------------- *)
@@ -2169,6 +2158,7 @@ End Ind.
 End SubLatticeInd.
 
 (* ==================================================================== *)
+(*
 Module GradedLattice.
 Section ClassDef.
 Context {T: eqType}.
@@ -2223,6 +2213,7 @@ Proof.
 by case: L => ? [].
 Qed.
 End GLatticeTheory.
+*)
 
 (*==================================================================== *)
 (*
