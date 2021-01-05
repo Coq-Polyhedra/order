@@ -142,6 +142,10 @@ Notation "x >=<_ r y" := ((x <=_r y) || (y <=_r x))
   (at level 70, r at level 2, no associativity, format "x  >=<_ r  y").
 Notation "x ><_ r y" := (~~ ( x >=<_r y ))
   (at level 70, r at level 2, no associativity, format "x  ><_ r  y").
+Notation ">=<_ r y" := [pred x | x >=<_r y]
+  (at level 80, r at level 2, format ">=<_ r  y").
+Notation "><_ r y" := [pred x | x ><_r y]
+  (at level 80, r at level 2, format "><_ r  y").
 Notation "[ 'leo:' r ]" := (@pack_of_le _ (Phant _) r _ id)
   (at level 0, format "[ 'leo:'  r ]").
 Notation "[ 'lto:' r ]" := (@pack_of_lt _ (Phant _) r _ id)
@@ -253,17 +257,27 @@ Variant lt_xor_ge r (x y : T) :
   | LtNotGe of x <_r y  : lt_xor_ge r x y x x y y false true
   | GeNotLt of y <=_r x : lt_xor_ge r x y y y x x true false.
 
+
+Definition leif r (x y : T) C : Prop := ((x <=_r y) * ((x == y) = C))%type.
+Definition lteif r (x y : T) C := if C then x <=_r y else x <_r y.
 End OrderDef.
 
+Notation "x <=_ r y ?= 'iff' C" := (leif r x y C)
+  (at level 70, C at level 1, r at level 2,
+  format "x '[hv'  <=_ r '/'  y  ?=  'iff'  C ']'" ).
+
+Notation "x <_ r y ?<= 'if' C" := (lteif r x y C)
+  (at level 71, C at level 1, r at level 1, y at next level,
+  format "x '[hv'  <_ r '/'  y  ?<=  'if'  C ']'").
 
 Section OrderTheory.
 
-Variables ( T: eqType ) (r: {porder T}).
+Variables ( T: eqType ) ( r : {porder T} ).
 
 Local Notation "x <= y" := (x <=_r y).
 Local Notation "x < y" := (x <_r y).
-Local Notation "x >= y" := (x >=_r y).
-Local Notation "x > y" := (x >_r y).
+Local Notation "x >= y" := (x >=_r y) (only parsing).
+Local Notation "x > y" := (x >_r y) (only parsing).
 Local Notation "x <= y <= z" := ((x <= y) && (y <= z)).
 Local Notation "x < y < z"   := ((x < y) && (y < z)).
 Local Notation "x < y <= z"  := ((x < y) && (y <= z)).
@@ -276,9 +290,14 @@ Local Notation min := (min r).
 Local Notation max := (max r).
 Local Notation le_xor_gt := (le_xor_gt r).
 Local Notation lt_xor_ge := (lt_xor_ge r).
+Local Notation "x <= y ?= 'iff' C" := (leif r x y C).
+(*Local Notation "x < y ?<= 'if' C" := (x <_r y ?<= if C).*)
+Local Notation ">=< y" := (>=<_r y).
+
 
 Lemma lexx : reflexive (<=:r).
 Proof. by case: r => ? ? []. Qed.
+Hint Resolve lexx : core.
 
 Lemma le_anti : antisymmetric (<=:r).
 Proof. case: r => le lt [] /= _ ha _ _ _ x y /andP []; exact: ha. Qed.
@@ -364,7 +383,7 @@ Definition lt_gtF x y hxy := le_gtF (@ltW x y hxy).
 Lemma lt_leAnge x y : (x < y) = (x <= y) && ~~ (y <= x).
 Proof.
 apply/idP/idP => [ltxy|/andP[lexy Nleyx]]; first by rewrite ltW // lt_geF.
-rewrite lt_def lexy andbT; apply: contraNneq Nleyx => ->; exact: lexx.
+by rewrite lt_def lexy andbT; apply: contraNneq Nleyx => ->.
 Qed.
 
 Lemma lt_le_asym x y : x < y <= x = false.
@@ -490,6 +509,167 @@ Proof. by case: comparableP. Qed.
 
 End Comparable.
 
+Section Leif.
+
+Lemma leifP x y C : reflect (x <= y ?= iff C) (if C then (x == y) else (x < y)).
+Proof.
+rewrite /leif le_eqVlt; apply: (iffP idP)=> [|[]].
+  by case: C => [/eqP->|lxy]; rewrite ?eqxx // lxy lt_eqF.
+by move=> /orP[/eqP->|lxy] <-; rewrite ?eqxx // lt_eqF.
+Qed.
+
+Lemma leif_refl x C : reflect (x <= x ?= iff C) C.
+Proof. by apply: (iffP idP) => [-> | <-] //; split; rewrite ?eqxx ?lexx. Qed.
+
+Lemma leif_trans x1 x2 x3 C12 C23 :
+  x1 <= x2 ?= iff C12 -> x2 <= x3 ?= iff C23 -> x1 <= x3 ?= iff C12 && C23.
+Proof.
+move/leifP => leif12 /leifP leif23; apply/leifP; move: leif12 leif23.
+case: C12 => /=.
+  by move/eqP => ->.
+move=> lt12; case C23.
+  by move/eqP => <-.
+by move/(lt_trans lt12).
+Qed.
+
+Lemma leif_le x y : x <= y -> x <= y ?= iff (x >= y).
+Proof. by move=> lexy; split=> //; rewrite eq_le lexy. Qed.
+
+Lemma leif_eq x y : x <= y -> x <= y ?= iff (x == y).
+Proof. by []. Qed.
+
+Lemma ge_leif x y C : x <= y ?= iff C -> (y <= x) = C.
+Proof. by case=> le_xy; rewrite eq_le le_xy. Qed.
+
+Lemma lt_leif x y C : x <= y ?= iff C -> (x < y) = ~~ C.
+Proof. by move=> le_xy; rewrite lt_def !le_xy andbT. Qed.
+
+Lemma ltNleif x y C : x <= y ?= iff ~~ C -> (x < y) = C.
+Proof. by move=> /lt_leif; rewrite negbK. Qed.
+
+Lemma eq_leif x y C : x <= y ?= iff C -> (x == y) = C.
+Proof. by move=> /leifP; case: C comparableP => [] []. Qed.
+
+Lemma eqTleif x y C : x <= y ?= iff C -> C -> x = y.
+Proof. by move=> /eq_leif<-/eqP. Qed.
+
+End Leif.
+
+Section Lteif.
+
+Lemma lteif_trans x y z C1 C2 :
+  lteif r x y C1 -> lteif r y z C2 -> lteif r x z (C1 && C2).
+Proof.
+case: C1 C2 => [][];
+  [exact: le_trans | exact: le_lt_trans | exact: lt_le_trans | exact: lt_trans].
+Qed.
+
+Lemma lteif_anti C1 C2 x y :
+  (lteif r x y C1) && (lteif r y x C2) = C1 && C2 && (x == y).
+Proof. by case: C1 C2 => [][]; rewrite lte_anti. Qed.
+
+Lemma lteifxx x C : (lteif r x x C) = C.
+Proof. by case: C; rewrite /= ?lexx ?ltxx. Qed.
+
+Lemma lteifNF x y C : lteif r y x (~~ C) -> (lteif r x y C) = false.
+Proof. by case: C => [/lt_geF|/le_gtF]. Qed.
+
+Lemma lteifS x y C : x < y -> lteif r x y C.
+Proof. by case: C => //= /ltW. Qed.
+
+Lemma lteifT x y : lteif r x y true = (x <= y). Proof. by []. Qed.
+
+Lemma lteifF x y : lteif r x y false = (x < y). Proof. by []. Qed.
+
+Lemma lteif_orb x y : {morph (lteif r) x y : p q / p || q}.
+Proof. by case=> [][] /=; case: comparableP. Qed.
+
+Lemma lteif_andb x y : {morph (lteif r) x y : p q / p && q}.
+Proof. by case=> [][] /=; case: comparableP. Qed.
+
+Lemma lteif_imply C1 C2 x y : C1 ==> C2 -> lteif r x y C1 -> lteif r x y C2.
+Proof. by case: C1 C2 => [][] //= _ /ltW. Qed.
+
+Lemma lteifW C x y : lteif r x y C -> x <= y.
+Proof. by case: C => // /ltW. Qed.
+
+Lemma ltrW_lteif C x y : x < y -> lteif r x y C.
+Proof. by case: C => // /ltW. Qed.
+
+Lemma lteifN C x y : lteif r x y (~~ C) -> ~~ (lteif r y x C).
+Proof. by case: C => /=; case: comparableP. Qed.
+
+End Lteif.
+
+Section MinMax.
+
+Lemma minElt x y : min x y = if x < y then x else y. Proof. by []. Qed.
+Lemma maxElt x y : max x y = if x < y then y else x. Proof. by []. Qed.
+
+Lemma minEle x y : min x y = if x <= y then x else y.
+Proof. by case: comparableP. Qed.
+
+Lemma maxEle x y : max x y = if x <= y then y else x.
+Proof. by case: comparableP. Qed.
+
+Lemma comparable_minEgt x y : x >=< y -> min x y = if x > y then y else x.
+Proof. by case: comparableP. Qed.
+Lemma comparable_maxEgt x y : x >=< y -> max x y = if x > y then x else y.
+Proof. by case: comparableP. Qed.
+Lemma comparable_minEge x y : x >=< y -> min x y = if x >= y then y else x.
+Proof. by case: comparableP. Qed.
+Lemma comparable_maxEge x y : x >=< y -> max x y = if x >= y then x else y.
+Proof. by case: comparableP. Qed.
+
+Lemma min_l x y : x <= y -> min x y = x. Proof. by case: comparableP. Qed.
+Lemma min_r x y : y <= x -> min x y = y. Proof. by case: comparableP. Qed.
+Lemma max_l x y : y <= x -> max x y = x. Proof. by case: comparableP. Qed.
+Lemma max_r x y : x <= y -> max x y = y. Proof. by case: comparableP. Qed.
+
+Lemma minxx : idempotent (min : T -> T -> T).
+Proof. by rewrite /min => x; rewrite ltxx. Qed.
+
+Lemma maxxx : idempotent (max : T -> T -> T).
+Proof. by rewrite /max => x; rewrite ltxx. Qed.
+
+Lemma eq_minl x y : (min x y == x) = (x <= y).
+Proof. by rewrite !(fun_if, if_arg) eqxx; case: comparableP. Qed.
+
+Lemma eq_maxr x y : (max x y == y) = (x <= y).
+Proof. by rewrite !(fun_if, if_arg) eqxx; case: comparableP. Qed.
+
+Lemma min_idPl x y : reflect (min x y = x) (x <= y).
+Proof. by apply: (iffP idP); rewrite (rwP eqP) eq_minl. Qed.
+
+Lemma max_idPr x y : reflect (max x y = y) (x <= y).
+Proof. by apply: (iffP idP); rewrite (rwP eqP) eq_maxr. Qed.
+
+Lemma min_minKx x y : min (min x y) y = min x y.
+Proof. by rewrite !(fun_if, if_arg) ltxx/=; case: comparableP. Qed.
+
+Lemma min_minxK x y : min x (min x y) = min x y.
+Proof. by rewrite !(fun_if, if_arg) ltxx/=; case: comparableP. Qed.
+
+Lemma max_maxKx x y : max (max x y) y = max x y.
+Proof. by rewrite !(fun_if, if_arg) ltxx/=; case: comparableP. Qed.
+
+Lemma max_maxxK x y : max x (max x y) = max x y.
+Proof. by rewrite !(fun_if, if_arg) ltxx/=; case: comparableP. Qed.
+
+Lemma comparable_minl z : {in >=< z &, forall x y, min x y >=< z}.
+Proof. by move=> x y cmp_xz cmp_yz; rewrite /min; case: ifP. Qed.
+
+Lemma comparable_minr z : {in >=< z &, forall x y, z >=< min x y}.
+Proof. by move=> x y cmp_xz cmp_yz; rewrite /min comparable_sym; case: ifP. Qed.
+
+Lemma comparable_maxl z : {in >=< z &, forall x y, max x y >=< z}.
+Proof. by move=> x y cmp_xz cmp_yz; rewrite /max; case: ifP. Qed.
+
+Lemma comparable_maxr z : {in >=< z &, forall x y, z >=< max x y}.
+Proof. by move=> x y cmp_xz cmp_yz; rewrite /max comparable_sym; case: ifP. Qed.
+
+End MinMax.
+
 End OrderTheory.
 
 (* ==================================================================== *)
@@ -609,8 +789,6 @@ Record class (r : {porder T}) := Class {
   meetA : associative meet;
   meetxx : idempotent meet;
   leEmeet : forall x y, (x <=_r y) = (meet x y == x);
-  top : T;
-  lex1 : forall x, x <=_r top
 }.
 
 
@@ -638,7 +816,6 @@ Module Exports.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Canonical porder_of.
-Notation top := top.
 Notation meet r := (@meet_of _ (Phant _) r _ id).
 Notation "{ 'meetSemiLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'meetSemiLattice'  T }").
@@ -661,8 +838,6 @@ Record class (r : {porder T}) := Class {
   joinA : associative join;
   joinxx : idempotent join;
   leEjoin : forall x y, (x <=_r y) = (join y x == y);
-  bot : T;
-  le0x : forall x, bot <=_r x 
 }.
 
 Structure pack (phr : phant T) := Pack {
@@ -689,7 +864,6 @@ End ClassDef.
 Module Exports.
 
 Notation join r := (@join_of _ (Phant _) r _ id).
-Notation bot := bot.
 Coercion pack_order : pack >-> Order.pack.
 Coercion pack_class : pack >-> class.
 Canonical order_of.
@@ -709,17 +883,15 @@ Section DualMeetJoin.
 Context {T: eqType}.
 Variable (m : {meetSemiLattice T}) (j : {joinSemiLattice T}).
 
-Check Join.Class.
-
 Definition DualMeetClass := @Join.Class _ (m^~)
   (meet m) (Meet.meetC m) (Meet.meetA m) (Meet.meetxx m)
-  (fun x y => (Meet.leEmeet m y x)) (top m) (Meet.lex1 m).
+  (fun x y => (Meet.leEmeet m y x)).
 
 Canonical DualMeetPack := Join.Pack (Phant _) DualMeetClass.
 
 Definition DualJoinClass := @Meet.Class _ (j^~)
   (join j) (Join.joinC j) (Join.joinA j) (Join.joinxx j)
-  (fun x y => (Join.leEjoin j y x)) (bot j) (Join.le0x j).
+  (fun x y => (Join.leEjoin j y x)).
 
 Canonical DualJoinPack := Meet.Pack (Phant _) DualJoinClass.
 
@@ -748,7 +920,7 @@ Context {T: eqType} (r: {meetSemiLattice T}).
 
 Local Notation "x `&` y" := (meet r x y).
 Local Notation "x <= y" := (x <=_r y).
-Local Notation top := (top r).
+
 
 Lemma meetC : commutative (meet r).
 Proof. by case: r => ? []. Qed.
@@ -832,23 +1004,8 @@ Proof. by rewrite meetC eq_meetl. Qed.
 Lemma leI2 x y z t : x <= z -> y <= t -> x `&` y <= z `&` t.
 Proof. by move=> xz yt; rewrite lexI !leIx2 ?xz ?yt ?orbT. Qed.
 
-
-Lemma lex1 : forall x, x <= top.
-Proof.
-by case: r => ? [].
-Qed.
-
-Lemma meet1x : left_id top (meet r).
-Proof.
-by move=> x; apply/eqP; rewrite meetC -leEmeet lex1.
-Qed.
-
-Lemma meetx1 : right_id top (meet r).
-Proof.
-by move=> x; apply/eqP; rewrite -leEmeet lex1.
-Qed.
-
 End MeetTheory.
+
 
 (* ===================================================================== *)
 
@@ -858,7 +1015,7 @@ Context {T: eqType} (r: {joinSemiLattice T}).
 
 Local Notation "x `|` y" := (join r x y).
 Local Notation "x <= y" := (x <=_r y).
-Local Notation bot := (bot r).
+
 
 Lemma joinC : commutative (join r).
 Proof. by case: r => ? []. Qed.
@@ -939,18 +1096,159 @@ Proof. exact: (@eq_meetr _ r^~j). Qed.
 Lemma leU2 x y z t : x <= z -> y <= t -> x `|` y <= z `|` t.
 Proof. exact: (@leI2 _ r^~j). Qed.
 
-Lemma le0x : forall x, bot <=_r x.
-Proof. exact:(@lex1 _ r^~j). Qed.
-
-Lemma joinx0 : right_id bot (join r).
-Proof. exact: (@meetx1 _ r^~j). Qed.
-
-Lemma join0x : left_id bot (join r).
-Proof. exact: (@meet1x _ r^~j). Qed.
-
 End JoinTheory.
 
+(* ================================================================ *)
 
+Module TMeet.
+Section ClassDef.
+Context {T: eqType}.
+
+Set Primitive Projections.
+Record class (r : {meetSemiLattice T}) := Class
+  {
+    top : T;
+    lex1 : forall x, x <=_r top
+  }.
+
+Structure pack (phr : phant T) := Pack
+  {
+    pack_meet : {meetSemiLattice T};
+    pack_class : class pack_meet
+  }.
+
+Unset Primitive Projections.
+Local Coercion pack_meet : pack >-> Meet.pack.
+
+Variables (phr : phant T) (tmr : pack phr).
+
+Check Order.Pack.
+Canonical order_of := Order.Pack phr (Order.pack_class tmr).
+End ClassDef.
+
+(* ---------------------------------------------------------------- *)
+
+Module Exports.
+Coercion pack_meet : pack >-> Meet.pack.
+Coercion pack_class : pack >-> class.
+Canonical order_of.
+Notation top := top.
+Notation "{ 'tMeetSemiLattice' T }" := (pack (Phant T))
+  (at level 0, format "{ 'tMeetSemiLattice'  T }").
+
+End Exports.
+End TMeet.
+Include TMeet.Exports.
+
+(* ================================================================= *)
+
+Module BJoin.
+Section ClassDef.
+Context {T: eqType}.
+
+Set Primitive Projections.
+Record class (r : {joinSemiLattice T}) := Class
+  {
+    bot : T;
+    le0x : forall x, bot <=_r x
+  }.
+
+Structure pack (phr : phant T) := Pack
+  {
+    pack_join : {joinSemiLattice T};
+    pack_class : class pack_join
+  }.
+
+Unset Primitive Projections.
+Local Coercion pack_join : pack >-> Join.pack.
+
+Variables (phr : phant T) (tmr : pack phr).
+
+Check Order.Pack.
+Canonical order_of := Order.Pack phr (Order.pack_class tmr).
+End ClassDef.
+
+(* ---------------------------------------------------------------- *)
+
+Module Exports.
+Coercion pack_join : pack >-> Join.pack.
+Coercion pack_class : pack >-> class.
+Canonical order_of.
+Notation bot := bot.
+Notation "{ 'bJoinSemiLattice' T }" := (pack (Phant T))
+  (at level 0, format "{ 'bJoinSemiLattice'  T }").
+
+End Exports.
+End BJoin.
+Include BJoin.Exports.
+
+(* =============================================================== *)
+
+Section DualTMeetBJoin.
+
+Context {T: eqType}.
+Variables (tm : {tMeetSemiLattice T}) (bj : {bJoinSemiLattice T}).
+
+Definition DualTMeetClass :=
+  @BJoin.Class _ (tm^~m) (top tm) (TMeet.lex1 tm).
+
+Canonical DualTMeetPack := BJoin.Pack (Phant _) DualTMeetClass.
+
+Definition DualBJoinClass :=
+  @TMeet.Class _ (bj^~j) (bot bj) (BJoin.le0x bj).
+
+Canonical DualBJoinPack := TMeet.Pack (Phant _) DualBJoinClass.
+
+End DualTMeetBJoin.
+
+Notation "j '^~bj'" := (DualBJoinPack j) (at level 8, format "j '^~bj'").
+Notation "m '^~tm'" := (DualTMeetPack m) (at level 8, format "m '^~tm'").
+
+Section DualTBTest.
+
+Context {T: eqType}.
+Variable (bj : {bJoinSemiLattice T}) (tm : {tMeetSemiLattice T}).
+
+Check erefl : bj = ((bj^~bj)^~tm).
+Check erefl : tm = ((tm^~tm)^~bj).
+
+End DualTBTest.
+
+Section TMeetTheory.
+
+Context {T: eqType} (r: {tMeetSemiLattice T}).
+
+Local Notation "x <= y" := (x <=_r y).
+Local Notation top := (top r).
+
+Lemma lex1 : forall x, x <= top.
+Proof. by case: r => ? []. Qed.
+  
+Lemma meet1x : left_id top (meet r).
+Proof. by move=> x; apply/eqP; rewrite meetC -leEmeet lex1. Qed.
+  
+Lemma meetx1 : right_id top (meet r).
+Proof. by move=> x; apply/eqP; rewrite -leEmeet lex1. Qed.
+
+End TMeetTheory.
+
+Section BJoinTheory.
+
+Context {T: eqType} (r : {bJoinSemiLattice T}).
+Local Notation "x <= y" := (x <=_r y).
+Local Notation bot := (bot r).
+
+Lemma le0x : forall x, bot <= x.
+Proof. exact:(@lex1 _ r^~bj). Qed.
+
+Lemma joinx0 : right_id bot (join r).
+Proof. exact: (@meetx1 _ r^~bj). Qed.
+
+Lemma join0x : left_id bot (join r).
+Proof. exact: (@meet1x _ r^~bj). Qed.
+
+End BJoinTheory.
+  
 (* ==================================================================== *)
 (*Module Lattice.
 
