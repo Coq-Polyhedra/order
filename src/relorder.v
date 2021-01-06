@@ -1637,6 +1637,10 @@ Local Coercion pack_order : pack >-> POrder.pack.
 Variable (phr : phant T) (m : pack phr).
 
 Definition order_of := POrder.Pack phr (POrder.pack_class m).
+Definition clone (r : {porder T}) :=
+  fun (pl : pack phr) & phant_id (pack_order pl) r =>
+  pl.
+
 End ClassDef.
 
 
@@ -1649,6 +1653,8 @@ Coercion pack_order : pack >-> POrder.pack.
 Coercion pack_class : pack >-> class.
 Notation "{ 'preLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
+Notation "[ 'preLattice' 'of' r ]" := (@clone _ (Phant _) r _ id)
+  (at level 0, format "[ 'preLattice'  'of'  r ]").
 Notation lub := lub.
 Notation glb := glb.
 
@@ -1671,14 +1677,10 @@ Canonical DualPreLatticePack :=
 
 End DualPreLattice.
 
-Notation "L '^~pl'" := (DualPreLatticePack L)
-  (at level 8, format "L '^~pl'").
-
 Section PreLatticeDualTest.
 
 Context (T: choiceType) (L : {preLattice T}).
-Check erefl L : (L^~pl)^~pl = L.
-
+Check erefl L : [preLattice of L^~^~] = L.
 End PreLatticeDualTest.
 
 Section PreLatticeTheory.
@@ -1703,13 +1705,13 @@ rewrite PreLattice.lub_min // => x; rewrite !inE => /eqP ->; exact: lexx.
 Qed.
 
 Lemma glb1 (L : {preLattice T}) a : glb L [fset a] = a.
-Proof. exact: (lub1 L^~pl). Qed.
+Proof. exact: (lub1 [preLattice of L^~]). Qed.
 
 Lemma glb_desc L A B: A `<=` B -> glb L B <=_L glb L A.
 Proof. move/fsubsetP => AsubB; apply/glb_max_le => x /AsubB; exact: glb_inf_le. Qed.
 
 Lemma lub_incr L A B : A `<=` B -> lub L A <=_L lub L B.
-Proof. by move/(glb_desc L^~pl). Qed.
+Proof. by move/(glb_desc [preLattice of L^~]). Qed.
 
 Lemma glbU1 L A a : glb L [fset a; (glb L A)] = glb L (A `|` [fset a]).
 Proof.
@@ -1725,13 +1727,13 @@ apply/(@le_anti _ L)/andP; split.
 Qed.
 
 Lemma lubU1 L A a: lub L [fset a; lub L A] = lub L (A `|`[fset a]).
-Proof. exact:(glbU1 L^~pl). Qed.
+Proof. exact:(glbU1 [preLattice of L^~]). Qed.
 
 Lemma glb_empty L : forall x, glb L fset0 >=_L x.
 Proof. by move=> x; apply glb_max_le => y; rewrite in_fset0. Qed.
 
 Lemma lub_empty L : forall x, lub L fset0 <=_L x.
-Proof. exact: (glb_empty L^~pl). Qed.
+Proof. exact: (glb_empty [preLattice of L^~]). Qed.
 
 End PreLatticeTheory.
 
@@ -1760,7 +1762,7 @@ Variable (L: {preLattice T}).
 
 Record subLattice :=
   SubLattice { elements :> {fset T};
-  _ : stable L elements && stable (L^~pl) elements }.
+  _ : stable L elements && stable ([preLattice of L^~]) elements }.
 
 Canonical subLattice_subType := Eval hnf in [subType for elements].
 
@@ -1785,7 +1787,7 @@ Definition inE := (in_subLatticeE, inE).
 Definition fmeet (S: subLattice) x y :=
   glb L [fset x; y].
 Definition fjoin (S : subLattice) x y:=
-  glb (L^~pl) [fset x; y].
+  glb ([preLattice of L^~]) [fset x; y].
 
 Definition ftop (S : subLattice) := lub L S.
 Definition fbot (S : subLattice) := glb L S.
@@ -1801,7 +1803,7 @@ Section SubLatticeDual.
 
 Context {T: choiceType} (L: {preLattice T}) (S: subLattice L).
 
-Lemma stableDual : (stable L^~pl S) && (stable L S).
+Lemma stableDual : (stable [preLattice of L^~] S) && (stable L S).
 Proof. by case: S => S0 stableS0; rewrite andbC. Defined.
 
 Canonical SubLatticeDual := SubLattice stableDual.
@@ -2279,7 +2281,7 @@ Lemma in_intv_range L (S : subLattice L) a b x:
 Proof. by case/intervalP. Qed.
 
 Lemma stable_interval L (S:subLattice L) a b:
-  stable L (interval S a b) && stable (L^~pl) (interval S a b).
+  stable L (interval S a b) && stable ([preLattice of L^~]) (interval S a b).
 Proof.
 apply/andP; split; apply/stableP => x y /intervalP [xS ax xb]
   /intervalP [yS ay yb]; apply/intervalP; split.
@@ -2343,7 +2345,7 @@ Lemma dual_intv_r L (S : subLattice L) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
 Proof. by apply/eqP/fset_eqP => x; rewrite !inE /= [X in _ && X]andbC. Qed.
 
-Definition dual_intv := (@dual_intv_r, fun L => @dual_intv_r L^~pl).
+Definition dual_intv := (@dual_intv_r, fun L => @dual_intv_r [preLattice of L^~]).
 
 Lemma mem_intv_dual L (S : subLattice L) a b : 
   [<a; b>]_(S^~s) =i [<b; a>]_S.
@@ -2476,7 +2478,7 @@ Proof. by exact/val_inj. Qed.
 Lemma fbot_dual_r (L : {preLattice T}) (S : subLattice L) :
   \fbot_(S^~s) = \ftop_S.
   
-  Notation dualize := (fun f => (@f, fun L => @f L^~pl)).
+  Notation dualize := (fun f => (@f, fun L => @f [preLattice of L^~])).
   Proof. by []. Qed.
 
 Definition fbot_dual := dualize fbot_dual_r.
@@ -2492,7 +2494,7 @@ Lemma ind_decr (S : subLattice L) (x : T) :
 Proof.
 move=> x_in_S PS.
 rewrite -[S]dualK -dual_intv fbot_dual.
-apply: (ind_incr (P := fun S' : subLattice L^~pl => P S'^~s)) => //.
+apply: (ind_incr (P := fun S' : subLattice [preLattice of L^~] => P S'^~s)) => //.
 - by move=> S' x' ??; rewrite dual_intv; apply: P_decr.
 - by rewrite dualK.
 Qed.
