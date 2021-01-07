@@ -1871,6 +1871,10 @@ Definition fbot L (S : subLattice L) :=
 
 Notation "\fbot_ S" := (fbot S) (at level 2, S at next level, format "\fbot_ S").
 
+Definition ftop L (S : subLattice L) := \fbot_(S^~s).
+
+Notation "\ftop_ S" := (ftop S) (at level 2, S at next level, format "\ftop_ S").
+
 Lemma foo L (S : subLattice L) x0 :
   x0 \in S -> \fbot_S = \big[\fmeet_S/x0]_(x <- S) x.
 Proof.
@@ -1878,86 +1882,58 @@ rewrite inE /fbot; case: fpickP => [->//|y0 y0_in_S x0_in_S].
 rewrite -(fsetD1K x0_in_S).
 Admitted.
 
-Lemma mem_fbot L (S : subLattice L) x :
-  x \in S -> \fbot_S \in S.
+Lemma mem_fbot L (S : subLattice L) x0 :
+  x0 \in S -> \fbot_S \in S.
 Proof.
-
-
-  rewrite /fbot.
-have: forall S', S' `<=` S -> S'!= fset0 -> glb L S' \in S.
-- move=> S' + /fset0Pn [a] /mem_fset1U; move=> + S'eq.
-  rewrite -{}S'eq; elim/fset_ind: S'.
-  + rewrite fsetU0 => /fsubsetP a_sub_S; rewrite -fset2xx.
-    by apply/mem_fmeet; apply/a_sub_S; rewrite inE.
-  + move=> b /= S'' bnS'' Hind /fsubsetP abS''_subS.
-    have a_in_S: a \in S by apply: abS''_subS; rewrite !inE eq_refl.
-    have b_in_S: b \in S by apply: abS''_subS; rewrite !inE eq_refl orbT.
-    rewrite fsetUCA fsetUC -glbU1 mem_fmeet //.
-    apply/Hind/fsubsetP=> z zaS''; apply/abS''_subS.
-    by rewrite fsetUCA inE zaS'' orbT.
-by move/(_ S) => + Sprop; move/(_ (fsubset_refl S) Sprop).
+move => x0S; rewrite (foo x0S) big_seq.
+by apply/big_stable => //; apply/mem_fmeet.
 Qed.
 
-Lemma mem_ftop L (S : subLattice L) : S != fset0 :> {fset _} ->
-  \ftop_S \in S.
+Lemma le0f L (S : subLattice L) : {in S, forall x, \fbot_S <=_L x}.
+Proof.
+move => x xS; rewrite (foo xS) big_seq.
+rewrite (big_mem_sub _ _ _ _ xS _ x) ?leIfl //.
+apply/big_stable => //; apply/mem_fmeet.
+- exact: fmeetC.
+- exact: fmeetA.
+- exact: mem_fmeet.
+Qed.
+
+Lemma fjoinf0 L (S : subLattice L) : {in S, right_id \fbot_S (\fjoin_S)}.
+Proof. by move=> x xS; apply/eqP; rewrite eq_fjoinl ?le0f ?(mem_fbot xS). Qed.
+
+Lemma fjoin0f L (S : subLattice L): {in S, left_id \fbot_S (\fjoin_S)}.
+Proof. by move=> x xS; apply/eqP; rewrite eq_fjoinr ?le0f ?(mem_fbot xS). Qed.
+
+Lemma mem_ftop L (S : subLattice L) x0 :
+  x0 \in S -> \ftop_S \in S.
 Proof. exact: (@mem_fbot _ S^~s). Qed.
 
-Lemma le0f L (S : subLattice L) : S != fset0 :> {fset _} ->
-  {in S, forall x, \fbot_S <=_L x}.
-Proof. move=> Sprop0 x xS; exact: glb_inf_le. Qed.
+Lemma lef1 L (S : subLattice L) : {in S, forall x, x <=_L \ftop_S}.
+Proof. move=> ??; exact: (@le0f _ S^~s). Qed.
 
-Lemma fjoinf0 L (S : subLattice L) : S != fset0 :> {fset _} ->
-  {in S, right_id \fbot_S (\fjoin_S)}.
-Proof. by move=> Sprop0 x xS; apply/eqP; rewrite eq_fjoinl ?le0f ?mem_fbot. Qed.
-
-Lemma fjoin0f L (S : subLattice L): S != fset0 :> {fset _} ->
-  {in S, left_id \fbot_S (\fjoin_S)}.
-Proof. by move=> Sprop0 x xS; apply/eqP; rewrite eq_fjoinr ?le0f ?mem_fbot. Qed.
-
-Lemma lef1 L (S : subLattice L) : S != fset0 :> {fset _} ->
-  {in S, forall x, x <=_L \ftop_S}.
-Proof.
-move=> ???; exact: (@le0f _ S^~s).
-Qed.
-
-Lemma fmeetf1 L (S : subLattice L) : S != fset0 :> {fset _} ->
-  {in S, right_id \ftop_S (\fmeet_S)}.
+Lemma fmeetf1 L (S : subLattice L) : {in S, right_id \ftop_S (\fmeet_S)}.
 Proof. exact: (@fjoinf0 _ S^~s). Qed.
 
-Lemma fmeet1f L (S : subLattice L) : S != fset0 :> {fset _} ->
-  {in S, left_id \ftop_S (\fmeet_S)}.
+Lemma fmeet1f L (S : subLattice L) : {in S, left_id \ftop_S (\fmeet_S)}.
 Proof. exact: (@fjoin0f _ S^~s). Qed.
 
 (* ---------------------------------------------------------------------- *)
 
-
-Lemma ftop_id L (S: subLattice L) : S!= fset0 :> {fset _} ->
+Lemma ftop_id L (S: subLattice L) :
   {in S, forall t, (forall x, x \in S -> x <=_L t) -> \ftop_S = t}.
 Proof.
-move=> Sprop0 t tS ttop; apply/(@le_anti _ L).
-by rewrite lef1 //= andbT; apply/ttop; rewrite mem_ftop.
+move=> t tS ttop; apply/(@le_anti _ L).
+by rewrite lef1 //= andbT; apply/ttop; rewrite (mem_ftop tS).
 Qed.
-
-
 
 Lemma ftopE L (S: subLattice L) : S != fset0 :> {fset _} ->
   \ftop_S = \big[\fjoin_S / \fbot_S]_(i <- S) i.
 Proof.
-move=> Sprop0; apply/ftop_id => //.
-- rewrite big_seq; elim/big_ind:  _ => //.
-  + exact: mem_fbot.
-  + exact: mem_fjoin.
-- move=> x x_in_S; rewrite big_seq.
-  rewrite (@big_mem_sub _ _ _ _ (mem S) _ _ _ _ _ _ x x_in_S x_in_S) => //.
-  + rewrite lefUl //; apply/big_stable => //;
-      [exact:mem_fjoin | exact: mem_fbot].
-  + move=> ????; exact: fjoinC.
-  + move=> ??????; exact: fjoinA.
-  + exact: mem_fjoin.
-  + exact: mem_fbot.
+by case/fset0Pn => x /(@mem_ftop _ S^~s) /foo.
 Qed.
 
-Lemma fbot_id L (S: subLattice L) : S != fset0 :> {fset _} ->
+Lemma fbot_id L (S: subLattice L) :
   {in S, forall t, (forall x, x \in S -> x >=_L t) -> \fbot_S = t}.
 Proof. exact: (@ftop_id _ S^~s). Qed.
 
@@ -1965,8 +1941,10 @@ Lemma fbotE L (S: subLattice L) : S != fset0 :> {fset _} ->
 \fbot_S = \big[\fmeet_S / \ftop_S]_(i <- S) i.
 Proof. exact: (@ftopE _ S^~s). Qed.
 
-
 End SubLatticeTheory.
+
+Notation "\fbot_ S" := (@fbot _ _ S) (at level 2, S at next level, format "\fbot_ S").
+Notation "\ftop_ S" := (@ftop _ _ S) (at level 2, S at next level, format "\ftop_ S").
 
 
 (* ==================================================================== *)

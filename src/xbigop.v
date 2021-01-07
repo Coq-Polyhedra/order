@@ -1,7 +1,5 @@
 From mathcomp Require Import all_ssreflect.
 
-
-
 Section BigOpSub.
 
 Context {T : eqType} {x0 : T} {op : T -> T -> T} {P Q : pred T}.
@@ -21,7 +19,6 @@ move=> a l Hind; rewrite big_cons; case/boolP: (P a).
 move=> _; exact: Hind.
 Qed.
 
-
 Lemma big_mem_sub (r : seq T) x : x \in r -> P x ->
     \big[op/x0]_(y <- r | P y) y = op x (\big[op/x0]_(y <- (rem x r) | P y) y).
 Proof.
@@ -33,7 +30,7 @@ elim: r; rewrite ?in_nil // => a l Hind; rewrite inE; case/orP.
     - move/PQ => Qa; rewrite Hind //; have Qx: (Q x) by apply: PQ.
       by rewrite ha ?big_stable // [X in op X _]hc // ha ?big_stable.
     - move=> _; exact: Hind.
-Qed. 
+Qed.
 
 Lemma big_nmem_sub (r : seq T) x: x \in r -> ~~ P x ->
   \big[op/x0]_(y <- r | P y) y = \big[op/x0]_(y <- rem x r | P y) y.
@@ -58,5 +55,5 @@ elim: r.
   + by move=> Pa; rewrite (big_mem_sub s a a_in_s) // NHind.
   + by move=> nPa; rewrite NHind -big_nmem_sub.
 Qed.
-  
+
 End BigOpSub.
