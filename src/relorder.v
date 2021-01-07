@@ -1842,19 +1842,41 @@ move=> ????; exact: (@lefI2 _ S^~s).
 Qed.
 
 (* -------------------------------------------------------------------- *)
+Definition fpick (S : {fset T}) :=
+  omap val (@pick [finType of S] xpredT).
+
+Variant fpick_spec (S : {fset T}) : option T -> Type :=
+| FPick0 of S = fset0 : fpick_spec S None
+| FPickS (x0 : T) of x0 \in S : fpick_spec S (Some x0).
+
+Lemma fpickP S : fpick_spec S (fpick S).
+Proof.
+rewrite /fpick; case: pickP => /= [x _|]; first by apply: (FPickS (valP x)).
+case: (S =P fset0) => [-> _|]; first by constructor.
+by move/eqP/fset0Pn=> h -/(_ [` xchooseP h]).
+Qed.
+
+Lemma fpick0 : fpick fset0 = None.
+Proof. by case: fpickP. Qed.
+
+Lemma fpickS (S : {fset T}) :
+  S != fset0 -> exists2 x0, x0 \in S & fpick S = Some x0.
+Proof. by case: fpickP => [->|] // x0 x0_in_S _; exists x0. Qed.
 
 Definition fbot L (S : subLattice L) :=
-  if (S : seq _) is x0 :: S' then
-    \big[\fmeet_S/x0]_(x <- S') x
+  if fpick S is Some x0 then
+    \big[\fmeet_S/x0]_(x <- S) x
   else
     PreLattice.witness L.
 
 Notation "\fbot_ S" := (fbot S) (at level 2, S at next level, format "\fbot_ S").
 
 Lemma foo L (S : subLattice L) x0 :
-  x0 \in S -> \fbot_S = \big[\fmeet_S/x0]_(x <- (S `\ x0)) x.
+  x0 \in S -> \fbot_S = \big[\fmeet_S/x0]_(x <- S) x.
 Proof.
-move => x0S; rewrite /fbot.
+rewrite inE /fbot; case: fpickP => [->//|y0 y0_in_S x0_in_S].
+rewrite -(fsetD1K x0_in_S).
+Admitted.
 
 Lemma mem_fbot L (S : subLattice L) x :
   x \in S -> \fbot_S \in S.
