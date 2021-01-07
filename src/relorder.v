@@ -1310,15 +1310,24 @@ Section ClassDef.
 Context {T : choiceType}.
 
 Set Primitive Projections.
+
+(*TODO*)
   
 Record class (r : {porder T}) := Class
 {
-  lub : {fset T} -> T;
-  glb : {fset T} -> T;
-  lub_sup : forall S, forall x, x \in S -> x <=_r lub S;
-  lub_min : forall S, forall z, (forall x, x \in S -> x <=_r z) -> lub S <=_r z;
-  glb_inf : forall S, forall x, x \in S -> x <=_(r^~) glb S;
-  glb_max : forall S, forall z, (forall x, x \in S -> x <=_(r^~) z) -> glb S <=_(r^~) z
+  witness : T;
+  premeet : {fset T} -> T -> T -> T;
+  prejoin : {fset T} -> T -> T -> T;
+  premeet_min : forall S x y, x \in S -> y \in S ->
+    premeet S x y <=_r x /\ premeet S x y <=_r y;
+  premeet_inf : forall S x y z, x \in S -> y \in S -> z \in S ->
+    z <=_r x -> z <=_r y ->
+    z <=_r premeet S x y;
+  prejoin_max : forall S x y, x \in S -> y \in S ->
+    prejoin S x y <=_(r^~) x /\ prejoin S x y <=_(r^~) y;
+  prejoin_sup : forall S x y z, x \in S -> y \in S -> z \in S ->
+    z <=_(r^~) x -> z <=_(r^~) y ->
+    z <=_(r^~) prejoin S x y;
 }.
 
 Structure pack (phr : phant T) := Pack
@@ -1352,8 +1361,10 @@ Notation "{ 'preLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
 Notation "[ 'preLattice' 'of' r ]" := (@clone _ (Phant _) r _ id)
   (at level 0, format "[ 'preLattice'  'of'  r ]").
-Notation lub := lub.
-Notation glb := glb.
+Notation premeet := premeet.
+Notation prejoin := prejoin.
+
+
 
 End Exports.
 
@@ -1366,8 +1377,8 @@ Context {T: choiceType}.
 Variable (L : {preLattice T}).
 
 Definition DualPreLatticeClass := PreLattice.Class
-    (PreLattice.glb_inf L) (PreLattice.glb_max L)
-    (PreLattice.lub_sup L) (PreLattice.lub_min L).
+    (PreLattice.witness L) (PreLattice.prejoin_max L) (PreLattice.prejoin_sup L)
+    (PreLattice.premeet_min L) (PreLattice.premeet_inf L).
 
 Canonical DualPreLatticePack :=
   PreLattice.Pack (Phant T) DualPreLatticeClass.
@@ -1380,7 +1391,7 @@ Context (T: choiceType) (L : {preLattice T}).
 Check erefl L : [preLattice of L^~^~] = L.
 End PreLatticeDualTest.
 
-Section PreLatticeTheory.
+(*Section PreLatticeTheory.
 
 Context {T: choiceType}.
 Implicit Type L: {preLattice T}.
@@ -1432,7 +1443,7 @@ Proof. by move=> x; apply glb_max_le => y; rewrite in_fset0. Qed.
 Lemma lub_empty L : forall x, lub L fset0 <=_L x.
 Proof. exact: (glb_empty [preLattice of L^~]). Qed.
 
-End PreLatticeTheory.
+End PreLatticeTheory.*)
 
 (* ====================================================================== *)
 
@@ -1441,12 +1452,12 @@ Section SubLattice.
 Context {T : choiceType}.
 
 Definition stable (L: {preLattice T}) (S : {fset T}) :=
-  [forall x : S, [forall y : S, glb L [fset (fsval x); (fsval y)] \in S]].
+  [forall x : S, [forall y : S, premeet L S (fsval x) (fsval y) \in S]].
 
 
 Lemma stableP (L: {preLattice T}) (S : {fset T}) :
   reflect (forall x y, x \in S -> y \in S ->
-    glb L [fset x; y] \in S)
+    premeet L S x y \in S)
     (stable L S).
 Proof.
 apply/(iffP idP).
@@ -1481,20 +1492,13 @@ Proof. by []. Qed.
   
 Definition inE := (in_subLatticeE, inE).
 
-Definition fmeet (S: subLattice) x y :=
-  glb L [fset x; y].
-Definition fjoin (S : subLattice) x y:=
-  glb ([preLattice of L^~]) [fset x; y].
-
-Definition ftop (S : subLattice) := lub L S.
-Definition fbot (S : subLattice) := glb L S.
+Definition fmeet (S: subLattice) := premeet L S.
+Definition fjoin (S: subLattice) := prejoin L S.
 
 End SubLattice.
 
-Notation "'\fmeet_' S" := (fmeet S) (at level 8, format "'\fmeet_' S").
-Notation "'\fjoin_' S" := (fjoin S) (at level 8, format "'\fjoin_' S").
-Notation "'\ftop_' S" := (ftop S) (at level 8, format "'\ftop_' S").
-Notation "'\fbot_' S" := (fbot S) (at level 8, format "'\fbot_' S").
+Notation "'\fmeet_' S" := (@fmeet _ _ S) (at level 8, format "'\fmeet_' S").
+Notation "'\fjoin_' S" := (@fjoin _ _ S) (at level 8, format "'\fjoin_' S").
 
 Section SubLatticeDual.
 
@@ -1504,6 +1508,10 @@ Lemma stableDual : (stable [preLattice of L^~] S) && (stable L S).
 Proof. by case: S => S0 stableS0; rewrite andbC. Defined.
 
 Canonical SubLatticeDual := SubLattice stableDual.
+
+Variable (x : T).
+Check (x \in SubLatticeDual).
+Check (SubLatticeDual).
 
 End SubLatticeDual.
 
@@ -1523,7 +1531,8 @@ Section SubLatticeTheory.
 Context {T: choiceType}.
 Implicit Type L : {preLattice T}.
 
-Lemma dual_fjoinE L (S: subLattice L) : \fjoin_(S^~s) = \fmeet_S.
+Lemma dual_fjoinE L (S: subLattice L):
+  \fjoin_(S^~s)= \fmeet_S.
 Proof. by []. Qed.
 
 Lemma dual_fmeetE L (S: subLattice L) : \fmeet_(S^~s) = \fjoin_S.
@@ -1540,6 +1549,9 @@ Proof. exact: (@mem_fjoin _ S^~s). Qed.
 
 Lemma fmeetC L (S : subLattice L) : {in S &, commutative (\fmeet_S)}.
 Proof.
+move=> x y xS yS; apply: (@le_anti _ L).
+
+
 move=> x y _ _; rewrite /fmeet; congr glb; apply/eqP/fset_eqP => z.
 by rewrite !inE orbC.
 Qed.
