@@ -1327,11 +1327,15 @@ Record class (r : {porder T}) := Class
   premeet_inf : forall S x y z, x \in S -> y \in S -> z \in S ->
     z <=_r x -> z <=_r y ->
     z <=_r premeet S x y;
+  premeet_incr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
+    premeet S x y <=_r premeet S' x y;
   prejoin_max : forall S x y, x \in S -> y \in S ->
     prejoin S x y <=_(r^~) x /\ prejoin S x y <=_(r^~) y;
   prejoin_sup : forall S x y z, x \in S -> y \in S -> z \in S ->
     z <=_(r^~) x -> z <=_(r^~) y ->
     z <=_(r^~) prejoin S x y;
+  prejoin_decr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
+    prejoin S x y <=_(r^~) prejoin S' x y
 }.
 
 Structure pack (phr : phant T) := Pack
@@ -1381,8 +1385,11 @@ Context {T: choiceType}.
 Variable (L : {preLattice T}).
 
 Definition DualPreLatticeClass := PreLattice.Class
-    (PreLattice.witness L) (PreLattice.prejoin_max L) (PreLattice.prejoin_sup L)
-    (PreLattice.premeet_min L) (PreLattice.premeet_inf L).
+    (PreLattice.witness L)
+    (PreLattice.prejoin_max L) (PreLattice.prejoin_sup L)
+    (PreLattice.prejoin_decr L)
+    (PreLattice.premeet_min L) (PreLattice.premeet_inf L)
+    (PreLattice.premeet_incr L).
 
 Canonical DualPreLatticePack :=
   PreLattice.Pack (Phant T) DualPreLatticeClass.
@@ -1395,12 +1402,46 @@ Context (T: choiceType) (L : {preLattice T}).
 Check erefl L : [preLattice of L^~^~] = L.
 End PreLatticeDualTest.
 
-(*Section PreLatticeTheory.
+Section PreLatticeTheory.
 
 Context {T: choiceType}.
 Implicit Type L: {preLattice T}.
 
-Lemma glb_inf_le L: forall S, forall x, x \in S -> x >=_L (glb L S).
+Lemma premeet_min L S:
+  {in S &, forall x y, premeet L S x y <=_L x /\ premeet L S x y <=_L y}.
+Proof. exact: PreLattice.premeet_min. Qed.
+
+Lemma premeet_inf L S:
+  {in S & &, forall x y z, z <=_L x -> z <=_L y -> z <=_L premeet L S x y}.
+Proof. exact: PreLattice.premeet_inf. Qed.
+
+Lemma premeet_incr L S S': S `<=` S' ->
+  {in S &, forall x y, premeet L S x y <=_L premeet L S' x y}.
+Proof. move=> ?????; exact: PreLattice.premeet_incr. Qed.
+
+Lemma prejoin_max L S:
+  {in S &, forall x y, prejoin L S x y <=_(L^~) x /\ prejoin L S x y <=_(L^~) y}.
+Proof. exact: PreLattice.prejoin_max. Qed.
+
+Lemma prejoin_sup L S:
+  {in S & &, forall x y z, z <=_(L^~) x -> z <=_(L^~) y -> z <=_(L^~) prejoin L S x y}.
+Proof. exact: PreLattice.prejoin_sup. Qed.
+
+Lemma prejoin_decr L S S': S `<=` S' ->
+  {in S &, forall x y, prejoin L S x y <=_(L^~) prejoin L S' x y}.
+Proof. move=> ?????; exact: PreLattice.prejoin_decr. Qed.
+
+Lemma dual_premeet L S x y:
+  premeet [preLattice of L^~] S x y = prejoin L S x y.
+Proof. by []. Qed.
+
+Lemma dual_prejoin L S x y:
+  prejoin [preLattice of L^~] S x y = premeet L S x y.
+Proof. by []. Qed.
+
+End PreLatticeTheory.
+
+(*Lemma glb_inf_le L: forall S, forall x, x \in S -> x >=_L (glb L S).
 Proof. move=> /= S x xS; exact:PreLattice.glb_inf. Qed.
 
 Lemma glb_max_le L: forall S, forall z, (forall x, x \in S -> x >=_L z) ->
@@ -1529,6 +1570,8 @@ Proof. by apply/val_inj. Qed.
 
 End SubLatticeDualTest.
 
+(* ========================================================================= *)
+
 Section SubLatticeTheory.
 
 Context {T: choiceType}.
@@ -1552,19 +1595,19 @@ Proof. exact: (@mem_fjoin _ S^~s). Qed.
 
 Lemma leIfl L (S : subLattice L) : {in S &, forall x y, \fmeet_S x y <=_L x}.
 Proof.
-by move=> x y xS yS; move: (PreLattice.premeet_min L xS yS) => [].
+by move=> x y xS yS; move: (premeet_min L xS yS) => [].
 Qed.
 
 Lemma leIfr L (S : subLattice L) : {in S &, forall x y, \fmeet_S x y <=_L y}.
 Proof.
-by move=> x y xS yS; move: (PreLattice.premeet_min L xS yS) => [].
+by move=> x y xS yS; move: (premeet_min L xS yS) => [].
 Qed.
 
 Lemma lefI L (S : subLattice L) :
   {in S & &, forall x y z, (x <=_L \fmeet_S y z) = (x <=_L y) && (x <=_L z)}.
 Proof.
 move=> x y z xS yS zS; apply/(sameP idP)/(iffP idP).
-- by case/andP=> xley xlez; apply/PreLattice.premeet_inf.
+- by case/andP=> xley xlez; apply/premeet_inf.
 - move=> xlem.
   by rewrite (le_trans xlem (leIfl yS zS)) (le_trans xlem (leIfr yS zS)).
 Qed.
@@ -2009,26 +2052,85 @@ Lemma in_intv_range L (S : subLattice L) a b x:
   x \in interval S a b -> a <=_L x /\ x <=_L b.
 Proof. by case/intervalP. Qed.
 
-Lemma stable_interval L (S:subLattice L) a b:
-  stable L (interval S a b) && stable ([preLattice of L^~]) (interval S a b).
+Lemma dual_intv_fset_eq L (S: subLattice L) a b:
+  interval S a b = interval S^~s b a :> {fset _}.
 Proof.
-apply/andP; split; apply/stableP => x y /intervalP [xS ax xb]
-  /intervalP [yS ay yb]; apply/intervalP; split.
-- exact: mem_fmeet.
-- by rewrite (lefI _ xS yS) ax ay.
-- by apply/(le_trans _ xb)/(@leIfl _ _ S).
-- exact: mem_fjoin.
-- exact/(le_trans ax)/(@lefUl _ _ S).
-- by rewrite (leUf _ xS yS) xb yb.
+apply/eqP/fset_eqP => x; rewrite !intervalE.
+by congr (_ && _); rewrite andbC; congr (_ && _).
 Qed.
 
-Definition SubLatInterval L (S: subLattice L) a b :=
-  SubLattice (stable_interval S a b).
+Lemma premeet_intv_stable L (S : subLattice L) x y a b:
+  a \in S -> b \in S ->
+  x \in interval S a b -> y \in interval S a b ->
+  premeet L S x y \in interval S a b.
+Proof.
+move=> aS bS xSab ySab.
+case/intervalP: (xSab) => xS alex xleb.
+case/intervalP : (ySab) => yS aley yleb.
+apply/intervalP; split.
+- exact: mem_fmeet.
+- exact: premeet_inf.
+- by apply:(le_trans _ xleb); case: (premeet_min L xS yS).
+Qed.
 
-Notation " [< a ; b >]_ S " := (@SubLatInterval _ S a b)
-  (at level 0, S at level 8, format "[<  a ;  b  >]_ S").
+Lemma premeet_intvE L (S : subLattice L) a b x y:
+  a \in S -> b \in S ->
+  x \in interval S a b -> y \in interval S a b ->
+  premeet L S x y = premeet L (interval S a b) x y.
+Proof.
+move=> aS bS xintv yintv.
+case/intervalP: (xintv) => xS alex xleb.
+case/intervalP: (yintv) => yS aley yleb.
+apply/(le_anti L)/andP; split.
+- by apply: premeet_inf => //; first exact: premeet_intv_stable;
+    case: (premeet_min L xS yS).
+- by apply: premeet_incr => //; apply/fsubsetP => ? /intervalP [].
+Qed.
 
-Lemma in_intervalP L (S: subLattice L) a b x:
+Lemma prejoin_intv_stable L (S : subLattice L) x y a b:
+  a \in S -> b \in S ->
+  x \in interval S a b -> y \in interval S a b ->
+  prejoin L S x y \in interval S a b.
+Proof.
+move=> aS bS xSab ySab.
+case/intervalP: (xSab) => xS alex xleb.
+case/intervalP : (ySab) => yS aley yleb.
+apply/intervalP; split.
+- exact: mem_fjoin.
+- by apply:(le_trans alex); case: (prejoin_max L xS yS).
+- exact: prejoin_sup.
+Qed. 
+
+Lemma prejoin_intvE L (S: subLattice L) a b x y:
+  a \in S -> b \in S ->
+  x \in interval S a b -> y \in interval S a b ->
+  prejoin L S x y = prejoin L (interval S a b) x y.
+Proof.
+move=> aS bS xintv yintv.
+case/intervalP: (xintv) => xS alex xleb.
+case/intervalP: (yintv) => yS aley yleb.
+apply/(le_anti L)/andP; split.
+- by apply: prejoin_decr => //; apply/fsubsetP => ? /intervalP [].
+- by apply: prejoin_sup => //; first exact: prejoin_intv_stable;
+    case: (prejoin_max L xS yS).
+Qed.
+
+Lemma stable_interval L (S:subLattice L) a b:
+  a \in S -> b \in S ->
+  stable L (interval S a b) && stable ([preLattice of L^~]) (interval S a b).
+Proof.
+move=> aS bS; apply/andP; split; apply/stableP.
+- by move=> ????; rewrite -premeet_intvE // premeet_intv_stable.
+- by move=> ????; rewrite /= -prejoin_intvE // prejoin_intv_stable.
+Qed.
+
+Definition SubLatInterval L (S: subLattice L) a b (aS : a \in S) (bS : b \in S) :=
+  SubLattice (stable_interval aS bS).
+
+Notation " [< aS ; bS >]_ S " := (@SubLatInterval _ S _ _ aS bS)
+  (at level 0, S at level 8, format "[<  aS ;  bS  >]_ S").
+
+(*Lemma in_intervalP L (S: subLattice L) a b x:
   reflect
    [/\ x \in S, a <=_L x & x <=_L b]
     (x \in [< a ; b >]_S).
@@ -2252,6 +2354,6 @@ by rewrite lef1.
 Qed.
 End Ind.
 
-End SubLatticeInd.
+End SubLatticeInd.*)
 
 (* ==================================================================== *)
