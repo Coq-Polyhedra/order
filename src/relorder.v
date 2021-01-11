@@ -4067,5 +4067,86 @@ Local Canonical nat_bTotalOrder := [bTotalOrder of leq].
 
 End NatOrder.
 
+(* ================================================================== *)
+
+Module Theory.
+Export RelOrder.POrderTheory.
+Export RelOrder.BPOrderTheory.
+Export RelOrder.TPOrderTheory.
+Export RelOrder.MeetTheory.
+Export RelOrder.BMeetTheory.
+Export RelOrder.TMeetTheory.
+Export RelOrder.JoinTheory.
+Export RelOrder.BJoinTheory.
+Export RelOrder.TJoinTheory.
+Export RelOrder.LatticeTheory.
+Export RelOrder.DistrLatticeTheory.
+Export RelOrder.BDistrLatticeTheory.
+Export RelOrder.TDistrLatticeTheory.
+Export RelOrder.TotalTheory.
+End Theory.
+
 End RelOrder.
+
+(* ==================================================================== *)
+
+Export RelOrder.POrder.Exports RelOrder.BPOrder.Exports.
+Export RelOrder.TPOrder.Exports RelOrder.TBPOrder.Exports.
+Export RelOrder.Meet.Exports RelOrder.BMeet.Exports.
+Export RelOrder.TMeet.Exports RelOrder.TBMeet.Exports.
+Export RelOrder.Join.Exports RelOrder.BJoin.Exports.
+Export RelOrder.TJoin.Exports RelOrder.TBJoin.Exports.
+Export RelOrder.Lattice.Exports RelOrder.BLattice.Exports.
+Export RelOrder.TLattice.Exports RelOrder.TBLattice.Exports.
+Export RelOrder.DistrLattice.Exports RelOrder.BDistrLattice.Exports.
+Export RelOrder.TDistrLattice.Exports RelOrder.TBDistrLattice.Exports.
+Export RelOrder.Total.Exports RelOrder.BTotal.Exports.
+Export RelOrder.TTotal.Exports RelOrder.TBTotal.Exports.
+
+Notation le := RelOrder.POrder.le.
+Notation lt := RelOrder.POrder.lt.
+Notation bottom := RelOrder.BPOrder.bottom.
+Notation top := RelOrder.TPOrder.top.
+Notation meet := RelOrder.Meet.meet.
+Notation join := RelOrder.Join.join.
+
+Notation "<=: r" := (le r) (at level 2, r at level 1, format "<=: r").
+Notation "<: r" := (lt r) (at level 2, r at level 1, format "<: r").
+Notation "x <=_ r y" :=
+  (<=: r x y) (at level 65, r at level 2, format "x  <=_ r  y").
+Notation "x >=_ r y" := (y <=_r x) (at level 65, r at level 2, only parsing).
+Notation "x <_ r y" :=
+  (<: r x y) (at level 65, r at level 2, format "x  <_ r  y").
+Notation "x >_ r y" := (y <_r x) (at level 65, r at level 2, only parsing).
+Notation "x <=_ r0 y <=_ r1 z" := ((x <=_r0 y) && (y <=_r1 z))
+  (at level 65, y, z at next level, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <=_ r1  z").
+Notation "x <_ r0 y <_ r1 z" := ((x <_r0 y) && (y <_r1 z))
+  (at level 65, y, z at next level, r0 at level 2, r1 at level 2, format "x  <_ r0  y  <_ r1  z").
+Notation "x <=_ r0 y <_ r1 z" := ((x <=_r0 y) && (y <_r1 z))
+  (at level 65, y, z at next level, r0 at level 2, r1 at level 2, format "x  <=_ r0  y  <_ r1  z").
+Notation "x <_ r0 y <=_ r1 z" := ((x <_r0 y) && (y <=_r1 z))
+  (at level 70, r0 at level 2, r1 at level 2, format "x  <_ r0  y  <=_ r1  z").
+Notation "x >=<_ r y" := (comparable r x y)
+  (at level 70, r at level 2, no associativity, format "x  >=<_ r  y").
+Notation "x ><_ r y" := (~~ comparable r x y)
+  (at level 70, r at level 2, no associativity, format "x  ><_ r  y").
+Notation ">=<_ r y" :=
+  [pred x | x >=<_r y] (at level 80, r at level 2, format ">=<_ r  y").
+Notation "><_ r y" :=
+  [pred x | x ><_r y] (at level 80, r at level 2, format "><_ r  y").
+
+Notation "x <=_ r y ?= 'iff' C" := (RelOrder.leif r x y C)
+  (at level 70, C at level 1, r at level 2,
+  format "x '[hv'  <=_ r '/'  y  ?=  'iff'  C ']'").
+
+Notation "x <_ r y ?<= 'if' C" := (RelOrder.lteif r x y C)
+  (at level 71, C at level 1, r at level 1, y at next level,
+  format "x '[hv'  <_ r '/'  y  ?<=  'if'  C ']'").
+
+Notation "ord ^~" := (RelOrder.dual_pOrder ord) (at level 8, format "ord ^~").
+
+
+
+
+
 (* ==================================================================== *)

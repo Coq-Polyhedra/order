@@ -10,6 +10,9 @@ Import GRing.Theory Num.Theory.
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
 
+Import RelOrder.
+Import RelOrder.Theory.
+
 
 Module PreLattice.
 Section ClassDef.
@@ -18,9 +21,7 @@ Context {T : choiceType}.
 
 Set Primitive Projections.
 
-(*TODO*)
-
-Record class (r : {porder T}) := Class
+Record class (r : {pOrder T}) := Class
 {
   witness : T;
   premeet : {fset T} -> T -> T -> T;
@@ -43,18 +44,18 @@ Record class (r : {porder T}) := Class
 
 Structure pack (phr : phant T) := Pack
 {
-  pack_order : {porder T};
+  pack_order : {pOrder T};
   pack_class : class pack_order
 }.
 
 Unset Primitive Projections.
 
-Local Coercion pack_order : pack >-> POrder.pack.
+Local Coercion pack_order : pack >-> POrder.order.
 
 Variable (phr : phant T) (m : pack phr).
 
-Definition order_of := POrder.Pack phr (POrder.pack_class m).
-Definition clone (r : {porder T}) :=
+Definition order_of := POrder.Pack phr (POrder.class_ m).
+Definition clone (r : {pOrder T}) :=
   fun (pl : pack phr) & phant_id (pack_order pl) r =>
   pl.
 
@@ -66,7 +67,7 @@ End ClassDef.
 Module Exports.
 
 Canonical order_of.
-Coercion pack_order : pack >-> POrder.pack.
+Coercion pack_order : pack >-> POrder.order.
 Coercion pack_class : pack >-> class.
 Notation "{ 'preLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
@@ -99,11 +100,11 @@ Canonical DualPreLatticePack :=
 
 End DualPreLattice.
 
-Section PreLatticeDualTest.
+(*Section PreLatticeDualTest.
 
 Context (T: choiceType) (L : {preLattice T}).
 Check erefl L : [preLattice of L^~^~] = L.
-End PreLatticeDualTest.
+End PreLatticeDualTest.*)
 
 Section PreLatticeTheory.
 
@@ -257,9 +258,9 @@ Proof. by case: S => S0 stableS0; rewrite andbC. Defined.
 
 Canonical FinLatticeDual := FinLattice stableDual.
 
-Variable (x : T).
+(*Variable (x : T).
 Check (x \in FinLatticeDual).
-Check (FinLatticeDual).
+Check (FinLatticeDual).*)
 
 End SubLatticeDual.
 
@@ -318,7 +319,7 @@ Qed.
 
 Lemma fmeetC L (S : {finLattice L}) : {in S &, commutative (\fmeet_S)}.
 Proof.
-move=> x y xS yS; apply: (le_anti L).
+move=> x y xS yS; apply/(@le_anti _ L).
 by apply/andP; split; rewrite lefI ?mem_fmeet ?leIfl ?leIfr.
 Qed.
 
@@ -336,7 +337,7 @@ Qed.
 
 Lemma fmeetA L (S : {finLattice L}) : {in S & &, associative (\fmeet_S) }.
 Proof.
-move=> x y z xS yS zS; apply: (le_anti L).
+move=> x y z xS yS zS; apply: (@le_anti _ L).
 apply/andP; split; rewrite ?lefI ?leIfl ?leIfr ?mem_fmeet ?andbT //=.
 - apply/andP; split.
   + by apply/lefIr => //; rewrite ?mem_fmeet ?leIfl.
@@ -348,7 +349,7 @@ Qed.
 
 Lemma fmeetxx L (S : {finLattice L}) : {in S, idempotent (\fmeet_S)}.
 Proof.
-move => x xS; apply: (le_anti L).
+move => x xS; apply: (@le_anti _ L).
 by rewrite lefIl //= lefI ?lexx.
 Qed.
 
@@ -358,7 +359,7 @@ Proof.
 move=> x y xS yS.
 apply/(sameP idP)/(iffP idP).
 - move/eqP=> <-; exact: leIfr.
-- move=> xley; apply/eqP/(le_anti L); rewrite leIfl ?lefI //=.
+- move=> xley; apply/eqP/(@le_anti _ L); rewrite leIfl ?lefI //=.
   by rewrite lexx xley.
 Qed.
 
@@ -807,7 +808,7 @@ Proof.
 move=> x_in y_in.
 move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
 move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
-apply/(le_anti L)/andP; split.
+apply/(@le_anti _ L)/andP; split.
 - by apply: premeet_inf=> //; first exact: premeet_intv_stable;
      case: (premeet_min L xS yS).
 - apply: premeet_incr=> //; apply/fsubsetP=> ?; exact: in_intv_support.
@@ -970,8 +971,8 @@ case/boolP: (S' == fset0).
 - case/(minset_neq0 L)/fset0Pn => y /mem_minsetE.
   rewrite in_fsetD intervalE ?(mem_fbot x_in_S) // !inE negb_or.
   case => /and4P [/andP [yNbot y_neq_x] y_in_S bot_le_y y_le_x mini_y].
-  exists y => //. apply/atomP. split => //.
-    by rewrite lt_neqAle yNbot bot_le_y.
+  exists y => //. apply/atomP; split => //.
+    by rewrite lt_neqAle eq_sym yNbot bot_le_y.
   move=> x0 x0_in_S bot_lt_x0; apply: contraT; rewrite negbK => x0_lt_y.
   have/mini_y: x0 \in S'.
   + rewrite in_fsetD intervalE ?(mem_fbot x_in_S) //.
