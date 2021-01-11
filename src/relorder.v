@@ -2031,106 +2031,111 @@ Section SubLatticeInd.
 Context {T : choiceType}.
 Implicit Type (L:{preLattice T}).
 
+Lemma mem_bigfmeet L (S: subLattice L) (P : pred T) (F : T -> T) x :
+  x \in S -> {in S, forall y, F y \in S} ->
+     \big[\fmeet_S / x]_(i <- S | P i) F i \in S.
+Admitted.
+
+Lemma mem_bigfjoin L (S: subLattice L) (P : pred T) (F : T -> T) x :
+  x \in S -> {in S, forall y, F y \in S} ->
+     \big[\fjoin_S / x]_(i <- S | P i) F i \in S.
+Admitted.
+
+Lemma meet_foo L (S: subLattice L) (P : pred T) (F : T -> T) x :
+  {in S, forall y, F y \in S} -> x \in S -> P x ->
+     \big[\fmeet_S / \ftop_S]_(i <- S | P i) F i <=_L F x.
+Admitted.
+
+Lemma join_foo L (S: subLattice L) (P : pred T) (F : T -> T) x :
+  {in S, forall y, F y \in S} -> x \in S -> P x ->
+     F x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | P i) F i.
+Admitted.
+
 Definition interval L (S : subLattice L) (a b : T) :=
-  [fset x | x in S & (a <=_L x) && (x <=_L b)].
+  [fset x | x in S & (\big[\fmeet_S / \ftop_S]_(i <- S | i >=_L a) i <=_L x)
+                     && (x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i)].
 
-Lemma intervalE L (S : subLattice L) a b (x : T) :
-  x \in interval S a b = (x \in S) && ((a <=_L x) && (x <=_L b)).
-Proof. by rewrite /interval in_fsetE /= inE. Qed.
+Lemma in_interval L (S : subLattice L) a b x :
+  x \in S -> a <=_L x -> x <=_L b -> x \in interval S a b.
+Admitted.
 
-Lemma intervalP L (S : subLattice L) a b (x : T) :
+Lemma intervalE L (S : subLattice L) a b x :
+  a \in S -> b \in S -> x \in interval S a b = (x \in S) && ((a <=_L x) && (x <=_L b)).
+Proof.
+Admitted.
+(*by rewrite /interval in_fsetE /= inE. Qed.*)
+
+Lemma intervalP L (S : subLattice L) a b x :
+  a \in S -> b \in S ->
   reflect
     [/\ x \in S, a <=_L x & x <=_L b]
     (x \in interval S a b).
-Proof. by rewrite intervalE; apply/and3P. Qed.
+Proof. by move=> aS bS; rewrite intervalE //; apply/and3P. Qed.
 
-Lemma in_intv_support L (S : subLattice L) (a b : T) x :
+Lemma in_intv_support L (S : subLattice L) a b x :
   x \in interval S a b -> x \in S.
-Proof. by case/intervalP. Qed.
+Proof. by rewrite in_fsetE; case/and3P. Qed.
 
 Lemma in_intv_range L (S : subLattice L) a b x:
-  x \in interval S a b -> a <=_L x /\ x <=_L b.
-Proof. by case/intervalP. Qed.
+  a \in S -> b \in S -> x \in interval S a b -> a <=_L x /\ x <=_L b.
+Proof. move => aS bS; by case/intervalP. Qed.
 
 Lemma dual_intv_fset_eq L (S: subLattice L) a b:
   interval S a b = interval S^~s b a :> {fset _}.
-Proof.
-apply/eqP/fset_eqP => x; rewrite !intervalE.
-by congr (_ && _); rewrite andbC; congr (_ && _).
-Qed.
+Proof. by apply/eqP/fset_eqP=> x; rewrite !in_fsetE !inE [X in _ && X]andbC. Qed.
 
 Lemma premeet_intv_stable L (S : subLattice L) x y a b:
-  a \in S -> b \in S ->
   x \in interval S a b -> y \in interval S a b ->
   premeet L S x y \in interval S a b.
 Proof.
-move=> aS bS xSab ySab.
-case/intervalP: (xSab) => xS alex xleb.
-case/intervalP : (ySab) => yS aley yleb.
-apply/intervalP; split.
+rewrite !in_fsetE => /and3P[xS alex xleb] /and3P[yS aley yleb].
+apply/and3P; split.
 - exact: mem_fmeet.
-- exact: premeet_inf.
+- by apply/premeet_inf => //; apply/mem_bigfmeet; rewrite ?(mem_ftop xS).
 - by apply:(le_trans _ xleb); case: (premeet_min L xS yS).
 Qed.
 
 Lemma premeet_intvE L (S : subLattice L) a b x y:
-  a \in S -> b \in S ->
   x \in interval S a b -> y \in interval S a b ->
   premeet L S x y = premeet L (interval S a b) x y.
 Proof.
-move=> aS bS xintv yintv.
-case/intervalP: (xintv) => xS alex xleb.
-case/intervalP: (yintv) => yS aley yleb.
+move=> x_in y_in.
+move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
+move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
 apply/(le_anti L)/andP; split.
 - by apply: premeet_inf => //; first exact: premeet_intv_stable;
-    case: (premeet_min L xS yS).
-- by apply: premeet_incr => //; apply/fsubsetP => ? /intervalP [].
+     case: (premeet_min L xS yS).
+- apply: premeet_incr => //; apply/fsubsetP => ?; exact: in_intv_support.
 Qed.
 
 Lemma prejoin_intv_stable L (S : subLattice L) x y a b:
-  a \in S -> b \in S ->
   x \in interval S a b -> y \in interval S a b ->
   prejoin L S x y \in interval S a b.
 Proof.
-move=> aS bS xSab ySab.
-case/intervalP: (xSab) => xS alex xleb.
-case/intervalP : (ySab) => yS aley yleb.
-apply/intervalP; split.
-- exact: mem_fjoin.
-- by apply:(le_trans alex); case: (prejoin_max L xS yS).
-- exact: prejoin_sup.
-Qed. 
+rewrite dual_intv_fset_eq -dual_premeet; exact: premeet_intv_stable. Qed.
 
 Lemma prejoin_intvE L (S: subLattice L) a b x y:
-  a \in S -> b \in S ->
   x \in interval S a b -> y \in interval S a b ->
   prejoin L S x y = prejoin L (interval S a b) x y.
 Proof.
-move=> aS bS xintv yintv.
-case/intervalP: (xintv) => xS alex xleb.
-case/intervalP: (yintv) => yS aley yleb.
-apply/(le_anti L)/andP; split.
-- by apply: prejoin_decr => //; apply/fsubsetP => ? /intervalP [].
-- by apply: prejoin_sup => //; first exact: prejoin_intv_stable;
-    case: (prejoin_max L xS yS).
+rewrite dual_intv_fset_eq -dual_premeet; exact: premeet_intvE.
 Qed.
 
 Lemma stable_interval L (S:subLattice L) a b:
-  a \in S -> b \in S ->
   stable L (interval S a b) && stable ([preLattice of L^~]) (interval S a b).
 Proof.
-move=> aS bS; apply/andP; split; apply/stableP.
+apply/andP; split; apply/stableP.
 - by move=> ????; rewrite -premeet_intvE // premeet_intv_stable.
 - by move=> ????; rewrite /= -prejoin_intvE // prejoin_intv_stable.
 Qed.
 
-Definition SubLatInterval L (S: subLattice L) a b (aS : a \in S) (bS : b \in S) :=
-  SubLattice (stable_interval aS bS).
+Definition SubLatInterval L (S: subLattice L) a b :=
+  SubLattice (stable_interval a b).
 
 Notation " [< aS ; bS >]_ S " := (@SubLatInterval _ S _ _ aS bS)
   (at level 0, S at level 8, format "[<  aS ;  bS  >]_ S").
 
-(*Lemma in_intervalP L (S: subLattice L) a b x:
+Lemma in_intervalP L (S: subLattice L) a b x:
   reflect
    [/\ x \in S, a <=_L x & x <=_L b]
     (x \in [< a ; b >]_S).
