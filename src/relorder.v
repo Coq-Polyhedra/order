@@ -2130,16 +2130,17 @@ apply/andP; split; apply/stableP.
 Qed.
 
 Definition SubLatInterval L (S: subLattice L) a b :=
-  SubLattice (stable_interval a b).
+  SubLattice (@stable_interval L S a b).
 
-Notation " [< aS ; bS >]_ S " := (@SubLatInterval _ S _ _ aS bS)
-  (at level 0, S at level 8, format "[<  aS ;  bS  >]_ S").
+Notation " [< a ; b >]_ S " := (@SubLatInterval _ S a b)
+  (at level 0, S at level 8, format "[<  a ;  b  >]_ S").
 
 Lemma in_intervalP L (S: subLattice L) a b x:
+  a \in S -> b \in S ->
   reflect
    [/\ x \in S, a <=_L x & x <=_L b]
     (x \in [< a ; b >]_S).
-Proof. by rewrite !inE; exact:and3P. Qed.
+Proof. move=> aS bS; rewrite intervalE //; exact:and3P. Qed.
 
 Lemma intv_id L (S: subLattice L) : [<\fbot_S; \ftop_S>]_S = S.
 Proof.
@@ -2148,19 +2149,18 @@ case/boolP: (S == fset0 :> {fset _}).
   by rewrite !inE Seq0 in_fset0.
 - move=> Sprop0; apply/eqP/fset_eqP => x.
   rewrite !inE; apply: andb_idr => xS.
-  by rewrite le0f ?lef1.
+  by rewrite meet_foo ?le0f ?join_foo ?lef1.
 Qed.
 
 Lemma mono_interval L (S : subLattice L) (x y x' y' : T) :
   x'<=_L x -> y <=_L y' -> [< x; y >]_[< x'; y' >]_S = [< x; y >]_S.
 Proof.
 move=> lex ley; apply/eqP/fset_eqP => z.
-rewrite !inE; case/boolP: (z \in S) => //.
-move=> zS /=; apply: andb_idl => /andP [xlez zley].
-by rewrite (le_trans lex xlez) (le_trans zley ley).
-Qed.
+apply/(sameP idP)/(iffP idP).
+- move=> z_xyS.
+Admitted.
 
-Lemma sub_interval L (S : subLattice L) c d: {in S &, forall a b,
+(*Lemma sub_interval L (S : subLattice L) c d: {in S &, forall a b,
   a <=_L b -> c <=_L d ->
   ([<a;b>]_S `<=` [<c;d>]_S)%fset = (c <=_L a) && (b <=_L d)}.
 Proof.
