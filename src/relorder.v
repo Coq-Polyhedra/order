@@ -35,11 +35,13 @@ Notation class_of := mixin_of (only parsing).
 
 (* NB: the interface should not be a primitive record. see:                   *)
 (* https://github.com/math-comp/math-comp/pull/462#issuecomment-598130155.    *)
+Set Primitive Projections.
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
-  _ : class_of le lt;
+  class_ : class_of le lt;
 }.
+Unset Primitive Projections.
 
 Variable (phT : phant T) (ord : order phT).
 
@@ -152,12 +154,14 @@ Record class_of (le lt : rel T) (top : T) := Class {
 }.
 Unset Primitive Projections.
 
+Set Primitive Projections.
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   top : T;
-  _ : class_of le lt top;
+  class_ : class_of le lt top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> POrder.class_of.
 
@@ -211,15 +215,15 @@ Record class_of (le lt : rel T) (bottom top : T) := Class {
   base : BPOrder.class_of le lt bottom;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   bottom : T;
   top : T;
-  _ : class_of le lt bottom top;
+  class_ : class_of le lt bottom top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> BPOrder.class_of.
 Local Coercion base2 le lt bottom top (c : class_of le lt bottom top) :
@@ -290,14 +294,15 @@ Record class_of (le lt : rel T) (meet : T -> T -> T) := Class {
   mixin : mixin_of le meet;
 }.
 
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
-  _ : class_of le lt meet;
+  class_ : class_of le lt meet;
 }.
+
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> POrder.class_of.
 
@@ -351,15 +356,16 @@ Record class_of (le lt : rel T) (meet : T -> T -> T) (bottom : T) := Class {
   base : Meet.class_of le lt meet;
   mixin : BPOrder.mixin_of le bottom;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
   bottom : T;
-  _ : class_of le lt meet bottom;
+  class_ : class_of le lt meet bottom;
 }.
+
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Meet.class_of.
 Local Coercion base2 le lt meet bottom (c : class_of le lt meet bottom) :
@@ -421,15 +427,16 @@ Record class_of (le lt : rel T) (meet : T -> T -> T) (top : T) := Class {
   base : Meet.class_of le lt meet;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
   top : T;
-  _ : class_of le lt meet top;
+  class_ : class_of le lt meet top;
 }.
+
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Meet.class_of.
 Local Coercion base2 le lt meet top (c : class_of le lt meet top) :
@@ -491,7 +498,6 @@ Record class_of (le lt : rel T) (meet : T -> T -> T) (bottom top : T) := Class {
   base : BMeet.class_of le lt meet bottom;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -499,8 +505,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   bottom : T;
   top : T;
-  _ : class_of le lt meet bottom top;
+  class_ : class_of le lt meet bottom top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> BMeet.class_of.
 Local Coercion base2 le lt meet bottom top
@@ -604,14 +611,14 @@ Record class_of (le lt : rel T) (join : T -> T -> T) := Class {
   base : POrder.class_of le lt;
   mixin : Meet.mixin_of (dual_rel le) join;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   join : T -> T -> T;
-  _ : class_of le lt join;
+  class_ : class_of le lt join;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> POrder.class_of.
 
@@ -665,15 +672,15 @@ Record class_of (le lt : rel T) (join : T -> T -> T) (bottom : T) := Class {
   base : Join.class_of le lt join;
   mixin : BPOrder.mixin_of le bottom;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   join : T -> T -> T;
   bottom : T;
-  _ : class_of le lt join bottom;
+  class_ : class_of le lt join bottom;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Join.class_of.
 Local Coercion base2 le lt join bottom (c : class_of le lt join bottom) :
@@ -735,15 +742,15 @@ Record class_of (le lt : rel T) (join : T -> T -> T) (top : T) := Class {
   base : Join.class_of le lt join;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   join : T -> T -> T;
   top : T;
-  _ : class_of le lt join top;
+  class_ : class_of le lt join top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Join.class_of.
 Local Coercion base2 le lt join top (c : class_of le lt join top) :
@@ -805,7 +812,6 @@ Record class_of (le lt : rel T) (join : T -> T -> T) (bottom top : T) := Class {
   base : BJoin.class_of le lt join bottom;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -813,8 +819,9 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  _ : class_of le lt join bottom top;
+  class_ : class_of le lt join bottom top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> BJoin.class_of.
 Local Coercion base2 le lt join bottom top
@@ -919,15 +926,15 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) := Class {
   base : Meet.class_of le lt meet;
   mixin : Meet.mixin_of (dual_rel le) join;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
   join : T -> T -> T;
-  _ : class_of le lt meet join;
+  class_ : class_of le lt meet join;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Meet.class_of.
 Local Coercion base2 le lt meet join (c : class_of le lt meet join) :
@@ -990,7 +997,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (bottom : T) :=
   base : Lattice.class_of le lt meet join;
   mixin : BPOrder.mixin_of le bottom;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -998,8 +1004,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   bottom : T;
-  _ : class_of le lt meet join bottom;
+  class_ : class_of le lt meet join bottom;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Lattice.class_of.
 Local Coercion base2 le lt meet join bottom
@@ -1104,7 +1111,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (top : T) := Class {
   base : Lattice.class_of le lt meet join;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1112,8 +1118,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   top : T;
-  _ : class_of le lt meet join top;
+  class_ : class_of le lt meet join top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Lattice.class_of.
 Local Coercion base2 le lt meet join top (c : class_of le lt meet join top) :
@@ -1215,7 +1222,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (bottom top : T) :=
   base : BLattice.class_of le lt meet join bottom;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1224,8 +1230,9 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  _ : class_of le lt meet join bottom top;
+  class_ : class_of le lt meet join bottom top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> BLattice.class_of.
 Local Coercion base2 le lt meet join bottom top
@@ -1348,15 +1355,15 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) := Class {
   base : Lattice.class_of le lt meet join;
   mixin : mixin_of meet join;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
   join : T -> T -> T;
-  _ : class_of le lt meet join;
+  class_ : class_of le lt meet join;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Lattice.class_of.
 
@@ -1418,7 +1425,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (bottom : T) :=
   base : DistrLattice.class_of le lt meet join;
   mixin : BPOrder.mixin_of le bottom;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1426,8 +1432,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   bottom : T;
-  _ : class_of le lt meet join bottom;
+  class_ : class_of le lt meet join bottom;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> DistrLattice.class_of.
 Local Coercion base2 le lt meet join bottom
@@ -1514,7 +1521,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (top : T) :=
   base : DistrLattice.class_of le lt meet join;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1522,8 +1528,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   top : T;
-  _ : class_of le lt meet join top;
+  class_ : class_of le lt meet join top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> DistrLattice.class_of.
 Local Coercion base2 le lt meet join top (c : class_of le lt meet join top) :
@@ -1607,7 +1614,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (bottom top : T) :=
   base : BDistrLattice.class_of le lt meet join bottom;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1616,8 +1622,9 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  _ : class_of le lt meet join bottom top;
+  class_ : class_of le lt meet join bottom top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> BDistrLattice.class_of.
 Local Coercion base2 le lt meet join bottom top
@@ -1753,15 +1760,15 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) := Class {
   base : DistrLattice.class_of le lt meet join;
   mixin : mixin_of le;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
   join : T -> T -> T;
-  _ : class_of le lt meet join;
+  class_ : class_of le lt meet join;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> DistrLattice.class_of.
 
@@ -1828,7 +1835,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (bottom : T) :=
   base : Total.class_of le lt meet join;
   mixin : BPOrder.mixin_of le bottom;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1836,8 +1842,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   bottom : T;
-  _ : class_of le lt meet join bottom;
+  class_ : class_of le lt meet join bottom;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Total.class_of.
 Local Coercion base2 le lt meet join bottom
@@ -1933,7 +1940,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (top : T) :=
   base : Total.class_of le lt meet join;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -1941,8 +1947,9 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   top : T;
-  _ : class_of le lt meet join top;
+  class_ : class_of le lt meet join top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> Total.class_of.
 Local Coercion base2 le lt meet join top (c : class_of le lt meet join top) :
@@ -2035,7 +2042,6 @@ Record class_of (le lt : rel T) (meet join : T -> T -> T) (bottom top : T) :=
   base : BTotal.class_of le lt meet join bottom;
   mixin : TPOrder.mixin_of le top;
 }.
-Unset Primitive Projections.
 
 Structure order (phT : phant T) := Pack {
   le : rel T;
@@ -2044,8 +2050,9 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  _ : class_of le lt meet join bottom top;
+  class_ : class_of le lt meet join bottom top;
 }.
+Unset Primitive Projections.
 
 Local Coercion base : class_of >-> BTotal.class_of.
 Local Coercion base2 le lt meet join bottom top
@@ -2420,6 +2427,30 @@ Canonical dual_tbTotalOrder (ord : {tbTotalOrder T}) :=
   [tbTotalOrder of dual_rel <=:ord].
 
 End DualOrder.
+
+Notation "ord ^~" := (dual_pOrder ord) (at level 8, format "ord ^~").
+
+Parameter (r : {pOrder nat}).
+
+(*
+Set Primitive Projections.
+Record R := mkR { x : nat; y : nat; _ : x = y; }.
+Unset Primitive Projections.
+
+Parameter z : R.
+
+Goal z = let: mkR x y p := z in mkR p.
+Proof.
+done.
+
+Goal r = let: POrder.Pack le lt mixin := r in POrder.Pack _ mixin.
+Proof.
+*)
+
+Goal r = (r^~)^~.
+Proof.
+reflexivity.
+Qed.
 
 (* ========================================================================== *)
 
@@ -3284,7 +3315,9 @@ Lemma meets_setU I (A B : {set I}) (F : I -> L) :
   \big[meet/1]_(i in (A :|: B)) F i =
   \big[meet/1]_(i in A) F i `&` \big[meet/1]_(i in B) F i.
 Proof.
-rewrite -!big_enum -big_cat; apply/eq_big_idem; first exact: meetxx.
+
+rewrite -!big_enum; have /= <- := @big_cat _ _ meet_comoid.
+apply/eq_big_idem; first exact: meetxx.
 by move=> ?; rewrite mem_cat !mem_enum inE.
 Qed.
 
@@ -3932,12 +3965,10 @@ Qed.
 End FsetOrderTheory.
 
 (* ========================================================================== *)
+Notation "ord ^~" := (dual_pOrder ord) (at level 8, format "ord ^~").
 
 Module DualOrderTest.
 Section DualOrderTest.
-
-Local Notation "ord ^~" := (dual_pOrder ord) (at level 8, format "ord ^~").
-
 Variable (T : eqType) (ord : {pOrder T}).
 
 Lemma le_dual_inv x y: x <=_((ord^~)^~) y = x <=_ord y.
@@ -4035,7 +4066,7 @@ Context {T : choiceType}.
 
 Set Primitive Projections.
   
-Record class (r : {porder T}) := Class
+Record class (r : {pOrder T}) := Class
 {
   lub : {fset T} -> T;
   glb : {fset T} -> T;
@@ -4047,18 +4078,18 @@ Record class (r : {porder T}) := Class
 
 Structure pack (phr : phant T) := Pack
 {
-  pack_order : {porder T};
+  pack_order : {pOrder T};
   pack_class : class pack_order
 }.
 
 Unset Primitive Projections.
 
-Local Coercion pack_order : pack >-> POrder.pack.
+Local Coercion pack_order : pack >-> POrder.order.
 
 Variable (phr : phant T) (m : pack phr).
 
-Definition order_of := POrder.Pack phr (POrder.pack_class m).
-Definition clone (r : {porder T}) :=
+Definition order_of := POrder.Pack phr (POrder.class m).
+Definition clone (r : {pOrder T}) :=
   fun (pl : pack phr) & phant_id (pack_order pl) r =>
   pl.
 
@@ -4070,7 +4101,7 @@ End ClassDef.
 Module Exports.
 
 Canonical order_of.
-Coercion pack_order : pack >-> POrder.pack.
+Coercion pack_order : pack >-> POrder.order.
 Coercion pack_class : pack >-> class.
 Notation "{ 'preLattice' T }" := (pack (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
@@ -4829,7 +4860,7 @@ case/boolP: (S' == fset0).
   rewrite !inE negb_or.
   case => /and4P [/andP [yNbot y_neq_x] y_in_S bot_le_y y_le_x mini_y].
   exists y; split => //; apply/atomP; split => //.
-    by rewrite lt_neqAle yNbot bot_le_y.
+    by rewrite lt_neqAle eq_sym yNbot bot_le_y.
   move=> x0 x0_in_S bot_lt_x0; apply: contraT; rewrite negbK => x0_lt_y.
   have/mini_y: x0 \in S'.
     rewrite !inE x0_in_S eq_sym (lt_eqF bot_lt_x0) (ltW bot_lt_x0) /=.
@@ -4860,7 +4891,6 @@ elim: n S xS PS Sprop0 => [|n ih] S xS PS Sprop0.
 - rewrite leqn0 => /eqP /cardfs0_eq /(congr1 (fun S => x \in S)).
   rewrite in_fset0 => /in_intervalP; case; split=> //.
   - by rewrite le0f.
-  - by rewrite lexx.
 case/boolP: (atom S x) => [atom_Sx|atomN_Sx]; first by move=> _; apply: P_incr.
 case: (x =P \fbot_S) => [-> _|/eqP neq0_x]; first by rewrite intv_id.
 have bot_lt_x: \fbot_S <_L x by rewrite lt_def eq_sym neq0_x le0f.
