@@ -115,6 +115,14 @@ Lemma premeet_min L S:
   {in S &, forall x y, premeet L S x y <=_L x /\ premeet L S x y <=_L y}.
 Proof. exact: PreLattice.premeet_min. Qed.
 
+Lemma premeet_minl L S:
+  {in S &, forall x y, premeet L S x y <=_L x}.
+Proof. by move=> x y xS yS; case: (premeet_min L xS yS). Qed.
+
+Lemma premeet_minr L S:
+  {in S &, forall x y, premeet L S x y <=_L y}.
+Proof. by move=> x y xS yS; case: (premeet_min L xS yS). Qed.
+
 Lemma premeet_inf L S:
   {in S & &, forall x y z, z <=_L x -> z <=_L y -> z <=_L premeet L S x y}.
 Proof. exact: PreLattice.premeet_inf. Qed.
@@ -126,6 +134,14 @@ Proof. move=> ?????; exact: PreLattice.premeet_incr. Qed.
 Lemma prejoin_max L S:
   {in S &, forall x y, prejoin L S x y <=_(L^~) x /\ prejoin L S x y <=_(L^~) y}.
 Proof. exact: PreLattice.prejoin_max. Qed.
+
+Lemma prejoin_maxl L S:
+  {in S &, forall x y, prejoin L S x y <=_(L^~) x}.
+Proof. by move=> x y xS yS; case: (prejoin_max L xS yS). Qed.
+
+Lemma prejoin_maxr L S:
+  {in S &, forall x y, prejoin L S x y <=_(L^~) y}.
+Proof. by move=> x y xS yS; case: (prejoin_max L xS yS). Qed.
 
 Lemma prejoin_sup L S:
   {in S & &, forall x y z, z <=_(L^~) x -> z <=_(L^~) y -> z <=_(L^~) prejoin L S x y}.
@@ -249,7 +265,7 @@ Notation "{ 'finLattice' L }" := (finLattice L) (at level 0, format "{ 'finLatti
 Notation "'\fmeet_' S" := (@fmeet _ _ S) (at level 8, format "'\fmeet_' S").
 Notation "'\fjoin_' S" := (@fjoin _ _ S) (at level 8, format "'\fjoin_' S").
 
-Section SubLatticeDual.
+Section FinLatticeDual.
 
 Context {T : choiceType} (L : {preLattice T}) (S : {finLattice L}).
 
@@ -262,22 +278,125 @@ Canonical FinLatticeDual := FinLattice stableDual.
 Check (x \in FinLatticeDual).
 Check (FinLatticeDual).*)
 
-End SubLatticeDual.
+Lemma dual_fjoinE:
+  \fjoin_(FinLatticeDual)= \fmeet_S.
+Proof. by []. Qed.
+
+Lemma dual_fmeetE: \fmeet_(FinLatticeDual) = \fjoin_S.
+Proof. by []. Qed.
+
+End FinLatticeDual.
 
 Notation "S ^~s" := (FinLatticeDual S)
   (at level 8, format "S ^~s").
 
-Section SubLatticeDualTest.
+Section FinLatticeDualTest.
 
-Context {T: choiceType} (L: {preLattice T}) (S: {finLattice L}).
+Context {T : choiceType} (L : {preLattice T}) (S : {finLattice L}).
 Goal ((S^~s)^~s) = S.
 Proof. by apply/val_inj. Qed.
 
-End SubLatticeDualTest.
+End FinLatticeDualTest.
+
+Section FinLatticeStructure.
+
+Context {T : choiceType}.
+Lemma stable_fun (L : {preLattice T}) (S : {finLattice L}) (x y : S) :
+  (\fmeet_S (fsval x) (fsval y) \in S).
+Proof.
+rewrite /fmeet inE; move: S x y; case => /= S + x y.
+by case/andP => /stableP /(_ _ _ (fsvalP x) (fsvalP y)).
+Qed.
+
+Context (L : {preLattice T}) (S : {finLattice L}).
+
+Definition Sle : rel S := fun x y => (fsval x) <=_L (fsval y).
+Definition Slt : rel S := fun x y => (fsval x) <_L (fsval y).
+
+Lemma Slexx : reflexive Sle.
+Proof. by move=> x; rewrite /Sle. Qed.
+
+Lemma Sle_anti : forall (x y : S), Sle x y -> Sle y x -> x = y.
+Proof.
+move=> x y; rewrite /Sle => le1 le2; apply/val_inj/(@le_anti _ L).
+by rewrite le1 le2.
+Qed.
+
+Lemma Sle_trans : transitive Sle.
+Proof. move=> y x z; rewrite /Sle; exact: le_trans. Qed.
+
+Lemma Slt_def : forall (x y : S), Slt x y = (x != y) && Sle x y.
+Proof. move=> x y; rewrite /Slt /Sle lt_def; congr (_ && _). Qed.
+
+Lemma dSlt_def : forall (x y : S), Slt y x = (x != y) && Sle y x.
+Proof. move=> x y; rewrite /Slt /Sle lt_def eq_sym; congr (_ && _). Qed.
+
+Definition Sle_mixin :=
+  POrder.Mixin Slexx Sle_anti Sle_trans Slt_def dSlt_def.
+
+Definition Smeet : S -> S -> S := fun x y : S => [`stable_fun x y].
+Definition Sjoin : S -> S -> S := fun x y : S => [` @stable_fun _ S^~s x y].
+
+
+Lemma SmeetC : commutative Smeet.
+Proof.
+move=> x y; apply/val_inj/(@le_anti _ L).
+by rewrite !premeet_inf // ?premeet_minl ?premeet_minr ?fsvalP.
+Qed.
+
+Lemma SmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
+  val (Smeet x (Smeet y z)) <=_L val t.
+Proof.
+move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP ->  /=.
++ by rewrite premeet_minl ?fsvalP ?stable_fun.
++ apply:(le_trans _ (premeet_minl L (fsvalP y) (fsvalP z))).
+  by rewrite premeet_minr ?fsvalP ?stable_fun.
++ apply:(le_trans _ (premeet_minr L (fsvalP y) (fsvalP z))).
+  by rewrite premeet_minr ?fsvalP ?stable_fun.
+Qed.
+
+Lemma SmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
+  val (Smeet (Smeet x y) z) <=_L val t.
+Proof.
+move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP -> /=.
++ apply:(le_trans _ (premeet_minl L (fsvalP x) (fsvalP y))).
+  by rewrite premeet_minl ?fsvalP ?stable_fun.
++ apply:(le_trans _ (premeet_minr L (fsvalP x) (fsvalP y))).
+  by rewrite premeet_minl ?fsvalP ?stable_fun.
++ by rewrite premeet_minr ?fsvalP ?stable_fun.
+Qed.
+
+Lemma SmeetA : associative Smeet.
+Proof.
+move=> x y z; apply/val_inj/(@le_anti _ L).
+by rewrite !premeet_inf ?fsvalP ?SmeetAl ?SmeetAr // !inE eq_refl ?orbT.
+Qed.
+
+Lemma leSmeet : forall x y : S, Sle x y = (Smeet x y == x).
+Proof.
+move=> x y; apply/(sameP idP)/(iffP idP).
+- by move/eqP => <-; rewrite /Sle premeet_minr ?fsvalP.
+- rewrite /Sle => xley; apply/eqP/val_inj/(@le_anti _ L).
+  by rewrite premeet_minl ?premeet_inf ?fsvalP.
+Qed.
+
+Definition Smeet_mixin := Meet.Mixin SmeetC SmeetA leSmeet.
+Definition Smeet_class := Meet.Class Sle_mixin Smeet_mixin.
+
+Lemma SjoinC : commutative Sjoin.
+Proof.
+move=> x y; apply/val_inj/(@le_anti _ L^~)=> /=; rewrite dual_fmeetE.
+rewrite !prejoin_sup ?fsvalP // ?stable_fun.
+Admitted.
+
+
+
+
+End FinLatticeStructure.
 
 (* ========================================================================= *)
 
-Section SubLatticeTheory.
+Section FinLatticeTheory.
 
 Context {T: choiceType}.
 Implicit Type L : {preLattice T}.
@@ -699,7 +818,7 @@ Lemma fbotE L (S: {finLattice L}) : S != fset0 :> {fset _} ->
 \fbot_S = \big[\fmeet_S / \ftop_S]_(i <- S) i.
 Proof. exact: (@ftopE _ S^~s). Qed.
 
-End SubLatticeTheory.
+End FinLatticeTheory.
 
 Notation "\fbot_ S" := (@fbot _ _ S) (at level 2, S at next level, format "\fbot_ S").
 Notation "\ftop_ S" := (@ftop _ _ S) (at level 2, S at next level, format "\ftop_ S").
@@ -835,13 +954,13 @@ apply/andP; split; apply/stableP.
 - by move=> ????; rewrite /= -prejoin_intvE // prejoin_intv_stable.
 Qed.
 
-Definition SubLatInterval L (S: {finLattice L}) a b :=
+Definition FinLatInterval L (S: {finLattice L}) a b :=
   FinLattice (@stable_interval L S a b).
 
 End Interval.
 End Interval.
 
-Notation " [< a ; b >]_ S " := (@Interval.SubLatInterval _ _ S a b)
+Notation " [< a ; b >]_ S " := (@Interval.FinLatInterval _ _ S a b)
   (at level 0, S at level 8, format "[<  a ;  b  >]_ S").
 
 Section IntervalTheory.
