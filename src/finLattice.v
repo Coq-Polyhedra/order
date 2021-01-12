@@ -401,12 +401,12 @@ Section FinLatticeTheory.
 Context {T: choiceType}.
 Implicit Type L : {preLattice T}.
 
-Lemma dual_fjoinE L (S: {finLattice L}):
+(*Lemma dual_fjoinE L (S: {finLattice L}):
   \fjoin_(S^~s)= \fmeet_S.
 Proof. by []. Qed.
 
 Lemma dual_fmeetE L (S: {finLattice L}) : \fmeet_(S^~s) = \fjoin_S.
-Proof. by []. Qed.
+Proof. by []. Qed.*)
 
 Lemma mem_fjoin L (S: {finLattice L}): {in S &, forall x y, \fjoin_S x y \in S}.
 Proof.
