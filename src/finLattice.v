@@ -334,6 +334,7 @@ Proof. move=> x y; rewrite /Slt /Sle lt_def eq_sym; congr (_ && _). Qed.
 Definition Sle_mixin :=
   POrder.Mixin Slexx Sle_anti Sle_trans Slt_def dSlt_def.
 
+
 Definition Smeet : S -> S -> S := fun x y : S => [`stable_fun x y].
 Definition Sjoin : S -> S -> S := fun x y : S => [` @stable_fun _ S^~s x y].
 
@@ -369,7 +370,8 @@ Qed.
 Lemma SmeetA : associative Smeet.
 Proof.
 move=> x y z; apply/val_inj/(@le_anti _ L).
-by rewrite !premeet_inf ?fsvalP ?SmeetAl ?SmeetAr // !inE eq_refl ?orbT.
+by rewrite !premeet_inf ?fsvalP ?SmeetAl ?SmeetAr //
+  !in_fsetE eq_refl ?orbT.
 Qed.
 
 Lemma leSmeet : forall x y : S, Sle x y = (Smeet x y == x).
@@ -385,14 +387,56 @@ Definition Smeet_class := Meet.Class Sle_mixin Smeet_mixin.
 
 Lemma SjoinC : commutative Sjoin.
 Proof.
-move=> x y; apply/val_inj/(@le_anti _ L^~)=> /=; rewrite dual_fmeetE.
-rewrite !prejoin_sup ?fsvalP // ?stable_fun.
-Admitted.
+move=> x y; apply/val_inj/(@le_anti _ L^~)=> /=.
+by rewrite !prejoin_sup ?prejoin_maxl ?prejoin_maxr ?stable_fun ?fsvalP.
+Qed.
 
+Lemma SjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
+  val (Sjoin x (Sjoin y z)) <=_(L^~) val t.
+Proof.
+move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP ->.
+- by rewrite prejoin_maxl ?fsvalP.
+- apply:(le_trans _ (prejoin_maxl L (fsvalP y) (fsvalP z))).
+  by rewrite prejoin_maxr ?fsvalP.
+- apply:(le_trans _ (prejoin_maxr L (fsvalP y) (fsvalP z))).
+  by rewrite prejoin_maxr ?fsvalP.
+Qed.
 
+Lemma SjoinAr : forall (x y z t : S), t \in [fset x; y; z] ->
+  val (Sjoin (Sjoin x y) z) <=_(L^~) val t.
+Proof.
+move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP ->.
+- apply: (le_trans _ (prejoin_maxl L (fsvalP x) (fsvalP y))).
+  by rewrite prejoin_maxl ?fsvalP.
+- apply: (le_trans _ (prejoin_maxr L (fsvalP x) (fsvalP y))).
+  by rewrite prejoin_maxl ?fsvalP.
+- by rewrite prejoin_maxr ?fsvalP.
+Qed.
+
+Lemma SjoinA : associative Sjoin.
+Proof.
+move=> x y z; apply/val_inj/(@le_anti _ L^~).
+by rewrite !prejoin_sup ?fsvalP ?SjoinAl ?SjoinAr //
+  !in_fsetE eq_refl ?orbT.
+Qed.
+
+Lemma leSjoin : forall x y : S, dual_rel Sle x y = (Sjoin x y == x).
+Proof.
+move=> x y; apply/(sameP idP)/(iffP idP).
+- move/eqP => <-; rewrite /Sle /dual_rel.
+  exact:(prejoin_maxr L (fsvalP x) (fsvalP y)).
+- rewrite /dual_rel /Sle => ylex; apply/eqP/val_inj/(@le_anti _ L^~).
+  by rewrite prejoin_maxl ?prejoin_sup ?fsvalP.
+Qed.
+
+Definition Sjoin_mixin := Meet.Mixin SjoinC SjoinA leSjoin.
+Definition SLattice_class := Lattice.Class Smeet_class Sjoin_mixin.
+Canonical SLattice_pack := Lattice.Pack (Phant _) SLattice_class.
 
 
 End FinLatticeStructure.
+
+Coercion SLattice_pack : finLattice >-> Lattice.order.
 
 (* ========================================================================= *)
 
@@ -418,9 +462,7 @@ Lemma mem_fmeet L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y \in S
 Proof. exact: (@mem_fjoin _ S^~s). Qed.
 
 Lemma leIfl L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y <=_L x}.
-Proof.
-by move=> x y xS yS; move: (premeet_min L xS yS) => [].
-Qed.
+Proof. move=> x y xS yS; exact: (@leIl _ S [`xS] [`yS]). Qed.
 
 Lemma leIfr L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y <=_L y}.
 Proof.
