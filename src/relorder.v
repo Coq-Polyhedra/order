@@ -21,25 +21,23 @@ Section ClassDef.
 
 Variable T : eqType.
 
+(* TODO: the interface (POrder.order) should not be a primitive record. see:  *)
+(* https://github.com/math-comp/math-comp/pull/462#issuecomment-598130155.    *)
 Set Primitive Projections.
 Record mixin_of (le lt : rel T) := Mixin {
   lexx : reflexive le;
   le_anti : forall x y, le x y -> le y x -> x = y;
   le_trans : transitive le;
-  lt_def : forall x y, (lt x y) = (x != y) && (le x y);
-  dlt_def : forall x y, (lt y x) = (x != y) && (le y x);
+  lt_def : forall x y, lt x y = (y != x) && le x y;
+  dlt_def : forall x y, lt y x = (y != x) && le y x;
 }.
-Unset Primitive Projections.
 
 Notation class_of := mixin_of (only parsing).
 
-(* NB: the interface should not be a primitive record. see:                   *)
-(* https://github.com/math-comp/math-comp/pull/462#issuecomment-598130155.    *)
-Set Primitive Projections.
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
-  class_ : class_of le lt;
+  #[canonical=no] class_ : class_of le lt;
 }.
 Unset Primitive Projections.
 
@@ -152,14 +150,12 @@ Record class_of (le lt : rel T) (top : T) := Class {
   base : POrder.class_of le lt;
   mixin : mixin_of le top;
 }.
-Unset Primitive Projections.
 
-Set Primitive Projections.
 Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   top : T;
-  class_ : class_of le lt top;
+  #[canonical=no] class_ : class_of le lt top;
 }.
 Unset Primitive Projections.
 
@@ -221,7 +217,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   bottom : T;
   top : T;
-  class_ : class_of le lt bottom top;
+  #[canonical=no] class_ : class_of le lt bottom top;
 }.
 Unset Primitive Projections.
 
@@ -299,7 +295,7 @@ Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   meet : T -> T -> T;
-  class_ : class_of le lt meet;
+  #[canonical=no] class_ : class_of le lt meet;
 }.
 
 Unset Primitive Projections.
@@ -362,7 +358,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   meet : T -> T -> T;
   bottom : T;
-  class_ : class_of le lt meet bottom;
+  #[canonical=no] class_ : class_of le lt meet bottom;
 }.
 
 Unset Primitive Projections.
@@ -433,7 +429,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   meet : T -> T -> T;
   top : T;
-  class_ : class_of le lt meet top;
+  #[canonical=no] class_ : class_of le lt meet top;
 }.
 
 Unset Primitive Projections.
@@ -505,7 +501,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   bottom : T;
   top : T;
-  class_ : class_of le lt meet bottom top;
+  #[canonical=no] class_ : class_of le lt meet bottom top;
 }.
 Unset Primitive Projections.
 
@@ -616,7 +612,7 @@ Structure order (phT : phant T) := Pack {
   le : rel T;
   lt : rel T;
   join : T -> T -> T;
-  class_ : class_of le lt join;
+  #[canonical=no] class_ : class_of le lt join;
 }.
 Unset Primitive Projections.
 
@@ -678,7 +674,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   join : T -> T -> T;
   bottom : T;
-  class_ : class_of le lt join bottom;
+  #[canonical=no] class_ : class_of le lt join bottom;
 }.
 Unset Primitive Projections.
 
@@ -748,7 +744,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   join : T -> T -> T;
   top : T;
-  class_ : class_of le lt join top;
+  #[canonical=no] class_ : class_of le lt join top;
 }.
 Unset Primitive Projections.
 
@@ -819,7 +815,7 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  class_ : class_of le lt join bottom top;
+  #[canonical=no] class_ : class_of le lt join bottom top;
 }.
 Unset Primitive Projections.
 
@@ -932,7 +928,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   meet : T -> T -> T;
   join : T -> T -> T;
-  class_ : class_of le lt meet join;
+  #[canonical=no] class_ : class_of le lt meet join;
 }.
 Unset Primitive Projections.
 
@@ -1004,7 +1000,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   bottom : T;
-  class_ : class_of le lt meet join bottom;
+  #[canonical=no] class_ : class_of le lt meet join bottom;
 }.
 Unset Primitive Projections.
 
@@ -1118,7 +1114,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   top : T;
-  class_ : class_of le lt meet join top;
+  #[canonical=no] class_ : class_of le lt meet join top;
 }.
 Unset Primitive Projections.
 
@@ -1230,7 +1226,7 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  class_ : class_of le lt meet join bottom top;
+  #[canonical=no] class_ : class_of le lt meet join bottom top;
 }.
 Unset Primitive Projections.
 
@@ -1361,7 +1357,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   meet : T -> T -> T;
   join : T -> T -> T;
-  class_ : class_of le lt meet join;
+  #[canonical=no] class_ : class_of le lt meet join;
 }.
 Unset Primitive Projections.
 
@@ -1432,7 +1428,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   bottom : T;
-  class_ : class_of le lt meet join bottom;
+  #[canonical=no] class_ : class_of le lt meet join bottom;
 }.
 Unset Primitive Projections.
 
@@ -1528,7 +1524,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   top : T;
-  class_ : class_of le lt meet join top;
+  #[canonical=no] class_ : class_of le lt meet join top;
 }.
 Unset Primitive Projections.
 
@@ -1622,7 +1618,7 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  class_ : class_of le lt meet join bottom top;
+  #[canonical=no] class_ : class_of le lt meet join bottom top;
 }.
 Unset Primitive Projections.
 
@@ -1766,7 +1762,7 @@ Structure order (phT : phant T) := Pack {
   lt : rel T;
   meet : T -> T -> T;
   join : T -> T -> T;
-  class_ : class_of le lt meet join;
+  #[canonical=no] class_ : class_of le lt meet join;
 }.
 Unset Primitive Projections.
 
@@ -1842,7 +1838,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   bottom : T;
-  class_ : class_of le lt meet join bottom;
+  #[canonical=no] class_ : class_of le lt meet join bottom;
 }.
 Unset Primitive Projections.
 
@@ -1947,7 +1943,7 @@ Structure order (phT : phant T) := Pack {
   meet : T -> T -> T;
   join : T -> T -> T;
   top : T;
-  class_ : class_of le lt meet join top;
+  #[canonical=no] class_ : class_of le lt meet join top;
 }.
 Unset Primitive Projections.
 
@@ -2050,7 +2046,7 @@ Structure order (phT : phant T) := Pack {
   join : T -> T -> T;
   bottom : T;
   top : T;
-  class_ : class_of le lt meet join bottom top;
+  #[canonical=no] class_ : class_of le lt meet join bottom top;
 }.
 Unset Primitive Projections.
 
@@ -2427,30 +2423,7 @@ Canonical dual_tbTotalOrder (ord : {tbTotalOrder T}) :=
   [tbTotalOrder of dual_rel <=:ord].
 
 End DualOrder.
-
-Notation "ord ^~" := (dual_pOrder ord) (at level 8, format "ord ^~").
-
-Parameter (r : {pOrder nat}).
-
-(*
-Set Primitive Projections.
-Record R := mkR { x : nat; y : nat; _ : x = y; }.
-Unset Primitive Projections.
-
-Parameter z : R.
-
-Goal z = let: mkR x y p := z in mkR p.
-Proof.
-done.
-
-Goal r = let: POrder.Pack le lt mixin := r in POrder.Pack _ mixin.
-Proof.
-*)
-
-Goal r = (r^~)^~.
-Proof.
-reflexivity.
-Qed.
+(* See [Module DualOrderTest] for tests. *)
 
 (* ========================================================================== *)
 
@@ -2514,11 +2487,11 @@ Proof. by case: ord => ? ? []. Qed.
 Lemma ge_trans : transitive ge.
 Proof. by move=> ? ? ? ? /le_trans; apply. Qed.
 
-Lemma lt_def x y : (x < y) = (x != y) && (x <= y).
+Lemma lt_def x y : (x < y) = (y != x) && (x <= y).
 Proof. by case: ord => ? ? []. Qed.
 
 Lemma lt_neqAle x y : (x < y) = (x != y) && (x <= y).
-Proof. by case: ord => ? ? []. Qed.
+Proof. by rewrite lt_def eq_sym. Qed.
 
 Lemma ltxx x : x < x = false.
 Proof. by rewrite lt_def eqxx. Qed.
@@ -2597,15 +2570,11 @@ by rewrite eq_le lenm /=; apply: (allP (order_path_min le_trans le_ms)).
 Qed.
 
 Lemma lt_sorted_eq s1 s2 : sorted lt s1 -> sorted lt s2 -> s1 =i s2 -> s1 = s2.
-Proof. 
-Admitted.  
-(*by apply: irr_sorted_eq => //; apply: lt_trans. Qed.*)
+Proof. by apply: irr_sorted_eq => //; apply: lt_trans. Qed.
 
 Lemma le_sorted_eq s1 s2 :
   sorted le s1 -> sorted le s2 -> perm_eq s1 s2 -> s1 = s2.
-Proof.
-Admitted.  
-(*exact/sorted_eq/le_anti/le_trans. Qed.*)
+Proof. exact/sorted_eq/le_anti/le_trans. Qed.
 
 Lemma sort_le_id s : sorted le s -> sort le s = s.
 Proof. exact/sorted_sort/le_trans. Qed.
@@ -3044,16 +3013,14 @@ Hypothesis F_comparable : {in P &, forall i j, F i >=< F j}.
 
 Lemma comparable_arg_minP: extremum_spec le P F (arg_min i0 P F).
 Proof.
-Admitted.
-(*by apply: extremum_inP => // [x _|y x z _ _ _]; [apply: lexx|apply: le_trans].
-Qed.*)
+by apply: extremum_inP => // [x _|y x z _ _ _]; [apply: lexx|apply: le_trans].
+Qed.
 
 Lemma comparable_arg_maxP: extremum_spec ge P F (arg_max i0 P F).
 Proof.
-Admitted.
-(*apply: extremum_inP => // [x _|y x z _ _ _|]; [exact: lexx|exact: ge_trans|].
+apply: extremum_inP => // [x _|y x z _ _ _|]; [exact: lexx|exact: ge_trans|].
 by move=> x y xP yP; rewrite orbC [_ || _]F_comparable.
-Qed.*)
+Qed.
 
 End ArgExtremum.
 
@@ -3089,13 +3056,202 @@ Lemma comparable_bigr x x0 op I (P : pred I) F (s : seq I) :
 Proof. by move=> *; elim/big_ind : _. Qed.
 
 End POrderTheory.
-(* Hint Resolve comparable_minr comparable_minl : core. *)
-(* Hint Resolve comparable_maxr comparable_maxl : core. *)
 
-(* TODO:
 Section ContraTheory.
+
+Context {T1 T2 : eqType} {ord1 : {pOrder T1}} {ord2 : {pOrder T2}}.
+Implicit Types (x y : T1) (z t : T2) (b : bool) (m n : nat) (P : Prop).
+
+Local Notation "x <= y" := (x <=_ord1 y).
+Local Notation "x < y" := (x <_ord1 y).
+Local Notation "x >=< y" := (x >=<_ord1 y).
+
+Lemma comparable_contraTle b x y : x >=< y -> (y < x -> ~~ b) -> (b -> x <= y).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma comparable_contraTlt b x y : x >=< y -> (y <= x -> ~~ b) -> (b -> x < y).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma comparable_contraPle P x y : x >=< y -> (y < x -> ~ P) -> (P -> x <= y).
+Proof. by case: comparableP => // _ _ /(_ isT). Qed.
+
+Lemma comparable_contraPlt P x y : x >=< y -> (y <= x -> ~ P) -> (P -> x < y).
+Proof. by case: comparableP => // _ _ /(_ isT). Qed.
+
+Lemma comparable_contraNle b x y : x >=< y -> (y < x -> b) -> (~~ b -> x <= y).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma comparable_contraNlt b x y : x >=< y -> (y <= x -> b) -> (~~ b -> x < y).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma comparable_contra_not_le P x y : x >=< y -> (y < x -> P) -> (~ P -> x <= y).
+Proof. by case: comparableP => // _ _ /(_ isT). Qed.
+
+Lemma comparable_contra_not_lt P x y : x >=< y -> (y <= x -> P) -> (~ P -> x < y).
+Proof. by case: comparableP => // _ _ /(_ isT). Qed.
+
+Lemma comparable_contraFle b x y : x >=< y -> (y < x -> b) -> (b = false -> x <= y).
+Proof. by case: comparableP; case: b => // _ _ /implyP. Qed.
+
+Lemma comparable_contraFlt b x y : x >=< y -> (y <= x -> b) -> (b = false -> x < y).
+Proof. by case: comparableP; case: b => // _ _ /implyP. Qed.
+
+Lemma contra_leT b x y : (~~ b -> x < y) -> (y <= x -> b).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma contra_ltT b x y : (~~ b -> x <= y) -> (y < x -> b).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma contra_leN b x y : (b -> x < y) -> (y <= x -> ~~ b).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma contra_ltN b x y : (b -> x <= y) -> (y < x -> ~~ b).
+Proof. by case: comparableP; case: b. Qed.
+
+Lemma contra_le_not P x y : (P -> x < y) -> (y <= x -> ~ P).
+Proof. by case: comparableP => // _ PF _ /PF. Qed.
+
+Lemma contra_lt_not P x y : (P -> x <= y) -> (y < x -> ~ P).
+Proof. by case: comparableP => // _ PF _ /PF. Qed.
+
+Lemma contra_leF b x y : (b -> x < y) -> (y <= x -> b = false).
+Proof. by case: comparableP; case: b => // _ /implyP. Qed.
+
+Lemma contra_ltF b x y : (b -> x <= y) -> (y < x -> b = false).
+Proof. by case: comparableP; case: b => // _ /implyP. Qed.
+
+Lemma comparable_contra_leq_le m n x y : x >=< y ->
+  (y < x -> (n < m)%N) -> ((m <= n)%N -> x <= y).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma comparable_contra_leq_lt m n x y : x >=< y ->
+  (y <= x -> (n < m)%N) -> ((m <= n)%N -> x < y).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma comparable_contra_ltn_le m n x y : x >=< y ->
+  (y < x -> (n <= m)%N) -> ((m < n)%N -> x <= y).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma comparable_contra_ltn_lt m n x y : x >=< y ->
+  (y <= x -> (n <= m)%N) -> ((m < n)%N -> x < y).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma contra_le_leq x y m n : ((n < m)%N -> y < x) -> (x <= y -> (m <= n)%N).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma contra_le_ltn x y m n : ((n <= m)%N -> y < x) -> (x <= y -> (m < n)%N).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma contra_lt_leq x y m n : ((n < m)%N -> y <= x) -> (x < y -> (m <= n)%N).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma contra_lt_ltn x y m n : ((n <= m)%N -> y <= x) -> (x < y -> (m < n)%N).
+Proof. by case: comparableP; case: ltngtP. Qed.
+
+Lemma comparable_contra_le x y z t : z >=<_ord2 t ->
+  (t <_ord2 z -> y < x) -> (x <= y -> z <=_ord2 t).
+Proof. by do 2![case: comparableP => //= ?]. Qed.
+
+Lemma comparable_contra_le_lt x y z t : z >=<_ord2 t ->
+  (t <=_ord2 z -> y < x) -> (x <= y -> z <_ord2 t).
+Proof. by do 2![case: comparableP => //= ?]. Qed.
+
+Lemma comparable_contra_lt_le x y z t : z >=<_ord2 t ->
+  (t <_ord2 z -> y <= x) -> (x < y -> z <=_ord2 t).
+Proof. by do 2![case: comparableP => //= ?]. Qed.
+
+Lemma comparable_contra_lt x y z t : z >=<_ord2 t ->
+ (t <=_ord2 z -> y <= x) -> (x < y -> z <_ord2 t).
+Proof. by do 2![case: comparableP => //= ?]. Qed.
+
+End ContraTheory.
+
 Section POrderMonotonyTheory.
-*)
+
+Context {T T' : eqType} {ord : {pOrder T}} {ord' : {pOrder T'}}.
+Implicit Types (m n p : nat) (x y z : T) (u v w : T').
+Variables (D D' : {pred T}) (f : T -> T').
+
+Let leT_refl := @lexx _ ord.
+Let leT'_refl := @lexx _ ord'.
+Let ltT_neqAle := @lt_neqAle _ ord.
+Let ltT'_neqAle := @lt_neqAle _ ord'.
+Let ltT_def := @lt_def _ ord.
+Let leT_anti := @le_anti _ ord.
+
+Let ge_antiT : antisymmetric (ge ord).
+Proof. by move=> ? ? /le_anti. Qed.
+
+Lemma ltW_homo : {homo f : x y / x <_ord y >-> x <_ord' y} ->
+                 {homo f : x y / x <=_ord y >-> x <=_ord' y}.
+Proof. exact: homoW. Qed.
+
+Lemma ltW_nhomo : {homo f : x y / y <_ord x >-> x <_ord' y} ->
+                  {homo f : x y / y <=_ord x >-> x <=_ord' y}.
+Proof. exact: homoW. Qed.
+
+Lemma inj_homo_lt :
+  injective f -> {homo f : x y / x <=_ord y >-> x <=_ord' y} ->
+  {homo f : x y / x <_ord y >-> x <_ord' y}.
+Proof. exact: inj_homo. Qed.
+
+Lemma inj_nhomo_lt :
+  injective f -> {homo f : x y / y <=_ord x >-> x <=_ord' y} ->
+  {homo f : x y / y <_ord x >-> x <_ord' y}.
+Proof. exact: inj_homo. Qed.
+
+Lemma inc_inj : {mono f : x y / x <=_ord y >-> x <=_ord' y} -> injective f.
+Proof. exact: mono_inj. Qed.
+
+Lemma dec_inj : {mono f : x y / y <=_ord x >-> x <=_ord' y} -> injective f.
+Proof. exact: mono_inj. Qed.
+
+Lemma leW_mono : {mono f : x y / x <=_ord y >-> x <=_ord' y} ->
+                 {mono f : x y / x <_ord y >-> x <_ord' y}.
+Proof. exact: anti_mono. Qed.
+
+Lemma leW_nmono : {mono f : x y / y <=_ord x >-> x <=_ord' y} ->
+                  {mono f : x y / y <_ord x >-> x <_ord' y}.
+Proof. exact: anti_mono. Qed.
+
+(* Monotony in D D' *)
+Lemma ltW_homo_in : {in D & D', {homo f : x y / x <_ord y >-> x <_ord' y}} ->
+                    {in D & D', {homo f : x y / x <=_ord y >-> x <=_ord' y}}.
+Proof. exact: homoW_in. Qed.
+
+Lemma ltW_nhomo_in : {in D & D', {homo f : x y / y <_ord x >-> x <_ord' y}} ->
+                     {in D & D', {homo f : x y / y <=_ord x >-> x <=_ord' y}}.
+Proof. exact: homoW_in. Qed.
+
+Lemma inj_homo_lt_in :
+  {in D & D', injective f} ->
+  {in D & D', {homo f : x y / x <=_ord y >-> x <=_ord' y}} ->
+  {in D & D', {homo f : x y / x <_ord y >-> x <_ord' y}}.
+Proof. exact: inj_homo_in. Qed.
+
+Lemma inj_nhomo_lt_in :
+  {in D & D', injective f} ->
+  {in D & D', {homo f : x y / y <=_ord x >-> x <=_ord' y}} ->
+  {in D & D', {homo f : x y / y <_ord x >-> x <_ord' y}}.
+Proof. exact: inj_homo_in. Qed.
+
+Lemma inc_inj_in : {in D &, {mono f : x y / x <=_ord y >-> x <=_ord' y}} ->
+                   {in D &, injective f}.
+Proof. exact: mono_inj_in. Qed.
+
+Lemma dec_inj_in : {in D &, {mono f : x y / y <=_ord x >-> x <=_ord' y}} ->
+                   {in D &, injective f}.
+Proof. exact: mono_inj_in. Qed.
+
+Lemma leW_mono_in : {in D &, {mono f : x y / x <=_ord y >-> x <=_ord' y}} ->
+                    {in D &, {mono f : x y / x <_ord y >-> x <_ord' y}}.
+Proof. exact: anti_mono_in. Qed.
+
+Lemma leW_nmono_in : {in D &, {mono f : x y / y <=_ord x >-> x <=_ord' y}} ->
+                     {in D &, {mono f : x y / y <_ord x >-> x <_ord' y}}.
+Proof. exact: anti_mono_in. Qed.
+
+End POrderMonotonyTheory.
 
 End POrderTheory.
 
@@ -3910,10 +4066,99 @@ Arguments max_idPl {T ord x y}.
 
 (* contra lemmas *)
 
-(* TODO:
 Section ContraTheory.
+
+Context {T1 T2 : eqType} {ord1 : {totalOrder T1}} {ord2 : {totalOrder T2}}.
+Implicit Types (x y : T1) (z t : T2) (b : bool) (m n : nat) (P : Prop).
+
+Local Notation "x <= y" := (x <=_ord2 y).
+Local Notation "x < y" := (x <_ord2 y).
+
+Lemma contraTle b z t : (t < z -> ~~ b) -> (b -> z <= t).
+Proof. exact: comparable_contraTle. Qed.
+
+Lemma contraTlt b z t : (t <= z -> ~~ b) -> (b -> z < t).
+Proof. exact: comparable_contraTlt. Qed.
+
+Lemma contraPle P z t : (t < z -> ~ P) -> (P -> z <= t).
+Proof. exact: comparable_contraPle. Qed.
+
+Lemma contraPlt P z t : (t <= z -> ~ P) -> (P -> z < t).
+Proof. exact: comparable_contraPlt. Qed.
+
+Lemma contraNle b z t : (t < z -> b) -> (~~ b -> z <= t).
+Proof. exact: comparable_contraNle. Qed.
+
+Lemma contraNlt b z t : (t <= z -> b) -> (~~ b -> z < t).
+Proof. exact: comparable_contraNlt. Qed.
+
+Lemma contra_not_le P z t : (t < z -> P) -> (~ P -> z <= t).
+Proof. exact: comparable_contra_not_le. Qed.
+
+Lemma contra_not_lt P z t : (t <= z -> P) -> (~ P -> z < t).
+Proof. exact: comparable_contra_not_lt. Qed.
+
+Lemma contraFle b z t : (t < z -> b) -> (b = false -> z <= t).
+Proof. exact: comparable_contraFle. Qed.
+
+Lemma contraFlt b z t : (t <= z -> b) -> (b = false -> z < t).
+Proof. exact: comparable_contraFlt. Qed.
+
+Lemma contra_leq_le m n z t : (t < z -> (n < m)%N) -> ((m <= n)%N -> z <= t).
+Proof. exact: comparable_contra_leq_le. Qed.
+
+Lemma contra_leq_lt m n z t : (t <= z -> (n < m)%N) -> ((m <= n)%N -> z < t).
+Proof. exact: comparable_contra_leq_lt. Qed.
+
+Lemma contra_ltn_le m n z t : (t < z -> (n <= m)%N) -> ((m < n)%N -> z <= t).
+Proof. exact: comparable_contra_ltn_le. Qed.
+
+Lemma contra_ltn_lt m n z t : (t <= z -> (n <= m)%N) -> ((m < n)%N -> z < t).
+Proof. exact: comparable_contra_ltn_lt. Qed.
+
+Lemma contra_le x y z t : (t < z -> y <_ord1 x) -> (x <=_ord1 y -> z <= t).
+Proof. exact: comparable_contra_le. Qed.
+
+Lemma contra_le_lt x y z t : (t <= z -> y <_ord1 x) -> (x <=_ord1 y -> z < t).
+Proof. exact: comparable_contra_le_lt. Qed.
+
+Lemma contra_lt_le x y z t : (t < z -> y <=_ord1 x) -> (x <_ord1 y -> z <= t).
+Proof. exact: comparable_contra_lt_le. Qed.
+
+Lemma contra_lt x y z t : (t <= z -> y <=_ord1 x) -> (x <_ord1 y -> z < t).
+Proof. exact: comparable_contra_lt. Qed.
+
+End ContraTheory.
+
 Section TotalMonotonyTheory.
-*)
+
+Context {T T' : eqType} {ord : {totalOrder T}} {ord' : {totalOrder T'}}.
+Variables (D : {pred T}) (f : T -> T').
+Implicit Types (x y z : T) (u v w : T').
+
+Let leT'_anti   := @le_anti _ ord'.
+Let ltT_neqAle  := @lt_neqAle _ ord.
+Let ltT'_neqAle := @lt_neqAle _ ord'.
+Let ltT_def     := @lt_def _ ord.
+Let leT_total   := @le_total _ ord.
+
+Lemma le_mono : {homo f : x y / x <_ord y >-> x <_ord' y} ->
+                {mono f : x y / x <=_ord y >-> x <=_ord' y}.
+Proof. exact: total_homo_mono. Qed.
+
+Lemma le_nmono : {homo f : x y / y <_ord x >-> x <_ord' y} ->
+                 {mono f : x y / y <=_ord x >-> x <=_ord' y}.
+Proof. exact: total_homo_mono. Qed.
+
+Lemma le_mono_in : {in D &, {homo f : x y / x <_ord y >-> x <_ord' y}} ->
+                   {in D &, {mono f : x y / x <=_ord y >-> x <=_ord' y}}.
+Proof. exact: total_homo_mono_in. Qed.
+
+Lemma le_nmono_in : {in D &, {homo f : x y / y <_ord x >-> x <_ord' y}} ->
+                    {in D &, {mono f : x y / y <=_ord x >->  x <=_ord' y}}.
+Proof. exact: total_homo_mono_in. Qed.
+
+End TotalMonotonyTheory.
 End TotalTheory.
 
 (* ========================================================================== *)
@@ -3984,7 +4229,7 @@ Proof. by []. Qed.
 Lemma lt_dual_inv x y: x <_((ord^~)^~) y = x <_ord y.
 Proof. by []. Qed.
 
-Goal POrder.class ord = POrder.class (ord^~)^~.
+Goal ord = (ord^~)^~.
 Proof. by []. Qed.
 
 Goal [leo: (dual_rel <=:ord)] = ord^~.
@@ -4034,8 +4279,11 @@ Module NatOrder.
 Lemma leq_asym x y : (x <= y)%N -> (y <= x)%N -> x = y.
 Proof. by move=> ? ?; apply/anti_leq/andP. Qed.
 
-Lemma dltn_def x y : (y < x)%N = (x != y) && (y <= x)%N.
-Proof. by rewrite ltn_neqAle eq_sym. Qed.
+Lemma ltn_def x y : (x < y)%N = (y != x)%N && (x <= y)%N.
+Proof. by case: ltngtP. Qed.
+
+Lemma dltn_def x y : (y < x)%N = (y != x) && (y <= x)%N.
+Proof. by case: ltngtP. Qed.
 
 Lemma leqEminn x y : (x <= y)%N = (minn x y == x).
 Proof. exact/minn_idPl/eqP. Qed.
@@ -4044,7 +4292,7 @@ Lemma leqEmaxn x y : (x >= y)%N = (maxn x y == x).
 Proof. exact/maxn_idPl/eqP. Qed.
 
 Definition nat_pOrderMixin :=
-  POrder.Mixin leqnn leq_asym leq_trans ltn_neqAle dltn_def.
+  POrder.Mixin leqnn leq_asym leq_trans ltn_def dltn_def.
 
 Local Canonical nat_pOrder := POrder leq ltn nat_pOrderMixin.
 (* BUG, TODO: the packager [BPOrder] can infer the [pOrder] instance only     *)
@@ -4143,6 +4391,7 @@ Notation "x <_ r y ?<= 'if' C" := (RelOrder.lteif r x y C)
   (at level 71, C at level 1, r at level 1, y at next level,
   format "x '[hv'  <_ r '/'  y  ?<=  'if'  C ']'").
 
+(* KS: Since it works only for pOrder, using it globally is a bit pity.       *)
 Notation "ord ^~" := (RelOrder.dual_pOrder ord) (at level 8, format "ord ^~").
 
 

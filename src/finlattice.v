@@ -366,10 +366,10 @@ Qed.
 Lemma Sle_trans : transitive Sle.
 Proof. move=> y x z; rewrite /Sle; exact: le_trans. Qed.
 
-Lemma Slt_def : forall (x y : S), Slt x y = (x != y) && Sle x y.
+Lemma Slt_def : forall (x y : S), Slt x y = (y != x) && Sle x y.
 Proof. move=> x y; rewrite /Slt /Sle lt_def; congr (_ && _). Qed.
 
-Lemma dSlt_def : forall (x y : S), Slt y x = (x != y) && Sle y x.
+Lemma dSlt_def : forall (x y : S), Slt y x = (y != x) && Sle y x.
 Proof. move=> x y; rewrite /Slt /Sle lt_def eq_sym; congr (_ && _). Qed.
 
 Definition Sle_mixin :=
