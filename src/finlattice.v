@@ -239,16 +239,17 @@ Definition MeetPreLatticeMixin := @PreLattice.Mixin
   T (<=:M) (top M) _ _ (Mmeet_min) (Mmeet_inf) (Mmeet_incr)
   (Mjoin_max) (Mjoin_sup) (Mjoin_decr).
 
-Canonical MeetPreLattice :=
+(*Canonical MeetPreLattice :=
   PreLattice (<=:M) (<:M) _ _ _ MeetPreLatticeMixin.
-
+*)
 End MeetToPreLattice.
 
 Section JoinToPreLattice.
 
 Context {T: choiceType} (J : {bJoinOrder T}).
 
-Canonical JoinPreLattice := [preLattice of (<=:(J^~))].
+Definition JoinPreLatticeMixin :=
+  MeetPreLatticeMixin [tMeetOrder of (<=:(J^~))].
 
 End JoinToPreLattice.
 
