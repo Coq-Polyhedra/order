@@ -20,43 +20,66 @@ Context {T : choiceType}.
 
 Set Primitive Projections.
 
-Record class (r : {pOrder T}) := Class
+Record mixin_of (le : rel T) (witness : T)
+       (premeet : {fset T} -> T -> T -> T)
+       (prejoin : {fset T} -> T -> T -> T) := Mixin
 {
+  premeet_min : forall S x y, x \in S -> y \in S ->
+    le (premeet S x y) x /\ le (premeet S x y) y;
+  premeet_inf : forall S x y z, x \in S -> y \in S -> z \in S ->
+    le z x -> le z y -> le z (premeet S x y);
+  premeet_incr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
+    le (premeet S x y) (premeet S' x y);
+  prejoin_max : forall S x y, x \in S -> y \in S ->
+    dual_rel le (prejoin S x y) x /\ dual_rel le (prejoin S x y) y;
+  prejoin_sup : forall S x y z, x \in S -> y \in S -> z \in S ->
+    dual_rel le z x -> dual_rel le z y ->
+    dual_rel le z (prejoin S x y);
+  prejoin_decr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
+    dual_rel le (prejoin S x y) (prejoin S' x y)
+}.
+
+Record class_of (le lt : rel T) (witness : T)
+       (premeet : {fset T} -> T -> T -> T)
+       (prejoin : {fset T} -> T -> T -> T) := Class {
+  base : POrder.class_of le lt;
+  mixin : mixin_of le witness premeet prejoin;
+}.
+
+Structure order (phT : phant T) := Pack {
+  le : rel T;
+  lt : rel T;
   witness : T;
   premeet : {fset T} -> T -> T -> T;
   prejoin : {fset T} -> T -> T -> T;
-  premeet_min : forall S x y, x \in S -> y \in S ->
-    premeet S x y <=_r x /\ premeet S x y <=_r y;
-  premeet_inf : forall S x y z, x \in S -> y \in S -> z \in S ->
-    z <=_r x -> z <=_r y ->
-    z <=_r premeet S x y;
-  premeet_incr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
-    premeet S x y <=_r premeet S' x y;
-  prejoin_max : forall S x y, x \in S -> y \in S ->
-    prejoin S x y <=_(r^~) x /\ prejoin S x y <=_(r^~) y;
-  prejoin_sup : forall S x y z, x \in S -> y \in S -> z \in S ->
-    z <=_(r^~) x -> z <=_(r^~) y ->
-    z <=_(r^~) prejoin S x y;
-  prejoin_decr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
-    prejoin S x y <=_(r^~) prejoin S' x y
-}.
-
-Structure pack (phr : phant T) := Pack
-{
-  pack_order : {pOrder T};
-  pack_class : class pack_order
+  class_ : class_of le lt witness premeet prejoin
 }.
 
 Unset Primitive Projections.
 
-Local Coercion pack_order : pack >-> POrder.order.
+Local Coercion base : class_of >-> POrder.class_of.
 
-Variable (phr : phant T) (m : pack phr).
+Variable (phT : phant T) (ord : order phT).
 
-Definition order_of := POrder.Pack phr (POrder.class_ m).
-Definition clone (r : {pOrder T}) :=
-  fun (pl : pack phr) & phant_id (pack_order pl) r =>
-  pl.
+Definition class : class_of (le ord) (lt ord)
+                            (witness ord) (premeet ord) (prejoin ord)  :=
+  let: Pack _ _ _ _ _ c as ord' := ord in c.
+
+Definition pOrder := @POrder.Pack _ phT (le ord) (lt ord) class.
+
+Variable (leT ltT : rel T) (wT : T)
+         (premeetT : {fset T} -> T -> T -> T)
+         (prejoinT : {fset T} -> T -> T -> T).
+
+Definition clone c of phant_id class c :=
+  @Pack phT leT ltT wT premeetT prejoinT c.
+
+Definition pack (m0 : mixin_of leT wT premeetT prejoinT) :=
+  fun (bord : POrder.order phT) b
+        & phant_id (POrder.class bord) b =>
+    fun m & phant_id m0 m =>
+      @Pack phT leT ltT wT premeetT prejoinT
+            (@Class leT ltT wT premeetT prejoinT b m).
 
 End ClassDef.
 
@@ -64,19 +87,19 @@ End ClassDef.
 (* ---------------------------------------------------------------------- *)
 
 Module Exports.
-
-Canonical order_of.
-Coercion pack_order : pack >-> POrder.order.
-Coercion pack_class : pack >-> class.
-Notation "{ 'preLattice' T }" := (pack (Phant T))
+Coercion base : class_of >-> POrder.class_of.
+Coercion pOrder : order >-> POrder.order.
+Canonical pOrder.
+Notation "{ 'preLattice' T }" := (order (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
-Notation "[ 'preLattice' 'of' r ]" := (@clone _ (Phant _) r _ id)
-  (at level 0, format "[ 'preLattice'  'of'  r ]").
+Notation PreLattice le lt w premeet prejoin mixin :=
+  (@pack _ (Phant _) le lt w premeet prejoin mixin _ _ id _ id).
+Notation "[ 'preLattice' 'of' le ]" :=
+  (@clone _ (Phant _) _ le (nosimpl _) (nosimpl _) (nosimpl _) (nosimpl _) _ id)
+    (at level 0, format "[ 'preLattice'  'of'  le ]").
+Notation witness := witness.
 Notation premeet := premeet.
 Notation prejoin := prejoin.
-
-
-
 End Exports.
 
 End PreLattice.
@@ -87,75 +110,83 @@ Section DualPreLattice.
 Context {T: choiceType}.
 Variable (L : {preLattice T}).
 
-Definition DualPreLatticeClass := PreLattice.Class
+Definition DualPreLatticeMixin :=
+  let: PreLattice.Class _ m := PreLattice.class L in
+  @PreLattice.Mixin T
+    (dual_rel <=:L)
     (PreLattice.witness L)
-    (PreLattice.prejoin_max L) (PreLattice.prejoin_sup L)
-    (PreLattice.prejoin_decr L)
-    (PreLattice.premeet_min L) (PreLattice.premeet_inf L)
-    (PreLattice.premeet_incr L).
+    (prejoin L) (premeet L)
+      (PreLattice.prejoin_max m) (PreLattice.prejoin_sup m)
+      (PreLattice.prejoin_decr m)
+      (PreLattice.premeet_min m) (PreLattice.premeet_inf m)
+      (PreLattice.premeet_incr m).
 
 Canonical DualPreLatticePack :=
-  PreLattice.Pack (Phant T) DualPreLatticeClass.
+  PreLattice (dual_rel <=:L) (dual_rel <:L) _ _ _ DualPreLatticeMixin.
 
 End DualPreLattice.
 
-(*Section PreLatticeDualTest.
-
+(*
+Section PreLatticeDualTest.
 Context (T: choiceType) (L : {preLattice T}).
-Check erefl L : [preLattice of L^~^~] = L.
-End PreLatticeDualTest.*)
+Check (erefl L : [preLattice of (<=:(L^~^~))] = L).
+End PreLatticeDualTest.
+*)
 
 Section PreLatticeTheory.
 
 Context {T: choiceType}.
 Implicit Type L: {preLattice T}.
 
+(* TO IMPROVE *)
+Definition mixin L := (PreLattice.mixin (PreLattice.class L)).
+
 Lemma premeet_min L S:
   {in S &, forall x y, premeet L S x y <=_L x /\ premeet L S x y <=_L y}.
-Proof. exact: PreLattice.premeet_min. Qed.
+Proof. exact: (PreLattice.premeet_min (mixin L)). Qed.
 
 Lemma premeet_minl L S:
   {in S &, forall x y, premeet L S x y <=_L x}.
-Proof. by move=> x y xS yS; case: (premeet_min L xS yS). Qed.
+Proof. by move=> x y xS yS; case: (PreLattice.premeet_min (mixin L) xS yS). Qed.
 
 Lemma premeet_minr L S:
   {in S &, forall x y, premeet L S x y <=_L y}.
-Proof. by move=> x y xS yS; case: (premeet_min L xS yS). Qed.
+Proof. by move=> x y xS yS; case: (PreLattice.premeet_min (mixin L) xS yS). Qed.
 
 Lemma premeet_inf L S:
   {in S & &, forall x y z, z <=_L x -> z <=_L y -> z <=_L premeet L S x y}.
-Proof. exact: PreLattice.premeet_inf. Qed.
+Proof. exact: (PreLattice.premeet_inf (mixin L)). Qed.
 
 Lemma premeet_incr L S S': S `<=` S' ->
   {in S &, forall x y, premeet L S x y <=_L premeet L S' x y}.
-Proof. move=> ?????; exact: PreLattice.premeet_incr. Qed.
+Proof. move=> ?????; exact: (PreLattice.premeet_incr (mixin L)). Qed.
 
 Lemma prejoin_max L S:
   {in S &, forall x y, prejoin L S x y <=_(L^~) x /\ prejoin L S x y <=_(L^~) y}.
-Proof. exact: PreLattice.prejoin_max. Qed.
+Proof. exact: (PreLattice.prejoin_max (mixin L)). Qed.
 
 Lemma prejoin_maxl L S:
   {in S &, forall x y, prejoin L S x y <=_(L^~) x}.
-Proof. by move=> x y xS yS; case: (prejoin_max L xS yS). Qed.
+Proof. by move=> x y xS yS; case: (PreLattice.prejoin_max (mixin L) xS yS). Qed.
 
 Lemma prejoin_maxr L S:
   {in S &, forall x y, prejoin L S x y <=_(L^~) y}.
-Proof. by move=> x y xS yS; case: (prejoin_max L xS yS). Qed.
+Proof. by move=> x y xS yS; case: (PreLattice.prejoin_max (mixin L) xS yS). Qed.
 
 Lemma prejoin_sup L S:
   {in S & &, forall x y z, z <=_(L^~) x -> z <=_(L^~) y -> z <=_(L^~) prejoin L S x y}.
-Proof. exact: PreLattice.prejoin_sup. Qed.
+Proof. exact: (PreLattice.prejoin_sup (mixin L)). Qed.
 
 Lemma prejoin_decr L S S': S `<=` S' ->
   {in S &, forall x y, prejoin L S x y <=_(L^~) prejoin L S' x y}.
-Proof. move=> ?????; exact: PreLattice.prejoin_decr. Qed.
+Proof. move=> ?????; exact: (PreLattice.prejoin_decr (mixin L)). Qed.
 
 Lemma dual_premeet L S x y:
-  premeet [preLattice of L^~] S x y = prejoin L S x y.
+  premeet [preLattice of <=:(L^~)] S x y = prejoin L S x y.
 Proof. by []. Qed.
 
 Lemma dual_prejoin L S x y:
-  prejoin [preLattice of L^~] S x y = premeet L S x y.
+  prejoin [preLattice of <=:(L^~)] S x y = premeet L S x y.
 Proof. by []. Qed.
 
 End PreLatticeTheory.
@@ -204,12 +235,12 @@ apply: meet_inf_seq; rewrite ?xlez ?ylez //.
 exact: Ssub.
 Qed.
 
-Definition MeetPreLatticeClass := PreLattice.Class
-  (top M) (Mmeet_min) (Mmeet_inf) (Mmeet_incr)
+Definition MeetPreLatticeMixin := @PreLattice.Mixin
+  T (<=:M) (top M) _ _ (Mmeet_min) (Mmeet_inf) (Mmeet_incr)
   (Mjoin_max) (Mjoin_sup) (Mjoin_decr).
 
-Canonical MeetPreLatticePack :=
-  PreLattice.Pack (Phant T) MeetPreLatticeClass.
+Canonical MeetPreLattice :=
+  PreLattice (<=:M) (<:M) _ _ _ MeetPreLatticeMixin.
 
 End MeetToPreLattice.
 
@@ -217,8 +248,7 @@ Section JoinToPreLattice.
 
 Context {T: choiceType} (J : {bJoinOrder T}).
 
-Canonical JoinPreLatticePack :=
-  PreLattice.Pack (Phant T) (MeetPreLatticeClass [tMeetOrder of (<=:(J^~))]).
+Canonical JoinPreLattice := [preLattice of (<=:(J^~))].
 
 End JoinToPreLattice.
 
@@ -244,7 +274,7 @@ Variable (L: {preLattice T}).
 
 Record finLattice :=
   FinLattice { elements :> {fset T};
-  _ : stable L elements && stable ([preLattice of L^~]) elements }.
+  _ : stable L elements && stable ([preLattice of (<=:(L^~))]) elements }.
 
 Canonical finLattice_subType := Eval hnf in [subType for elements].
 
@@ -279,7 +309,7 @@ Section FinLatticeDual.
 
 Context {T : choiceType} (L : {preLattice T}) (S : {finLattice L}).
 
-Lemma stableDual : (stable [preLattice of L^~] S) && (stable L S).
+Lemma stableDual : (stable [preLattice of (<=:(L^~))] S) && (stable L S).
 Proof. by case: S => S0 stableS0; rewrite andbC. Defined.
 
 Canonical FinLatticeDual := FinLattice stableDual.
@@ -468,8 +498,6 @@ Lemma foo3 (K : {fset T}) (P : T -> T -> T -> Prop) :
   {in K & &, forall x y z, P x y z}.
 Proof. move=> Pval x y z xS yS zS; exact: (Pval [`xS] [`yS] [`zS]). Qed.
 
-
-
 Lemma mem_fjoin L (S: {finLattice L}): {in S &, forall x y, \fjoin_S x y \in S}.
 Proof.
 move=> x y; rewrite !inE /fjoin /=; case: S => /= elts + xS yS.
@@ -491,7 +519,7 @@ Lemma lefI L (S : {finLattice L}) :
 Proof. apply: foo3; exact (@lexI _ S). Qed.
 
 Lemma fmeetC L (S : {finLattice L}) : {in S &, commutative (\fmeet_S)}.
-Proof. 
+Proof.
 apply: foo2=> x y; move: (@meetC _ S x y).
 exact: (@congr1 _ _ (@fsval _ S)).
 Qed.
@@ -522,7 +550,7 @@ Proof. apply: foo2; exact:(@leEmeet _ S). Qed.
 
 Lemma fmeetAC L (S : {finLattice L}) :
   {in S & &, right_commutative (\fmeet_S)}.
-Proof. 
+Proof.
 apply: foo3=> x y z; move:(@meetAC _ S x y z).
 exact: (@congr1 _ _ (@fsval _ S)).
 Qed.
@@ -982,7 +1010,7 @@ rewrite dual_intv_fset_eq -dual_premeet; exact: premeet_intvE.
 Qed.
 
 Lemma stable_interval L (S:{finLattice L}) a b:
-  stable L (interval S a b) && stable ([preLattice of L^~]) (interval S a b).
+  stable L (interval S a b) && stable ([preLattice of (<=:(L^~))]) (interval S a b).
 Proof.
 apply/andP; split; apply/stableP.
 - by move=> ????;rewrite -premeet_intvE // premeet_intv_stable.
@@ -1063,7 +1091,8 @@ Lemma dual_intv_r L (S : {finLattice L}) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
 Proof.  by apply/val_inj/Interval.dual_intv_fset_eq.  Qed.
 
-Definition dual_intv := (@dual_intv_r, fun L => @dual_intv_r [preLattice of L^~]).
+Definition dual_intv :=
+  (@dual_intv_r, fun L => @dual_intv_r [preLattice of (<=:(L^~))]).
 
 Lemma inL_intv L (S : {finLattice L}) (x y : T) :
   x \in S -> x <=_L y -> x \in [< x; y >]_S.
@@ -1200,7 +1229,7 @@ Proof. by exact/val_inj. Qed.
 Lemma fbot_dual_r (L : {preLattice T}) (S : {finLattice L}) :
   \fbot_(S^~s) = \ftop_S.
 
-Notation dualize := (fun f => (@f, fun L => @f [preLattice of L^~])).
+Notation dualize := (fun f => (@f, fun L => @f [preLattice of (<=:(L^~))])).
   Proof. by []. Qed.
 
 Definition fbot_dual := dualize fbot_dual_r.
@@ -1216,7 +1245,7 @@ Lemma ind_decr (S : {finLattice L}) (x : T) :
 Proof.
 move=> x_in_S PS.
 rewrite -[S]dualK -dual_intv fbot_dual.
-apply: (ind_incr (P := fun S' : finLattice [preLattice of L^~] => P S'^~s)) => //.
+apply: (ind_incr (P := fun S' : finLattice [preLattice of (<=:(L^~))] => P S'^~s)) => //.
 - by move=> S' x' ??; rewrite dual_intv; apply: P_decr.
 - by rewrite dualK.
 Qed.
