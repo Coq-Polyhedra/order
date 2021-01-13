@@ -348,7 +348,7 @@ Qed.
 Lemma SmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
   val (Smeet x (Smeet y z)) <=_L val t.
 Proof.
-move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP ->  /=.
+move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->  /=.
 + by rewrite premeet_minl ?fsvalP ?stable_fun.
 + apply:(le_trans _ (premeet_minl L (fsvalP y) (fsvalP z))).
   by rewrite premeet_minr ?fsvalP ?stable_fun.
@@ -359,7 +359,7 @@ Qed.
 Lemma SmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
   val (Smeet (Smeet x y) z) <=_L val t.
 Proof.
-move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP -> /=.
+move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP -> /=.
 + apply:(le_trans _ (premeet_minl L (fsvalP x) (fsvalP y))).
   by rewrite premeet_minl ?fsvalP ?stable_fun.
 + apply:(le_trans _ (premeet_minr L (fsvalP x) (fsvalP y))).
@@ -394,7 +394,7 @@ Qed.
 Lemma SjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
   val (Sjoin x (Sjoin y z)) <=_(L^~) val t.
 Proof.
-move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP ->.
+move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
 - by rewrite prejoin_maxl ?fsvalP.
 - apply:(le_trans _ (prejoin_maxl L (fsvalP y) (fsvalP z))).
   by rewrite prejoin_maxr ?fsvalP.
@@ -405,7 +405,7 @@ Qed.
 Lemma SjoinAr : forall (x y z t : S), t \in [fset x; y; z] ->
   val (Sjoin (Sjoin x y) z) <=_(L^~) val t.
 Proof.
-move=> x y z t; rewrite !inE; case/orP => [/orP []|] /eqP ->.
+move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
 - apply: (le_trans _ (prejoin_maxl L (fsvalP x) (fsvalP y))).
   by rewrite prejoin_maxl ?fsvalP.
 - apply: (le_trans _ (prejoin_maxr L (fsvalP x) (fsvalP y))).
@@ -463,6 +463,7 @@ Proof. exact: (@mem_fjoin _ S^~s). Qed.
 
 Lemma leIfl L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y <=_L x}.
 Proof. move=> x y xS yS; exact: (@leIl _ S [`xS] [`yS]). Qed.
+
 
 Lemma leIfr L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y <=_L y}.
 Proof.
