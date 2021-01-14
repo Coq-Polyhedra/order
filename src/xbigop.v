@@ -57,3 +57,73 @@ elim: r.
 Qed.
 
 End BigOpSub.
+
+Section BigOpSub2.
+
+Context {T : eqType} {op : T -> T -> T} {Q : pred T}.
+
+Hypothesis hc : forall x y, Q x -> Q y -> op x y = op y x.
+Hypothesis ha : forall x y z, Q x -> Q y -> Q z -> op x (op y z) = op (op x y) z.
+Hypothesis hs : forall x y, Q x -> Q y -> Q (op x y).
+Hypothesis hxx : forall x, Q x -> op x x = x.
+
+Lemma perm_eq2C (a b: T) (l : seq T) :
+  perm_eq [:: a, b & l] [:: b, a & l].
+Proof. by have /permPl := perm_catCA [:: a] [:: b] l. Qed.
+
+Lemma big_cons_idx (r : seq T) (x0 y0 : T) :
+  Q x0 -> Q y0 ->
+  \big[op/x0]_(x <- y0::r | Q x) x = \big[op/op x0 y0]_(x <- r | Q x) x.
+Proof.
+move=> Qx0 Qy0; elim: r => [|a l Hind].
+- by rewrite big_cons !big_nil hc ?Qy0 ?Qx0.
+- move: (perm_eq2C y0 a l) => permL.
+  rewrite (big_perm_sub hc ha hs (fun x H => H) Qx0 _ _ permL).
+  by rewrite big_cons [RHS]big_cons Hind.
+Qed.
+
+Lemma big_idxx (r : seq T) (x0 y0 : T):
+  x0 \in r -> y0 \in r -> Q x0 -> Q y0 ->
+  \big[op/x0]_(x <- r | Q x) x = \big[op/y0]_(x <- r | Q x) x.
+Proof.
+move=> x0r y0r Qx0 Qy0; case/boolP: (y0 == x0).
+- by move/eqP => ->.
+- move/negP=> y0nx0; move: (perm_to_rem x0r) => permx0.
+  rewrite (big_perm_sub hc ha hs (fun x H => H) Qx0 _ _ permx0).
+  rewrite (big_perm_sub hc ha hs (fun x H => H) Qy0 _ _ permx0).
+  rewrite !big_cons_idx //.
+  rewrite (perm_mem permx0) inE in y0r.
+  case/orP : y0r => // /perm_to_rem => permy0.
+  rewrite hxx //; have Qy0x0 : Q (op y0 x0) by rewrite hs.
+  rewrite (big_perm_sub hc ha hs (fun x H => H) Qx0 _ _ permy0).
+  rewrite (big_perm_sub hc ha hs (fun x H => H) Qy0x0 _ _ permy0).
+  rewrite !big_cons_idx //.
+  suff -> : op (op y0 x0) y0 = op x0 y0 by [].
+  by rewrite [X in op X _]hc -?ha ?hxx.
+Qed.
+End BigOpSub2.
+
+Section BigOpSubF.
+
+Context {T : eqType} {op : T -> T -> T} {F : T -> T} {P Q : pred T}.
+Context {x0 : T}.
+
+Hypothesis hc : forall x y, Q x -> Q y -> op x y = op y x.
+Hypothesis ha : forall x y z, Q x -> Q y -> Q z -> op x (op y z) = op (op x y) z.
+Hypothesis hs : forall x y, Q x -> Q y -> Q (op x y).
+Hypothesis hxx : forall x, Q x -> op x x = x.
+Hypothesis PQ : forall x, P x -> Q x.
+Hypothesis hF : forall x, Q x -> Q (F x).
+Hypothesis Q0 : Q x0.
+
+Lemma big_map_fun (r : seq T) :
+  \big[op/x0]_(i <- r | P i) F i =
+  \big[op/x0]_(i <- [seq F j | j <- r & P j]) i.
+Proof.
+elim: r.
+- by rewrite /= !big_nil.
+- move=> a l Hind; rewrite /= big_cons; case: (P a) => //=.
+  by rewrite big_cons; congr op.
+Qed.
+
+End BigOpSubF.
