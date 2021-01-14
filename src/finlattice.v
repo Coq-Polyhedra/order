@@ -122,7 +122,7 @@ Definition DualPreLatticeMixin :=
       (PreLattice.premeet_incr m).
 
 Canonical DualPreLatticePack :=
-  PreLattice (dual_rel <=:L) (dual_rel <:L) _ _ _ DualPreLatticeMixin.
+  PreLattice (dual_rel <=:L) _ _ _ _ DualPreLatticeMixin.
 
 End DualPreLattice.
 
@@ -240,7 +240,7 @@ Definition MeetPreLatticeMixin := @PreLattice.Mixin
   (Mjoin_max) (Mjoin_sup) (Mjoin_decr).
 
 (*Canonical MeetPreLattice :=
-  PreLattice (<=:M) (<:M) _ _ _ MeetPreLatticeMixin.
+  PreLattice (<=:M) _ _ _ _ MeetPreLatticeMixin.
 *)
 End MeetToPreLattice.
 
