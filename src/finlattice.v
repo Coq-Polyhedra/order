@@ -300,6 +300,10 @@ Definition inE := (in_finLatticeE, inE).
 Definition fmeet (S: finLattice) := premeet L S.
 Definition fjoin (S: finLattice) := prejoin L S.
 
+Lemma finlattice_eqP (S S' : finLattice) :
+  S =i S' <-> S = S'.
+Proof. by split => [eq |-> //];apply/val_inj/fsetP. Qed.
+
 End FinLattice.
 
 Notation "{ 'finLattice' L }" := (finLattice L) (at level 0, format "{ 'finLattice'  L }").
