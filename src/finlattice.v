@@ -1094,12 +1094,11 @@ Implicit Type (L : {preLattice T}).
 
 Lemma in_interval L (S : {finLattice L}) a b x :
   x \in S -> a <=_L x -> x <=_L b -> x \in [< a ; b >]_S.
-Admitted.
+Proof. exact: Interval.in_interval. Qed.
 
 Lemma intervalE L (S : {finLattice L}) a b x :
   a \in S -> b \in S -> x \in [< a ; b >]_S = (x \in S) && (a <=_L x <=_L b).
-Proof.
-Admitted.
+Proof. exact: Interval.intervalE. Qed.
 
 Lemma intervalP L (S: {finLattice L}) a b x:
   a \in S -> b \in S ->
@@ -1107,6 +1106,16 @@ Lemma intervalP L (S: {finLattice L}) a b x:
    (x \in S /\ a <=_L x <=_L b)
     (x \in [< a ; b >]_S).
 Proof. move=> aS bS; rewrite Interval.intervalE //; exact:andP. Qed.
+
+Lemma in_intv_support L (S: {finLattice L}) a b x :
+  x \in [< a ; b >]_S -> x \in S.
+Proof. exact: Interval.in_intv_support. Qed.
+
+Lemma in_intv_bigrange L (S: {finLattice L}) a b x :
+  x \in [< a ; b >]_S -> 
+  (\big[\fmeet_S / \ftop_S]_(i <- S | i >=_L a) i <=_L
+  x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i).
+Proof. by rewrite !inE /=; case/andP. Qed.
 
 Lemma intv_id L (S: {finLattice L}) : [<\fbot_S; \ftop_S>]_S = S.
 Proof.
@@ -1118,35 +1127,43 @@ case/boolP: (S == fset0 :> {fset _}).
   by rewrite Interval.meet_foo ?le0f ?Interval.join_foo ?lef1.
 Qed.
 
+
+
 Lemma mono_interval L (S : {finLattice L}) (x y x' y' : T) :
   x \in S -> x' \in S -> y \in S -> y' \in S ->
-    x'<=_L x -> y <=_L y' -> [< x; y >]_[< x'; y' >]_S = [< x; y >]_S.
+  x'<=_L x <=_L y'-> x' <=_L y <=_L y' ->
+  [< x; y >]_[< x'; y' >]_S = [< x; y >]_S.
 Proof.
-Admitted.
-(*  move=> lex ley; apply/eqP/fset_eqP => z.
+move=> xS x'S yS y'S x_x'y' y_x'y'.
+case/andP : (x_x'y') => x'lex xley'.
+case/andP : (y_x'y') => x'ley yley'.
+apply/eqP/fset_eqP=> z.
 apply/(sameP idP)/(iffP idP).
-- move=> z_xyS.
-Admitted.*)
+- case/intervalP => // zS /andP [xlez zley].
+  rewrite !intervalE ?xlez ?zley ?andbT ?xS ?x'S ?yS ?y'S ?zS
+    ?x_x'y' ?y_x'y' //=.
+  by rewrite (le_trans x'lex) ?(le_trans _ yley').
+- case/intervalP; [exact/intervalP |exact/intervalP | ].
+  case/intervalP => // zS /andP [x'lez zley'] /andP [xlez zley].
+  by rewrite intervalE ?zS ?xlez ?zley.
+Qed.
 
 Lemma sub_interval L (S : {finLattice L}) a b c d:
   a \in S -> b \in S -> c \in S -> d \in S ->
   a <=_L b -> c <=_L d ->
   ([<a;b>]_S `<=` [<c;d>]_S)%fset = (c <=_L a) && (b <=_L d).
 Proof.
-Admitted.
-(*
-  move=> a b aS bS aleb cled; apply/(sameP idP)/(iffP idP).
-- case/andP => c_le_a b_le_d; apply/fsubsetP => x /in_intervalP
-  [x_in_S a_le_x x_le_b].
-apply/in_intervalP; rewrite x_in_S; split=> //;
-[exact:(le_trans c_le_a) | exact: (le_trans x_le_b)].
+move=> aS bS cS dS aleb cled; apply/(sameP idP)/(iffP idP).
+- case/andP => clea bled; apply/fsubsetP => z.
+  case/intervalP => // zS /andP [alez zleb].
+  by rewrite intervalE // zS (le_trans clea alez) (le_trans zleb bled).
 - move/fsubsetP => sub.
-  have/in_intervalP[]: a \in [<c;d>]_S by
-    apply/sub/in_intervalP; rewrite aS lexx aleb.
-  have/in_intervalP[]: b \in [<c;d>]_S by
-    apply/sub/in_intervalP; rewrite bS lexx aleb.
-  by move=> _ _ -> _ ->.
-Qed.*)
+  have/intervalP: a \in [<c;d>]_S by
+    apply/sub; rewrite in_interval ?aS ?aleb.
+  have/intervalP: b \in [<c;d>]_S by
+    apply/sub; rewrite in_interval ?aS ?aleb.
+  by case/(_ cS dS) => _ /andP [_ ->] /(_ cS dS) [_ /andP [->]].
+Qed.
 
 Lemma dual_intv_r L (S : {finLattice L}) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
@@ -1162,12 +1179,14 @@ by move=> xS xy; apply/Interval.in_interval. Qed.
 
 Lemma inR_intv L (S : {finLattice L}) (x y : T) :
   y \in S -> x <=_L y -> y \in [< x; y >]_S.
-Admitted.
+Proof. 
+have -> : S = (S^~s)^~s by exact/val_inj.
+rewrite -dual_intv => ??; exact: inL_intv.
+Qed.
 
 Lemma in0L_intv L (S : {finLattice L}) (y : T) :
   y \in S -> \fbot_S \in [< \fbot_S; y >]_S.
-Proof.
-Admitted.
+Proof. move=> yS. 
 (*by move=> nz_S; rewrite inL_intv ?mem_fbot ?le0f //; apply/fset0Pn; exists y.
 Qed.*)
 
