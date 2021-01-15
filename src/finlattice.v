@@ -1116,7 +1116,7 @@ Lemma in_intv_support L (S: {finLattice L}) a b x :
 Proof. exact: Interval.in_intv_support. Qed.
 
 Lemma in_intv_bigrange L (S: {finLattice L}) a b x :
-  x \in [< a ; b >]_S -> 
+  x \in [< a ; b >]_S ->
   (\big[\fmeet_S / \ftop_S]_(i <- S | i >=_L a) i <=_L
   x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i).
 Proof. by rewrite !inE /=; case/andP. Qed.
@@ -1183,25 +1183,18 @@ by move=> xS xy; apply/Interval.in_interval. Qed.
 
 Lemma inR_intv L (S : {finLattice L}) (x y : T) :
   y \in S -> x <=_L y -> y \in [< x; y >]_S.
-Proof. 
+Proof.
 have -> : S = (S^~s)^~s by exact/val_inj.
 rewrite -dual_intv => ??; exact: inL_intv.
 Qed.
 
 Lemma in0L_intv L (S : {finLattice L}) (y : T) :
   y \in S -> \fbot_S \in [< \fbot_S; y >]_S.
-Proof. move=> yS. 
-(*by move=> nz_S; rewrite inL_intv ?mem_fbot ?le0f //; apply/fset0Pn; exists y.
-Qed.*)
+Proof. by move=> yS; apply/in_interval; rewrite ?le0f ?(mem_fbot yS). Qed.
 
 Lemma in0R_intv L (S : {finLattice L}) (x : T) :
   x \in S -> \ftop_S \in [< x; \ftop_S >]_S.
-Proof.
-Admitted.
-(*move=> ?; rewrite -mem_intv_dual.
-have <-: \fbot_(S^~s) = \ftop_S by [].
-exact:in0L_intv.
-Qed.*)
+Proof. by move=> yS; apply/in_interval; rewrite ?lef1 ?(mem_ftop yS). Qed.
 
 Lemma intv0E L (S : {finLattice L}) (a b : T) :
   a \in S -> a <=_L b -> \fbot_([<a; b>]_S) = a.
