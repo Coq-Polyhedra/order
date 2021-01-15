@@ -2597,14 +2597,14 @@ by rewrite eq_le lenm /=; apply: (allP (order_path_min le_trans le_ms)).
 Qed.
 
 Lemma lt_sorted_eq s1 s2 : sorted lt s1 -> sorted lt s2 -> s1 =i s2 -> s1 = s2.
-Proof. 
-Admitted.  
+Proof.
+Admitted.
 (*by apply: irr_sorted_eq => //; apply: lt_trans. Qed.*)
 
 Lemma le_sorted_eq s1 s2 :
   sorted le s1 -> sorted le s2 -> perm_eq s1 s2 -> s1 = s2.
 Proof.
-Admitted.  
+Admitted.
 (*exact/sorted_eq/le_anti/le_trans. Qed.*)
 
 Lemma sort_le_id s : sorted le s -> sort le s = s.
@@ -3102,6 +3102,9 @@ End POrderTheory.
 Hint Extern 0 (is_true (le _ _ _)) => apply: lexx : core.
 Hint Resolve lexx ltxx lt_irreflexive ltW lt_eqF : core.
 
+Arguments le_anti {T}.
+Arguments ge_anti {T}.
+Arguments eq_le {T}.
 Arguments leifP {T ord x y C}.
 Arguments leif_refl {T ord x C}.
 Arguments mono_in_leif [T ord A f C].
@@ -3279,7 +3282,7 @@ Lemma meetx1 : right_id 1 meet. Proof. by move=> x; apply/meet_idPl. Qed.
 Lemma meet1x : left_id 1 meet. Proof. by move=> x; apply/meet_idPr. Qed.
 
 Lemma meet_eq1 x y : (x `&` y == 1) = (x == 1) && (y == 1).
-Proof. by rewrite !(@eq_le _ ord) !lex1 lexI. Qed.
+Proof. by rewrite !(eq_le ord) !lex1 lexI. Qed.
 
 Canonical meet_monoid := Monoid.Law meetA meet1x meetx1.
 Canonical meet_comoid := Monoid.ComLaw meetC.
