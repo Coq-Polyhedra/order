@@ -919,6 +919,29 @@ Canonical TBSLattice_pack := TBLattice.Pack (Phant _) (TBSLattice_class).
 
 End FinTBLatticeStructure.
 
+Section FinLattice1.
+
+Context {T : choiceType}.
+Implicit Type (L : {preLattice T}) (a : T).
+
+Lemma stable1 L a : stable L [fset a].
+Proof.
+apply/stableP=> ?? /fset1P-> /fset1P->; apply/fset1P.
+apply/(le_anti L)/andP; split.
+- by apply/premeet_minl; rewrite fset11.
+- by apply/premeet_inf; rewrite ?fset11.
+Qed.
+
+Lemma is_lat1 L a :
+  stable L [fset a] && stable [preLattice of <=:(L^~)] [fset a].
+Proof. by apply/andP; split; apply/stable1. Qed.
+
+Definition lat1 L a := FinLattice (is_lat1 L a).
+
+End FinLattice1.
+
+Notation "[ 'finlattice' a 'for' L ]" := (@lat1 _ L a).
+
 (* ==================================================================== *)
 Section Atom.
 Context {T : choiceType}.
