@@ -844,7 +844,7 @@ Qed.
 Lemma le0f L (S : {finLattice L}) : {in S, forall x, \fbot_S <=_L x}.
 Proof.
 move => x xS; rewrite (fbot_def xS) big_seq.
-rewrite (@big_mem_sub _ _ _ (mem S) _ _ _ _ _ _ x) ?leIfl //. (* TODO: FIX IT *)
+rewrite (big_mem_sub _ _ _ _ xS xS)  ?leIfl //. (* TODO: FIX IT *)
 apply/big_stable => //; apply/mem_fmeet.
 - exact: fmeetC.
 - exact: fmeetA.
@@ -1002,11 +1002,12 @@ have FxS: F x \in [seq F j | j <- S & P j] by
 rewrite big_seq.
 have filtS: forall i, i \in [seq F j | j <- S & P j] -> i \in S by
   move=> i /mapP [j]; rewrite mem_filter => /andP [_ jS] ->; exact: FS.
-rewrite (@big_mem_sub _ _ _ _ (@fmeetC _ _ S) (@fmeetA _ _ S)
-  (@mem_fmeet _ _ S) filtS _ _ _ (@mem_ftop _ _ S _ xS) FxS). (* TODO: FIX IT *)
-rewrite lefIl ?FS //.
-rewrite (big_stable (@mem_fmeet _ _ S)) ?(mem_ftop xS) //.
-by apply: map_f; rewrite mem_filter Px xS.
+rewrite (big_mem_sub _ _ _ filtS _ FxS) ?lefIl ?(filtS _ FxS)
+  ?(big_stable _ filtS) ?(mem_ftop xS) //.
+- exact: mem_fmeet.
+- exact: fmeetC.
+- exact: fmeetA.
+- exact: mem_fmeet.
 Qed.
 
 
@@ -1034,10 +1035,11 @@ suff : ((\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) \in S) &&
   case/andP.
 rewrite big_seq_cond.
 rewrite (@big_stable _ _ _ (fun i => (i \in S) && (le L a i))) //.
-- move=> x y /andP [xS alex] /andP [yS aley].
+Admitted.
+(*- move=> x y /andP [xS alex] /andP [yS aley].
   by rewrite mem_fmeet //= lefI ?alex ?aley.
 - by rewrite (mem_ftop aS) lef1.
-Qed.
+Qed.*)
 
 Lemma join_bar L (S : {finLattice L}) b :
   b \in S -> (\big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i) = b.
@@ -1172,10 +1174,6 @@ move=> AS BS; rewrite intervalE // => /and3P [aS Alea aleB].
 rewrite intervalE // => /and3P [bS Aleb bleB].
 apply/eqP/fset_eqP=> z.
 apply/(sameP idP)/(iffP idP).
-(*case/andP : (x_x'y') => x'lex xley'.
-case/andP : (y_x'y') => x'ley yley'.
-apply/eqP/fset_eqP=> z.
-apply/(sameP idP)/(iffP idP).*)
 - case/intervalP => // zS /andP [alez zleb].
   rewrite !intervalE ?alez ?zleb ?andbT ?aS ?bS ?zS ?Aleb ?Alea //=.
   by rewrite (le_trans Alea) ?(le_trans _ bleB).
