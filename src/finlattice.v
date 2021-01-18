@@ -870,6 +870,14 @@ Proof. exact: (@fjoinf0 _ S^~s). Qed.
 Lemma fmeet1f L (S : {finLattice L}) : {in S, left_id \ftop_S (\fmeet_S)}.
 Proof. exact: (@fjoin0f _ S^~s). Qed.
 
+Lemma ltf1 L (S : {finLattice L}) :
+  {in S, forall x, (x <_L \ftop_S) = (x != \ftop_S)}.
+Proof. by move=> x xS; rewrite lt_neqAle ?lef1 ?andbT. Qed.
+
+Lemma lt0f L (S : {finLattice L}) :
+  {in S, forall x, (\fbot_S <_L x) = (x != \fbot_S)}.
+Proof. by move=> x xS; rewrite lt_def ?le0f ?andbT // eq_sym. Qed.
+
 (* ---------------------------------------------------------------------- *)
 
 Lemma ftop_id L (S: {finLattice L}) :
@@ -1420,10 +1428,10 @@ Context (f g : {fmorphism S1 >-> S2}).
 Lemma fmorph_stable : {in S1, forall x, f x \in S2}.
 Proof. by case: f => ? []. Qed.
 
-Lemma fmorphI : {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}.
+Lemma fmorphU : {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}.
 Proof. by case: f => ? []. Qed.
 
-Lemma fmorphU : {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}.
+Lemma fmorphI : {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}.
 Proof. by case: f => ? []. Qed.
 
 Lemma fmorph0: f \fbot_S1 = \fbot_S2.
@@ -1433,11 +1441,21 @@ Lemma fmorph1: f \ftop_S1 = \ftop_S2.
 Proof. Admitted.
 
 Lemma fmorph_homo : {in S1&, {homo f : x y / x <=_L y}}.
-Proof. Admitted.
+Proof.
+move=> x y xS yS; rewrite (leEfjoin xS) // => /eqP.
+move/(congr1 f); rewrite fmorphU // => <-.
+apply: lefUr; exact: fmorph_stable.
+Qed.
+
 
 Lemma omorph_mono :
   {in S1&, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
-Proof. Admitted.
+Proof.
+move=> f_inj x y xS yS.
+rewrite (leEfjoin xS) ?(leEfjoin (fmorph_stable xS))
+  ?(fmorph_stable yS) //.
+rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; exact: mem_fjoin.
+Qed.
 
 End MorphismTheory.
 
@@ -1492,18 +1510,34 @@ Lemma graded_rank rk :
 Proof. by case: rk => ? []. Qed.
 
 Lemma rank_eq0 rk x : x \in S -> (rk x == 0%N) = (x == \fbot_S).
-Proof. Admitted.
+Proof. 
+move=> xS; apply/(sameP idP)/(iffP idP).
+- by move/eqP => ->; rewrite rank0.
+- apply: contraTT; rewrite -lt0f //.
+  by move/(homo_rank rk (mem_fbot xS) xS); rewrite rank0 lt0n.
+Qed.
 
 Lemma rank_eq1 rk x : x \in S -> (rk x == rk \ftop_S) = (x == \ftop_S).
-Proof. Admitted.
+Proof.
+move=> xS; apply/(sameP idP)/(iffP idP).
+- by move/eqP => ->.
+- apply: contraTT; rewrite -ltf1 //.
+  by move/(homo_rank rk xS (mem_ftop xS)); rewrite neq_ltn => ->.
+Qed.
 
 Lemma rank_gt0 rk x : x \in S -> (0 < rk x)%N = (\fbot_S <_L x).
-Proof. Admitted.
+Proof. move=> xS; rewrite lt0n lt0f //; congr (~~ _); exact: rank_eq0. Qed.
 
 Lemma rank_le1 rk x : x \in S -> (rk x <= rk \ftop_S)%N.
-Proof. Admitted.
+Proof.
+move=> xS; rewrite leq_eqVlt rank_eq1 // -implyNb; apply/implyP.
+rewrite -ltf1 //; apply: homo_rank => //; exact: (mem_ftop xS).
+Qed.
 
 Lemma rank_gt1 rk x : x \in S -> (rk x < rk \ftop_S)%N = (x <_L \ftop_S).
-Proof. Admitted.
+Proof.
+move=> xS; rewrite ltn_neqAle rank_le1 ?andbT ?ltf1 //; congr (~~_).
+exact: rank_eq1.
+Qed.
 
 End RankTheory.
