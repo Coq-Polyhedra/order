@@ -870,6 +870,14 @@ Proof. exact: (@fjoinf0 _ S^~s). Qed.
 Lemma fmeet1f L (S : {finLattice L}) : {in S, left_id \ftop_S (\fmeet_S)}.
 Proof. exact: (@fjoin0f _ S^~s). Qed.
 
+Lemma ltf1 L (S : {finLattice L}) :
+  {in S, forall x, (x <_L \ftop_S) = (x != \ftop_S)}.
+Proof. by move=> x xS; rewrite lt_neqAle ?lef1 ?andbT. Qed.
+
+Lemma lt0f L (S : {finLattice L}) :
+  {in S, forall x, (\fbot_S <_L x) = (x != \fbot_S)}.
+Proof. by move=> x xS; rewrite lt_def ?le0f ?andbT // eq_sym. Qed.
+
 (* ---------------------------------------------------------------------- *)
 
 Lemma ftop_id L (S: {finLattice L}) :
@@ -1287,9 +1295,8 @@ Lemma ind_incr (S : {finLattice L}) (x : T) :
   x \in S -> P S -> P [<x; \ftop_S>]_S.
 Proof.
 move=> xS PS.
-have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
 move: {2}#|`_| (leqnn #|`[< \fbot_S; x >]_S|) => n.
-elim: n S xS PS Sprop0 => [|n ih] S xS PS Sprop0.
+elim: n S xS PS => [|n ih] S xS PS.
 - rewrite leqn0 => /eqP /cardfs0_eq /(congr1 (fun S => x \in S)).
   by rewrite in_fset0 intervalE ?le0f ?lexx
     ?(mem_fbot xS) ?xS.
@@ -1310,7 +1317,6 @@ rewrite !(intv0E, intv1E) ?(mem_ftop xS) ?lef1 //.
 rewrite !mono_interval ?lexx ?lef1 ?(mem_ftop xS)
   ?andbT //.
 apply.
-  by apply/fset0Pn; exists y; rewrite inL_intv ?lef1.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // in0L_intv.
 apply: fproper_ltn_card; rewrite {}/X.
@@ -1380,3 +1386,158 @@ Qed.
 End Ind.
 
 End IntervalTheory.
+
+(* -------------------------------------------------------------------- *)
+Module Morphism.
+Section ClassDef.
+Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
+
+Definition axiom (f : T -> T) :=
+  [/\ {in S1, forall x, f x \in S2}
+    , {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}
+    & {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}].
+
+Structure map (phS1 : phant S1) (phS2 : phant S2) :=
+  Pack {apply; _ : axiom apply}.
+Local Coercion apply : map >-> Funclass.
+
+Context (phS1 : phant S1) (phS2 : phant S2).
+Context (f g : T -> T) (cF : map phS1 phS2).
+
+Definition class := let: Pack _ c as cF' := cF return axiom cF' in c.
+Definition clone fA of phant_id g (apply cF) & phant_id fA class :=
+  @Pack phS1 phS2 f fA.
+End ClassDef.
+
+Module Exports.
+Notation omorphism f := (axiom f).
+Coercion apply : map >-> Funclass.
+Notation OMorphism fM := (Pack (Phant _) fM).
+Notation "{ 'fmorphism' S1 '>->' S2 }" := (map (Phant S1) (Phant S2))
+  (at level 0, format "{ 'fmorphism'  S1  '>->'  S2 }").
+End Exports.
+End Morphism.
+
+Include Morphism.Exports.
+
+(* -------------------------------------------------------------------- *)
+Section MorphismTheory.
+Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
+Context (f g : {fmorphism S1 >-> S2}).
+
+Lemma fmorph_stable : {in S1, forall x, f x \in S2}.
+Proof. by case: f => ? []. Qed.
+
+Lemma fmorphU : {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}.
+Proof. by case: f => ? []. Qed.
+
+Lemma fmorphI : {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}.
+Proof. by case: f => ? []. Qed.
+
+Lemma fmorph0: f \fbot_S1 = \fbot_S2.
+Proof. Admitted.
+
+Lemma fmorph1: f \ftop_S1 = \ftop_S2.
+Proof. Admitted.
+
+Lemma fmorph_homo : {in S1&, {homo f : x y / x <=_L y}}.
+Proof.
+move=> x y xS yS; rewrite (leEfjoin xS) // => /eqP.
+move/(congr1 f); rewrite fmorphU // => <-.
+apply: lefUr; exact: fmorph_stable.
+Qed.
+
+
+Lemma omorph_mono :
+  {in S1&, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
+Proof.
+move=> f_inj x y xS yS.
+rewrite (leEfjoin xS) ?(leEfjoin (fmorph_stable xS))
+  ?(fmorph_stable yS) //.
+rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; exact: mem_fjoin.
+Qed.
+
+End MorphismTheory.
+
+(* -------------------------------------------------------------------- *)
+Module Rank.
+Section ClassDef.
+Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
+
+Definition axiom (rank : T -> nat) :=
+  [/\ rank \fbot_S = 0%N
+    , {in S&, {homo rank : x y / x <_L y >-> (x < y)%N}}
+    & {in S&, forall x z, x <=_L z -> ((rank x).+1 < rank z)%N ->
+        exists y, x <_L y <_L z}].
+
+Structure map (phS : phant S) := Pack {apply; _ : axiom apply}.
+Local Coercion apply : map >-> Funclass.
+
+Context (phS : phant S).
+Context (f g : T -> nat) (cF : map phS).
+
+Definition class := let: Pack _ c as cF' := cF return axiom cF' in c.
+Definition clone fA of phant_id g (apply cF) & phant_id fA class :=
+  @Pack phS f fA.
+End ClassDef.
+
+Module Exports.
+Notation rank f := (axiom f).
+Coercion apply : map >-> Funclass.
+Notation Rank rk := (Pack (Phant _) rk).
+Notation "{ 'rank' S }" := (map (Phant S))
+  (at level 0, format "{ 'rank'  S }").
+End Exports.
+End Rank.
+
+Include Rank.Exports.
+
+(* -------------------------------------------------------------------- *)
+Section RankTheory.
+Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
+
+Implicit Types (rk : {rank S}).
+
+Lemma rank0 rk : rk \fbot_S = 0%N.
+Proof. by case: rk => ? []. Qed.
+
+Lemma homo_rank rk : {in S&, {homo rk : x y / x <_L y >-> (x < y)%N}}.
+Proof. by case: rk => ? []. Qed.
+
+Lemma graded_rank rk :
+  {in S&, forall x z, x <=_L z -> ((rk x).+1 < rk z)%N ->
+    exists y, x <_L y <_L z}.
+Proof. by case: rk => ? []. Qed.
+
+Lemma rank_eq0 rk x : x \in S -> (rk x == 0%N) = (x == \fbot_S).
+Proof. 
+move=> xS; apply/(sameP idP)/(iffP idP).
+- by move/eqP => ->; rewrite rank0.
+- apply: contraTT; rewrite -lt0f //.
+  by move/(homo_rank rk (mem_fbot xS) xS); rewrite rank0 lt0n.
+Qed.
+
+Lemma rank_eq1 rk x : x \in S -> (rk x == rk \ftop_S) = (x == \ftop_S).
+Proof.
+move=> xS; apply/(sameP idP)/(iffP idP).
+- by move/eqP => ->.
+- apply: contraTT; rewrite -ltf1 //.
+  by move/(homo_rank rk xS (mem_ftop xS)); rewrite neq_ltn => ->.
+Qed.
+
+Lemma rank_gt0 rk x : x \in S -> (0 < rk x)%N = (\fbot_S <_L x).
+Proof. move=> xS; rewrite lt0n lt0f //; congr (~~ _); exact: rank_eq0. Qed.
+
+Lemma rank_le1 rk x : x \in S -> (rk x <= rk \ftop_S)%N.
+Proof.
+move=> xS; rewrite leq_eqVlt rank_eq1 // -implyNb; apply/implyP.
+rewrite -ltf1 //; apply: homo_rank => //; exact: (mem_ftop xS).
+Qed.
+
+Lemma rank_gt1 rk x : x \in S -> (rk x < rk \ftop_S)%N = (x <_L \ftop_S).
+Proof.
+move=> xS; rewrite ltn_neqAle rank_le1 ?andbT ?ltf1 //; congr (~~_).
+exact: rank_eq1.
+Qed.
+
+End RankTheory.
