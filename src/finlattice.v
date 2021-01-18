@@ -1287,9 +1287,8 @@ Lemma ind_incr (S : {finLattice L}) (x : T) :
   x \in S -> P S -> P [<x; \ftop_S>]_S.
 Proof.
 move=> xS PS.
-have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
 move: {2}#|`_| (leqnn #|`[< \fbot_S; x >]_S|) => n.
-elim: n S xS PS Sprop0 => [|n ih] S xS PS Sprop0.
+elim: n S xS PS => [|n ih] S xS PS.
 - rewrite leqn0 => /eqP /cardfs0_eq /(congr1 (fun S => x \in S)).
   by rewrite in_fset0 intervalE ?le0f ?lexx
     ?(mem_fbot xS) ?xS.
@@ -1310,7 +1309,6 @@ rewrite !(intv0E, intv1E) ?(mem_ftop xS) ?lef1 //.
 rewrite !mono_interval ?lexx ?lef1 ?(mem_ftop xS)
   ?andbT //.
 apply.
-  by apply/fset0Pn; exists y; rewrite inL_intv ?lef1.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // in0L_intv.
 apply: fproper_ltn_card; rewrite {}/X.
