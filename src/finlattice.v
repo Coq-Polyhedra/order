@@ -1154,6 +1154,14 @@ Lemma in_intv_bigrange L (S: {finLattice L}) a b x :
   x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i).
 Proof. by rewrite !inE /=; case/andP. Qed.
 
+Lemma in_intvL L (S: {finLattice L}) a b x :
+  a \in S -> x \in [< a ; b >]_S -> a <=_L x.
+Admitted.
+
+Lemma in_intvR L (S: {finLattice L}) a b x :
+  b \in S -> x \in [< a ; b >]_S -> x <=_L b.
+Admitted.
+
 Lemma intv_id L (S: {finLattice L}) : [<\fbot_S; \ftop_S>]_S = S.
 Proof.
 case/boolP: (S == fset0 :> {fset _}).
@@ -1163,8 +1171,6 @@ case/boolP: (S == fset0 :> {fset _}).
   rewrite !inE; apply: andb_idr => xS.
   by rewrite Interval.meet_foo ?le0f ?Interval.join_foo ?lef1.
 Qed.
-
-
 
 Lemma mono_interval L (S : {finLattice L}) (A B a b : T) :
   A \in S -> B \in S -> a \in [< A; B >]_S -> b \in [<A ; B >]_S ->
