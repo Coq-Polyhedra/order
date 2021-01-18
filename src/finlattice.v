@@ -830,8 +830,8 @@ Lemma fbot_def L (S : {finLattice L}) x0 :
   x0 \in S -> \fbot_S = \big[\fmeet_S/x0]_(x <- S) x.
 Proof.
 rewrite inE /fbot; case: fpickP => [->//|y0 y0_in_S x0_in_S].
-rewrite big_seq [RHS]big_seq; apply: big_idxx => //;
-  [exact: fmeetC |exact: fmeetA | exact: mem_fmeet| exact: fmeetxx].
+rewrite big_seq [RHS]big_seq; apply: (big_idxx (Q := mem S)) => //;
+  [exact: fmeetC| exact: fmeetA| exact: mem_fmeet| exact: fmeetxx].
 Qed.
 
 Lemma mem_fbot L (S : {finLattice L}) x0 :
@@ -844,7 +844,7 @@ Qed.
 Lemma le0f L (S : {finLattice L}) : {in S, forall x, \fbot_S <=_L x}.
 Proof.
 move => x xS; rewrite (fbot_def xS) big_seq.
-rewrite (big_mem_sub _ _ _ _ xS _ x) ?leIfl //.
+rewrite (@big_mem_sub _ _ _ (mem S) _ _ _ _ _ _ x) ?leIfl //. (* TODO: FIX IT *)
 apply/big_stable => //; apply/mem_fmeet.
 - exact: fmeetC.
 - exact: fmeetA.
@@ -994,8 +994,8 @@ have FxS: F x \in [seq F j | j <- S & P j] by
 rewrite big_seq.
 have filtS: forall i, i \in [seq F j | j <- S & P j] -> i \in S by
   move=> i /mapP [j]; rewrite mem_filter => /andP [_ jS] ->; exact: FS.
-rewrite (big_mem_sub (@fmeetC _ _ S) (@fmeetA _ _ S)
-  (@mem_fmeet _ _ S) filtS (@mem_ftop _ _ S _ xS) _ _ FxS).
+rewrite (@big_mem_sub _ _ _ _ (@fmeetC _ _ S) (@fmeetA _ _ S)
+  (@mem_fmeet _ _ S) filtS _ _ _ (@mem_ftop _ _ S _ xS) FxS). (* TODO: FIX IT *)
 rewrite lefIl ?FS //.
 rewrite (big_stable (@mem_fmeet _ _ S)) ?(mem_ftop xS) //.
 by apply: map_f; rewrite mem_filter Px xS.
@@ -1025,7 +1025,7 @@ suff : ((\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) \in S) &&
   le L a (\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) by
   case/andP.
 rewrite big_seq_cond.
-rewrite (@big_stable _ _ _ _ (fun i => (i \in S) && (le L a i))) //.
+rewrite (@big_stable _ _ _ (fun i => (i \in S) && (le L a i))) //.
 - move=> x y /andP [xS alex] /andP [yS aley].
   by rewrite mem_fmeet //= lefI ?alex ?aley.
 - by rewrite (mem_ftop aS) lef1.
@@ -1218,7 +1218,7 @@ Proof. by move=> yS; rewrite inL_intv ?(mem_fbot yS) ?le0f. Qed.
 
 Lemma in0R_intv L (S : {finLattice L}) (x : T) :
   x \in S -> \ftop_S \in [< x; \ftop_S >]_S.
-Proof. 
+Proof.
 have -> : S = (S^~s)^~s by exact/val_inj.
 rewrite -dual_intv => ?. exact: in0L_intv.
 Qed.
