@@ -1468,7 +1468,7 @@ Definition axiom (rank : T -> nat) :=
   [/\ rank \fbot_S = 0%N
     , {in S&, {homo rank : x y / x <_L y >-> (x < y)%N}}
     & {in S&, forall x z, x <=_L z -> ((rank x).+1 < rank z)%N ->
-        exists y, x <_L y <_L z}].
+        exists2 y, y \in S & x <_L y <_L z}].
 
 Structure map (phS : phant S) := Pack {apply; _ : axiom apply}.
 Local Coercion apply : map >-> Funclass.
@@ -1506,11 +1506,11 @@ Proof. by case: rk => ? []. Qed.
 
 Lemma graded_rank rk :
   {in S&, forall x z, x <=_L z -> ((rk x).+1 < rk z)%N ->
-    exists y, x <_L y <_L z}.
+    exists2 y, y \in S & x <_L y <_L z}.
 Proof. by case: rk => ? []. Qed.
 
 Lemma rank_eq0 rk x : x \in S -> (rk x == 0%N) = (x == \fbot_S).
-Proof. 
+Proof.
 move=> xS; apply/(sameP idP)/(iffP idP).
 - by move/eqP => ->; rewrite rank0.
 - apply: contraTT; rewrite -lt0f //.
