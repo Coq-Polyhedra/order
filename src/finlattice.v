@@ -927,7 +927,7 @@ Implicit Type (L : {preLattice T}) (a : T).
 Lemma stable1 L a : stable L [fset a].
 Proof.
 apply/stableP=> ?? /fset1P-> /fset1P->; apply/fset1P.
-apply/(le_anti L)/andP; split.
+apply/(@le_anti _ L)/andP; split.
 - by apply/premeet_minl; rewrite fset11.
 - by apply/premeet_inf; rewrite ?fset11.
 Qed.
@@ -1213,28 +1213,32 @@ Qed.
 
 Lemma in0L_intv L (S : {finLattice L}) (y : T) :
   y \in S -> \fbot_S \in [< \fbot_S; y >]_S.
-Proof. by move=> yS; apply/in_interval; rewrite ?le0f ?(mem_fbot yS). Qed.
+Proof. by move=> yS; rewrite inL_intv ?(mem_fbot yS) ?le0f. Qed.
+
 
 Lemma in0R_intv L (S : {finLattice L}) (x : T) :
   x \in S -> \ftop_S \in [< x; \ftop_S >]_S.
-Proof. by move=> yS; apply/in_interval; rewrite ?lef1 ?(mem_ftop yS). Qed.
+Proof. 
+have -> : S = (S^~s)^~s by exact/val_inj.
+rewrite -dual_intv => ?. exact: in0L_intv.
+Qed.
 
-Lemma intv0E L (S : {finLattice L}) (a b : T) :
-  a \in S -> a <=_L b -> \fbot_([<a; b>]_S) = a.
+Lemma intv0E L (S : {finLattice L}) :
+  {in S &, forall a b, a <=_L b -> \fbot_([<a; b>]_S) = a}.
 Proof.
-Admitted.
-(*move=> aS ab; apply:fbot_id.
-- by apply/fset0Pn; exists a; rewrite !inE aS ab lexx.
-- by rewrite !inE aS ab lexx.
-- by move=> x; rewrite !inE => /and3P [].
-Qed.*)
+move=> a b aS bS aleb; apply: fbot_id;
+  rewrite ?inL_intv //.
+by move=> x /intervalP; case/(_ aS bS) => _ /andP [].
+Qed.
 
-Lemma intv1E L (S : {finLattice L}) (a b : T) :
-  b \in S -> a <=_L b -> \ftop_[<a; b>]_S = b.
+
+Lemma intv1E L (S : {finLattice L}):
+  {in S &, forall a b, a <=_L b -> \ftop_[<a; b>]_S = b}.
 Proof.
-Admitted.
-(*by move: (@intv0E _ S^~s b a); rewrite -dual_intv.
-Qed.*)
+move=> a b aS bS aleb.
+have -> : S = (S^~s)^~s by exact/val_inj.
+rewrite -dual_intv; exact : intv0E.
+Qed.
 
 Lemma sub_atomic L (S: {finLattice L}) x:
   x \in S -> \fbot_S <_L x ->
@@ -1259,11 +1263,12 @@ case/boolP: (S' == fset0).
   move=> x0 x0_in_S bot_lt_x0; apply: contraT; rewrite negbK => x0_lt_y.
   have/mini_y: x0 \in S'.
   + rewrite in_fsetD intervalE ?(mem_fbot x_in_S) //.
-    admit.
-(*  x0_in_S eq_sym. (lt_eqF bot_lt_x0) (ltW bot_lt_x0) /=.
-    rewrite -lt_def; exact: (lt_le_trans x0_lt_y).
-  by rewrite x0_lt_y.*)
-Admitted.
+    rewrite ?le0f ?x0_in_S //.
+    rewrite ?(ltW (lt_le_trans x0_lt_y y_le_x)) ?andbT.
+    rewrite !inE negb_or (gt_eqF bot_lt_x0) /=.
+    by rewrite (lt_eqF (lt_le_trans x0_lt_y y_le_x)).
+  by rewrite x0_lt_y.
+Qed.
 
 Lemma sub_coatomic L (S: {finLattice L}) x:
   x \in S -> x <_L \ftop_S -> exists2 y, coatom S y & x <=_L y.
@@ -1281,28 +1286,29 @@ Hypothesis (P_incr : forall S, forall x,
 Lemma ind_incr (S : {finLattice L}) (x : T) :
   x \in S -> P S -> P [<x; \ftop_S>]_S.
 Proof.
-Admitted.
-(*
 move=> xS PS.
 have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
 move: {2}#|`_| (leqnn #|`[< \fbot_S; x >]_S|) => n.
 elim: n S xS PS Sprop0 => [|n ih] S xS PS Sprop0.
 - rewrite leqn0 => /eqP /cardfs0_eq /(congr1 (fun S => x \in S)).
-  rewrite in_fset0 => /in_intervalP; case; split=> //.
-  - by rewrite le0f.
-  - by rewrite lexx.
-case/boolP: (atom S x) => [atom_Sx|atomN_Sx]; first by move=> _; apply: P_incr.
-case: (x =P \fbot_S) => [-> _|/eqP neq0_x]; first by rewrite intv_id.
-have bot_lt_x: \fbot_S <_L x by rewrite lt_def eq_sym neq0_x le0f.
-move=> sz; case: (sub_atomic xS bot_lt_x) => y [atom_Sy y_le_x].
+  by rewrite in_fset0 intervalE ?le0f ?lexx
+    ?(mem_fbot xS) ?xS.
+case/boolP: (atom S x) => [atom_Sx|atomN_Sx];
+  first by move=> _; apply: P_incr.
+case: (x =P \fbot_S) => [-> _|/eqP neq0_x];
+  first by rewrite intv_id.
+have bot_lt_x: \fbot_S <_L x by
+  rewrite lt_def eq_sym neq0_x le0f.
+move=> sz; case: (sub_atomic xS bot_lt_x) =>
+  y atom_Sy y_le_x.
 have yS: y \in S by case/atomP: atom_Sy.
-have nz_S: S != fset0 :> {fset _} by apply/fset0Pn; exists x.
 have ne_xy: x != y by apply: contraNneq atomN_Sx => ->.
-have: x \in [< y; \ftop_S >]_S.
-- by apply/in_intervalP; rewrite xS y_le_x lef1.
+have: x \in [< y; \ftop_S >]_S by
+  rewrite intervalE ?y_le_x ?lef1 ?(mem_ftop xS) ?xS ?yS.
 move/ih => /(_ (P_incr atom_Sy PS)).
-rewrite !(intv0E, intv1E) ?mem_ftop ?lef1 //.
-rewrite !mono_interval ?lexx ?lef1 //.
+rewrite !(intv0E, intv1E) ?(mem_ftop xS) ?lef1 //.
+rewrite !mono_interval ?lexx ?lef1 ?(mem_ftop xS)
+  ?andbT //.
 apply.
   by apply/fset0Pn; exists y; rewrite inL_intv ?lef1.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
@@ -1312,11 +1318,11 @@ rewrite fsetD1K ?in0L_intv //.
 apply: (@fsub_proper_trans _ ([< \fbot_S; x >]_S `\ \fbot_S)); last first.
 - by apply/fproperD1; rewrite in0L_intv.
 apply/fsubsetD1P; split.
-- by rewrite sub_interval ?le0f ?lexx.
-apply: contraL atom_Sy => /in_intervalP[_].
-rewrite le_eqVlt (le_gtF (le0f nz_S yS))  // orbF => /eqP-> _.
-by apply/negP => /atomP; rewrite ltxx; case.
-Qed.*)
+- rewrite sub_interval ?le0f ?(mem_fbot xS) ?xS ?yS //=.
+apply: contraL atom_Sy; rewrite intervalE //.
+case/and3P => _ ylebot _; apply/negP => /atomP[].
+by rewrite (le_gtF ylebot).
+Qed.
 End IndIncr.
 
 
@@ -1365,14 +1371,12 @@ Hypothesis (P_decr : forall (S:{finLattice L}), forall x,
 Lemma ind_id (S : {finLattice L}) (x y : T) :
   x \in S -> y \in S -> x <=_L y -> P S -> P [<x; y>]_S.
 Proof.
-Admitted.
-(*move=> xS yS le_xy PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
+move=> xS yS le_xy PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
 have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
-suff: P [< \fbot_[< x; \ftop_S >]_S; y >]_[< x; \ftop_S >]_S.
-- by rewrite intv0E ?lef1 // mono_interval // ?lexx ?lef1.
-apply: ind_decr => //; apply/in_intervalP; split=> //.
-by rewrite lef1.
-Qed.*)
+suff: P [< \fbot_[< x; \ftop_S >]_S; y >]_[< x; \ftop_S >]_S by
+  rewrite intv0E ?lef1 // ?mono_interval // ?lef1 ?andbT ?(mem_ftop xS).
+by apply: ind_decr; rewrite ?intervalE // ?le_xy ?lef1 ?yS ?(mem_ftop xS).
+Qed.
 End Ind.
 
 End IntervalTheory.
