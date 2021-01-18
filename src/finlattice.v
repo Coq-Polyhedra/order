@@ -1164,23 +1164,23 @@ Qed.
 
 
 
-Lemma mono_interval L (S : {finLattice L}) (x y x' y' : T) :
-  x \in S -> x' \in S -> y \in S -> y' \in S ->
-  x'<=_L x <=_L y'-> x' <=_L y <=_L y' ->
-  [< x; y >]_[< x'; y' >]_S = [< x; y >]_S.
+Lemma mono_interval L (S : {finLattice L}) (A B a b : T) :
+  A \in S -> B \in S -> a \in [< A; B >]_S -> b \in [<A ; B >]_S ->
+  [< a; b >]_[< A; B >]_S = [< a; b >]_S.
 Proof.
-move=> xS x'S yS y'S x_x'y' y_x'y'.
-case/andP : (x_x'y') => x'lex xley'.
-case/andP : (y_x'y') => x'ley yley'.
+move=> AS BS; rewrite intervalE // => /and3P [aS Alea aleB].
+rewrite intervalE // => /and3P [bS Aleb bleB].
 apply/eqP/fset_eqP=> z.
 apply/(sameP idP)/(iffP idP).
-- case/intervalP => // zS /andP [xlez zley].
-  rewrite !intervalE ?xlez ?zley ?andbT ?xS ?x'S ?yS ?y'S ?zS
-    ?x_x'y' ?y_x'y' //=.
-  by rewrite (le_trans x'lex) ?(le_trans _ yley').
-- case/intervalP; [exact/intervalP |exact/intervalP | ].
-  case/intervalP => // zS /andP [x'lez zley'] /andP [xlez zley].
-  by rewrite intervalE ?zS ?xlez ?zley.
+(*case/andP : (x_x'y') => x'lex xley'.
+case/andP : (y_x'y') => x'ley yley'.
+apply/eqP/fset_eqP=> z.
+apply/(sameP idP)/(iffP idP).*)
+- case/intervalP => // zS /andP [alez zleb].
+  rewrite !intervalE ?alez ?zleb ?andbT ?aS ?bS ?zS ?Aleb ?Alea //=.
+  by rewrite (le_trans Alea) ?(le_trans _ bleB).
+- case/intervalP; rewrite intervalE ?aS ?bS ?Alea ?Aleb //.
+  by case/and3P => zS _ _ alezleb; apply/intervalP.
 Qed.
 
 Lemma sub_interval L (S : {finLattice L}) a b c d:
@@ -1307,15 +1307,15 @@ case: (x =P \fbot_S) => [-> _|/eqP neq0_x];
 have bot_lt_x: \fbot_S <_L x by
   rewrite lt_def eq_sym neq0_x le0f.
 move=> sz; case: (sub_atomic xS bot_lt_x) =>
-  y atom_Sy y_le_x.
+  y atom_Sy ylex.
 have yS: y \in S by case/atomP: atom_Sy.
 have ne_xy: x != y by apply: contraNneq atomN_Sx => ->.
 have: x \in [< y; \ftop_S >]_S by
-  rewrite intervalE ?y_le_x ?lef1 ?(mem_ftop xS) ?xS ?yS.
+  rewrite intervalE ?ylex ?lef1 ?(mem_ftop xS) ?xS ?yS.
 move/ih => /(_ (P_incr atom_Sy PS)).
 rewrite !(intv0E, intv1E) ?(mem_ftop xS) ?lef1 //.
-rewrite !mono_interval ?lexx ?lef1 ?(mem_ftop xS)
-  ?andbT //.
+rewrite !mono_interval ?in0R_intv ?inL_intv
+  ?intervalE ?yS ?(mem_ftop xS) ?xS ?ylex ?lef1 //.
 apply.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // in0L_intv.
@@ -1377,11 +1377,12 @@ Hypothesis (P_decr : forall (S:{finLattice L}), forall x,
 Lemma ind_id (S : {finLattice L}) (x y : T) :
   x \in S -> y \in S -> x <=_L y -> P S -> P [<x; y>]_S.
 Proof.
-move=> xS yS le_xy PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
+move=> xS yS xley PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
 have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
-suff: P [< \fbot_[< x; \ftop_S >]_S; y >]_[< x; \ftop_S >]_S by
-  rewrite intv0E ?lef1 // ?mono_interval // ?lef1 ?andbT ?(mem_ftop xS).
-by apply: ind_decr; rewrite ?intervalE // ?le_xy ?lef1 ?yS ?(mem_ftop xS).
+suff: P [< \fbot_[< x; \ftop_S >]_S; y >]_[< x; \ftop_S >]_S.
+  rewrite intv0E ?mono_interval ?andbT ?inL_intv ?intervalE
+    ?yS ?xley ?(mem_ftop xS) ?lef1 //.
+by apply: ind_decr; rewrite ?intervalE // ?xley ?lef1 ?yS ?(mem_ftop xS).
 Qed.
 End Ind.
 
@@ -1395,7 +1396,9 @@ Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
 Definition axiom (f : T -> T) :=
   [/\ {in S1, forall x, f x \in S2}
     , {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}
-    & {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}].
+    , {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}
+    , f \fbot_S1 = \fbot_S2
+    & f \ftop_S1 = \ftop_S2].
 
 Structure map (phS1 : phant S1) (phS2 : phant S2) :=
   Pack {apply; _ : axiom apply}.
@@ -1434,11 +1437,11 @@ Proof. by case: f => ? []. Qed.
 Lemma fmorphI : {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}.
 Proof. by case: f => ? []. Qed.
 
-Lemma fmorph0: f \fbot_S1 = \fbot_S2.
-Proof. Admitted.
+Lemma fmorph0 : f \fbot_S1 = \fbot_S2.
+Proof. by case: f => ? []. Qed.
 
 Lemma fmorph1: f \ftop_S1 = \ftop_S2.
-Proof. Admitted.
+Proof. by case: f => ? []. Qed.
 
 Lemma fmorph_homo : {in S1&, {homo f : x y / x <=_L y}}.
 Proof.
