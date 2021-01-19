@@ -13,6 +13,106 @@ Local Open Scope ring_scope.
 Import RelOrder.
 Import RelOrder.Theory.
 
+(* -------------------------------------------------------------------- *)
+(* TODO: move this section to relorder.v                                *)
+Section POrderMonotonyTheory.
+Context (T T' : choiceType) (r : {pOrder T}) (r' : {pOrder T'}).
+Context (D D' : pred T) (f : T -> T').
+
+Hint Resolve lt_neqAle le_anti : core.
+
+Lemma ltW_homo :
+     {homo f : x y / x <_r  y >-> x <_r'  y}
+  -> {homo f : x y / x <=_r y >-> x <=_r' y}.
+Proof. by apply: homoW. Qed.
+
+Lemma inj_homo_lt :
+     injective f
+  -> {homo f : x y / x <=_r y >-> x <=_r' y}
+  -> {homo f : x y / x <_r  y >-> x <_r'  y}.
+Proof. exact: inj_homo. Qed.
+
+Lemma inc_inj : {mono f : x y / x <=_r y >-> x <=_r' y} -> injective f.
+Proof. exact: mono_inj. Qed.
+
+Lemma leW_mono :
+     {mono f : x y / x <=_r y >-> x <=_r' y}
+  -> {mono f : x y / x <_r  y >-> x <_r'  y}.
+Proof. exact: anti_mono. Qed.
+
+Lemma ltW_homo_in :
+     {in D & D', {homo f : x y / x <_r  y >-> x <_r'  y}}
+  -> {in D & D', {homo f : x y / x <=_r y >-> x <=_r' y}}.
+Proof. exact: homoW_in. Qed.
+
+Lemma inj_homo_lt_in :
+     {in D & D', injective f}
+  -> {in D & D', {homo f : x y / x <=_r y >-> x <=_r' y}}
+  -> {in D & D', {homo f : x y / x <_r  y >-> x <_r'  y}}.
+Proof. exact: inj_homo_in. Qed.
+
+Lemma inc_inj_in :
+      {in D &, {mono f : x y / x <=_r y >-> x <=_r' y}}
+   -> {in D &, injective f}.
+Proof. exact: mono_inj_in. Qed.
+
+Lemma leW_mono_in :
+     {in D &, {mono f : x y / x <=_r y >-> x <=_r' y}}
+  -> {in D &, {mono f : x y / x <_r  y >-> x <_r'  y}}.
+Proof. exact: anti_mono_in. Qed.
+End POrderMonotonyTheory.
+
+(* -------------------------------------------------------------------- *)
+(* TODO: move this section to relorder.v                                *)
+Section POrderMonotonyTheoryCodom.
+Context (d : unit) (T : choiceType) (T' : porderType d) (r : {pOrder T}).
+Context (D D' : pred T) (f : T -> T').
+
+Hint Resolve lt_neqAle le_anti : core.
+Hint Resolve Order.POrderTheory.lt_neqAle Order.POrderTheory.le_anti : core.
+
+Lemma ltW_homo_as :
+     {homo f : x y / x <_r  y >-> (x <  y)%O}
+  -> {homo f : x y / x <=_r y >-> (x <= y)%O}.
+Proof. by apply: homoW. Qed.
+
+Lemma inj_homo_lt_as :
+     injective f
+  -> {homo f : x y / x <=_r y >-> (x <= y)%O}
+  -> {homo f : x y / x <_r  y >-> (x <  y)%O}.
+Proof. exact: inj_homo. Qed.
+
+Lemma inc_inj_as : {mono f : x y / x <=_r y >-> (x <= y)%O} -> injective f.
+Proof. exact: mono_inj. Qed.
+
+Lemma leW_mono_as :
+     {mono f : x y / x <=_r y >-> (x <= y)%O}
+  -> {mono f : x y / x <_r  y >-> (x <  y)%O}.
+Proof. exact: anti_mono. Qed.
+
+Lemma ltW_homo_in_as :
+     {in D & D', {homo f : x y / x <_r  y >-> (x <  y)%O}}
+  -> {in D & D', {homo f : x y / x <=_r y >-> (x <= y)%O}}.
+Proof. exact: homoW_in. Qed.
+
+Lemma inj_homo_lt_in_as :
+     {in D & D', injective f}
+  -> {in D & D', {homo f : x y / x <=_r y >-> (x <= y)%O}}
+  -> {in D & D', {homo f : x y / x <_r  y >-> (x <  y)%O}}.
+Proof. exact: inj_homo_in. Qed.
+
+Lemma inc_inj_in_as :
+      {in D &, {mono f : x y / x <=_r y >-> (x <= y)%O}}
+   -> {in D &, injective f}.
+Proof. exact: mono_inj_in. Qed.
+
+Lemma leW_mono_in_as :
+     {in D &, {mono f : x y / x <=_r y >-> (x <= y)%O}}
+  -> {in D &, {mono f : x y / x <_r  y >-> (x <  y)%O}}.
+Proof. exact: anti_mono_in. Qed.
+End POrderMonotonyTheoryCodom.
+
+(* -------------------------------------------------------------------- *)
 Module PreLattice.
 Section ClassDef.
 
@@ -83,9 +183,7 @@ Definition pack (m0 : mixin_of leT wT premeetT prejoinT) :=
 
 End ClassDef.
 
-
 (* ---------------------------------------------------------------------- *)
-
 Module Exports.
 Coercion base : class_of >-> POrder.class_of.
 Coercion pOrder : order >-> POrder.order.
@@ -192,7 +290,6 @@ Proof. by []. Qed.
 End PreLatticeTheory.
 
 (* ================================================================== *)
-
 Section MeetToPreLattice.
 
 Context {T: choiceType} (M : {tMeetOrder T}).
@@ -1417,9 +1514,9 @@ Definition clone fA of phant_id g (apply cF) & phant_id fA class :=
 End ClassDef.
 
 Module Exports.
-Notation omorphism f := (axiom f).
+Notation fmorphism f := (axiom f).
 Coercion apply : map >-> Funclass.
-Notation OMorphism fM := (Pack (Phant _) fM).
+Notation FMorphism fM := (Pack (Phant _) fM).
 Notation "{ 'fmorphism' S1 '>->' S2 }" := (map (Phant S1) (Phant S2))
   (at level 0, format "{ 'fmorphism'  S1  '>->'  S2 }").
 End Exports.
@@ -1451,19 +1548,16 @@ Lemma fmorph_homo : {in S1&, {homo f : x y / x <=_L y}}.
 Proof.
 move=> x y xS yS; rewrite (leEfjoin xS) // => /eqP.
 move/(congr1 f); rewrite fmorphU // => <-.
-apply: lefUr; exact: fmorph_stable.
+by apply/lefUr; apply: fmorph_stable.
 Qed.
-
 
 Lemma omorph_mono :
   {in S1&, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
 Proof.
-move=> f_inj x y xS yS.
-rewrite (leEfjoin xS) ?(leEfjoin (fmorph_stable xS))
-  ?(fmorph_stable yS) //.
-rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; exact: mem_fjoin.
+move=> f_inj x y xS yS; rewrite (leEfjoin xS) //.
+rewrite (leEfjoin (fmorph_stable xS)) ?(fmorph_stable yS) //.
+by rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; apply: mem_fjoin.
 Qed.
-
 End MorphismTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1508,8 +1602,11 @@ Implicit Types (rk : {rank S}).
 Lemma rank0 rk : rk \fbot_S = 0%N.
 Proof. by case: rk => ? []. Qed.
 
-Lemma homo_rank rk : {in S&, {homo rk : x y / x <_L y >-> (x < y)%N}}.
+Lemma homo_rank_lt rk : {in S&, {homo rk : x y / x <_L y >-> (x < y)%N}}.
 Proof. by case: rk => ? []. Qed.
+
+Lemma homo_rank_le rk : {in S&, {homo rk : x y / x <=_L y >-> (x <= y)%N}}.
+Proof. by apply/(ltW_homo_in_as (f := rk))/homo_rank_lt. Qed.
 
 Lemma graded_rank rk :
   {in S&, forall x z, x <=_L z -> ((rk x).+1 < rk z)%N ->
@@ -1520,31 +1617,107 @@ Lemma rank_eq0 rk x : x \in S -> (rk x == 0%N) = (x == \fbot_S).
 Proof.
 move=> xS; apply/(sameP idP)/(iffP idP).
 - by move/eqP => ->; rewrite rank0.
-- apply: contraTT; rewrite -lt0f //.
-  by move/(homo_rank rk (mem_fbot xS) xS); rewrite rank0 lt0n.
+- apply: contraTT; rewrite -lt0f // => /(homo_rank_lt rk (mem_fbot xS) xS).
+  by rewrite rank0 lt0n.
 Qed.
 
 Lemma rank_eq1 rk x : x \in S -> (rk x == rk \ftop_S) = (x == \ftop_S).
 Proof.
-move=> xS; apply/(sameP idP)/(iffP idP).
-- by move/eqP => ->.
-- apply: contraTT; rewrite -ltf1 //.
-  by move/(homo_rank rk xS (mem_ftop xS)); rewrite neq_ltn => ->.
+move=> xS; apply/(sameP idP)/(iffP idP) => [/eqP->//|].
+apply: contraTT; rewrite -ltf1 // => /(homo_rank_lt rk xS (mem_ftop xS)).
+by rewrite neq_ltn => ->.
 Qed.
 
 Lemma rank_gt0 rk x : x \in S -> (0 < rk x)%N = (\fbot_S <_L x).
 Proof. move=> xS; rewrite lt0n lt0f //; congr (~~ _); exact: rank_eq0. Qed.
 
 Lemma rank_le1 rk x : x \in S -> (rk x <= rk \ftop_S)%N.
-Proof.
-move=> xS; rewrite leq_eqVlt rank_eq1 // -implyNb; apply/implyP.
-rewrite -ltf1 //; apply: homo_rank => //; exact: (mem_ftop xS).
-Qed.
+Proof. by move=> xS; apply/homo_rank_le/lef1 => //; apply/(mem_ftop xS). Qed.
 
 Lemma rank_gt1 rk x : x \in S -> (rk x < rk \ftop_S)%N = (x <_L \ftop_S).
 Proof.
-move=> xS; rewrite ltn_neqAle rank_le1 ?andbT ?ltf1 //; congr (~~_).
-exact: rank_eq1.
+by move=> xS; rewrite ltn_neqAle rank_le1 // andbT ltf1 // rank_eq1.
 Qed.
 
+Lemma rankI rk (x y : T) : x \in S -> y \in S ->
+  (rk (\fmeet_S x  y) <= minn (rk x) (rk y))%N.
+Proof. 
+move=> xS yS; rewrite leq_min !homo_rank_le ?(leIfl, leIfr) //;
+  by apply: mem_fmeet.
+Qed.
 End RankTheory.
+
+(* -------------------------------------------------------------------- *)
+Section RankInd.
+Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
+Context (rk : {rank S}) (P : T -> Prop).
+
+Hypothesis PH :
+  {in S, forall x, {in S, forall y, (rk y < rk x)%N -> P y} -> P x}.
+
+Lemma rank_ind x : x \in S -> P x.
+Proof.
+move: {2}(rk x) (leqnn (rk x)) => n; elim: n x => [|n ih] x.
++ move=> + xS; rewrite leqn0 rank_eq0 // => /eqP->.
+  apply: PH; first  by rewrite (mem_fbot xS).
+  by move=> y yS; rewrite rank0.
+rewrite leq_eqVlt=> /orP[]; last by rewrite ltnS => /ih.
+move/eqP => rkx xS; apply: PH => // y yS.
+by rewrite rkx ltnS => /ih; apply.
+Qed.
+End RankInd.
+
+Arguments rank_ind [_ _ _] _ [_].
+
+(* -------------------------------------------------------------------- *)
+Section GradedRankS.
+Context (T : choiceType) (L : {preLattice T}).
+Context (S : {finLattice L}) (rk : {rank S}).
+
+Lemma graded_rankS (x : T) : x \in S ->
+  (0 < rk x)%N -> exists y : T, [/\ y \in S, y <_L x & (rk y).+1 = rk x].
+Proof.
+move=> xS; rewrite lt0n rank_eq0 // => nz_x; case/boolP: (rk x < 2)%N.
++ rewrite ltnS leq_eqVlt ltnS leqn0 rank_eq0 // (negbTE nz_x) orbF.
+  move=> /eqP->; exists \fbot_S; split=> //; first exact: (mem_fbot xS).
+  - by rewrite lt0f // (mem_fbot xS). - by rewrite rank0.
+rewrite -leqNgt => gt1_rkx. case: (@graded_rank _ _ _ rk \fbot_S x) => //.
+- by apply: (mem_fbot xS). - by rewrite (le0f xS). - by rewrite rank0.
+move=> y; move: {2}(rk x - rk y)%N (leqnn (rk x - rk y)).
+move=> n; elim: n y => [|n ih] y.
++ rewrite leqn0 subn_eq0 => le_rk_xy yS /andP[_ /homo_rank_lt].
+  by move=> /(_ _ rk yS xS); rewrite ltnNge le_rk_xy.
+rewrite leq_eqVlt => /orP[]; last by rewrite ltnS => /ih.
+move=> h; have {h}: rk x = ((rk y).+1 + n)%N.
++ have: (rk x - rk y != 0)%N by rewrite (eqP h).
+  rewrite subn_eq0 -ltnNge => lt_rk_yx.
+  by rewrite addSnnS -(eqP h) addnC subnK // ltnW.
+case: (n =P 0)%N => [{ih}-> rkxE yS /andP[_ lt_yx]|/eqP nz_n rkxE yS].
++ by exists y => //; rewrite rkxE addn0.
+case/andP => [gt0_y lt_yx]; case: (@graded_rank _ _ _ rk y x) => //.
++ by apply/ltW. + by rewrite rkxE -[X in (X < _)%N]addn0 ltn_add2l lt0n.
+move=> z zS /andP[lt_yz lt_zx]; case: (ih z) => //.
++ by rewrite rkxE leq_subCl addnK; apply: homo_rank_lt.
++ by rewrite (lt_trans gt0_y lt_yz) lt_zx.
+by move=> t [tS lt_tx <-]; exists t.
+Qed.
+End GradedRankS.
+
+(* -------------------------------------------------------------------- *)
+Section FMorphismRank.
+
+Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
+Context (f : {fmorphism S1 >-> S2}) (rk1 : {rank S1}) (rk2 : {rank S2}).
+
+Lemma rank_morph x :
+  x \in S1 -> {in S1&, injective f} ->  (rk1 x <= rk2 (f x))%N.
+Proof.
+move=> + inj_f; move: x; apply: (rank_ind rk1) => x xS1 ih.
+case: (x =P \fbot_S1) => [->|]; first by rewrite rank0.
+move/eqP; rewrite -(rank_eq0 rk1) // -lt0n => /graded_rankS -/(_ xS1).
+case=> y [yS1 lt_yx <-]; apply: (leq_ltn_trans (ih _ _ _)) => //.
++ by apply: homo_rank_lt.
+apply/homo_rank_lt; try by apply/fmorph_stable.
+by apply/(inj_homo_lt_in inj_f (fmorph_homo f)).
+Qed.
+End FMorphismRank.
