@@ -1721,3 +1721,24 @@ apply/homo_rank_lt; try by apply/fmorph_stable.
 by apply/(inj_homo_lt_in inj_f (fmorph_homo f)).
 Qed.
 End FMorphismRank.
+
+(* -------------------------------------------------------------------- *)
+Section Atomistic.
+Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
+
+Definition atomistic_r (a : S) :=
+  [exists A : {fset S},
+       [forall x in A, atom S (val x)]
+    && (a == (\big[@Sjoin _ _ S/Sbot a]_(x in A) x))].
+
+Definition atomistic (a : T) :=
+  if @idP (a \in S) is  ReflectT h then atomistic_r [` h] else false.
+
+Definition coatomistic_r (a : S) :=
+  [exists A : {fset S},
+       [forall x in A, coatom S (val x)]
+    && (a == (\big[@Smeet _ _ S/Stop a]_(x in A) x))].
+
+Definition coatomistic (a : T) :=
+  if @idP (a \in S) is  ReflectT h then coatomistic_r [` h] else false.
+End Atomistic.
