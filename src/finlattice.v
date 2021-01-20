@@ -1107,13 +1107,24 @@ rewrite (big_mem_sub _ _ _ filtS _ FxS) ?lefIl ?(filtS _ FxS)
 - exact: mem_fmeet.
 Qed.
 
-
 Lemma join_foo L (S: {finLattice L}) (P : pred T) (F : T -> T) x :
   {in S, forall y, F y \in S} -> x \in S -> P x ->
      F x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | P i) F i.
 Proof. exact: (@meet_foo _ S^~s). Qed.
 
+Lemma fmeetsP L (S : {finLattice L}) (P : pred T) (F : T -> T) x :
+  {in S, forall y, P y -> x <=_L F y} -> x <=_L \big[\fmeet_S / \ftop_S]_(y <- S | P y) F y.
+Admitted.
 
+Lemma fjoin_meets L (S: {finLattice L}) x y :
+  x \in S -> y \in S ->
+  \fjoin_S x y = \big[\fmeet_S / \ftop_S]_(i <- S | (x <=_L i) && (y <=_L i)) i.
+Proof.
+move=> xS yS; apply/(le_anti L)/andP; split; last first.
+- apply/meet_foo; rewrite ?mem_fjoin //.
+  by apply/andP; split; rewrite ?lefUl ?lefUr.
+- by apply/fmeetsP=> ???; rewrite leUf.
+Qed.
 
 Definition interval L (S : {finLattice L}) (a b : T) :=
   [fset x | x in S & (\big[\fmeet_S / \ftop_S]_(i <- S | i >=_L a) i <=_L
@@ -1516,7 +1527,7 @@ End ClassDef.
 Module Exports.
 Notation fmorphism f := (axiom f).
 Coercion apply : map >-> Funclass.
-Notation FMorphism fM := (Pack (Phant _) fM).
+Notation FMorphism fM := (Pack (Phant _) (Phant _) fM).
 Notation "{ 'fmorphism' S1 '>->' S2 }" := (map (Phant S1) (Phant S2))
   (at level 0, format "{ 'fmorphism'  S1  '>->'  S2 }").
 End Exports.
@@ -1641,7 +1652,7 @@ Qed.
 
 Lemma rankI rk (x y : T) : x \in S -> y \in S ->
   (rk (\fmeet_S x  y) <= minn (rk x) (rk y))%N.
-Proof. 
+Proof.
 move=> xS yS; rewrite leq_min !homo_rank_le ?(leIfl, leIfr) //;
   by apply: mem_fmeet.
 Qed.
