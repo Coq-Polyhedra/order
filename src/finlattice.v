@@ -897,22 +897,78 @@ Proof. exact: (@fmeetKU _ S^~s). Qed.
 
 End FMeetJoinTheory.
 
-(* -------------------------------------------------------------------- *)
-Lemma mem_bigfmeet L (S: {finLattice L}) (P : pred T) (F : T -> T) x :
-  x \in S -> {in S, forall y, F y \in S} ->
-  \big[\fmeet_S / x]_(i <- S | P i) F i \in S.
+Section FBigTheory.
+
+Lemma mem_bigfmeet L (S: {finLattice L})
+  (r : seq T) (P : pred T) (F : T -> T) x :
+  x \in r -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
+  \big[\fmeet_S / x]_(i <- r | P i) F i \in S.
 Proof.
-move=> xS FS; rewrite big_seq_cond; apply: (big_ind (fun x => x \in S)) => //.
-  exact: mem_fmeet.
-move=> ? /andP [? _]; exact: FS.
+move=> xr FS rS; rewrite big_seq_cond; apply: (big_ind (fun x => x \in S)).
+- exact: rS.
+- exact: mem_fmeet.
+- by move=> i /andP [/rS /FS].
 Qed.
 
-Lemma mem_bigfjoin L (S: {finLattice L}) (P : pred T) (F : T -> T) x :
-  x \in S -> {in S, forall y, F y \in S} ->
-  \big[\fjoin_S / x]_(i <- S | P i) F i \in S.
+Lemma mem_bigfjoin L (S: {finLattice L})
+  (r : seq T) (P : pred T) (F : T -> T) x :
+  x \in r -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
+  \big[\fjoin_S / x]_(i <- r | P i) F i \in S.
 Proof.
 exact: (@mem_bigfmeet _ S^~s).
 Qed.
+
+Lemma fmeet_inf_seq L (S : {finLattice L})
+  (r : seq T) (P : {pred T}) (F : T -> T) x :
+  x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
+  \big[\fmeet_S / F x]_(i <- r | P i) F i <=_L F x.
+Proof.
+move=> xr Px FS rS.
+suff: (\big[\fmeet_S / F x]_(i <- r | P i) F i <=_L F x) &&
+(\big[\fmeet_S / F x]_(i <- r | P i) F i \in S) by case/andP.
+rewrite big_seq_cond; apply: (big_rec (fun y => (y <=_L F x) && (y \in S))).
+- by rewrite lexx FS ?rS.
+- move=> a b /andP [/rS aS _] /andP [bleFx bS].
+  by rewrite lefIr ?mem_fmeet ?FS // rS.
+Qed.
+
+Lemma fmeet_max_seq L (S : {finLattice L})
+  (r : seq T) (P : {pred T}) (F : T -> T) x u:
+  x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} -> 
+  F x <=_L u -> u \in S ->
+  \big[\fmeet_S / F x]_(i <- r | P i) F i <=_L u.
+Proof.
+move=> xr Px FS rS Fxleu uS.
+suff: (\big[\fmeet_S / F x]_(i <- r | P i) F i <=_L u) &&
+(\big[\fmeet_S / F x]_(i <- r | P i) F i \in S) by case/andP.
+rewrite big_seq_cond; apply: (big_rec (fun y => (y <=_L u) && (y \in S))).
+- by rewrite Fxleu FS ?rS.
+- move=> a b /andP [/rS aS _] /andP [bleFx bS].
+  by rewrite lefIr ?mem_fmeet ?FS //.
+Qed.
+
+Lemma fjoin_sup_seq L (S : {finLattice L})
+  (r : seq T) (P : {pred T}) (F : T -> T) x :
+  x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
+  \big[\fjoin_S / F x]_(i <- r | P i) F i >=_L F x.
+Proof. exact : (@fmeet_inf_seq _ S^~s). Qed.
+
+Lemma fjoin_min_seq L (S : {finLattice L})
+  (r : seq T) (P : {pred T}) (F : T -> T) x u:
+  x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} -> 
+  F x >=_L u -> u \in S ->
+  \big[\fjoin_S / F x]_(i <- r | P i) F i >=_L u.
+Proof. exact: (@fmeet_max_seq _ S^~s). Qed.
+
+End FBigTheory.
+
+End FinLatticeTheory.
+
+(* -------------------------------------------------------------------- *)
+Section TBDefs.
+
+Context {T: choiceType}.
+Implicit Type L : {preLattice T}.
 
 Definition fpick (S : {fset T}) :=
   omap val (@pick [finType of S] xpredT).
@@ -941,11 +997,17 @@ Definition fbot L (S : {finLattice L}) :=
   else
     PreLattice.witness L.
 
+Definition ftop L (S : {finLattice L}) := fbot (S^~s).
+
+End TBDefs.
+
 Notation "\fbot_ S" := (fbot S) (at level 2, S at next level, format "\fbot_ S").
-
-Definition ftop L (S : {finLattice L}) := \fbot_(S^~s).
-
 Notation "\ftop_ S" := (ftop S) (at level 2, S at next level, format "\ftop_ S").
+
+Section TBFinLatticeTheory.
+
+Context {T: choiceType}.
+Implicit Type L : {preLattice T}.
 
 Lemma fbot_def L (S : {finLattice L}) x0 :
   x0 \in S -> \fbot_S = \big[\fmeet_S/x0]_(x <- S) x.
@@ -1022,10 +1084,7 @@ Lemma fbotE L (S: {finLattice L}) : S != fset0 :> {fset _} ->
 \fbot_S = \big[\fmeet_S / \ftop_S]_(i <- S) i.
 Proof. exact: (@ftopE _ S^~s). Qed.
 
-End FinLatticeTheory.
-
-Notation "\fbot_ S" := (@fbot _ _ S) (at level 2, S at next level, format "\fbot_ S").
-Notation "\ftop_ S" := (@ftop _ _ S) (at level 2, S at next level, format "\ftop_ S").
+End TBFinLatticeTheory.
 
 Section FinTBLatticeStructure.
 
