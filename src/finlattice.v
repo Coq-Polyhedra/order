@@ -347,25 +347,27 @@ Section FinLattice.
 
 Context {T : choiceType}.
 
-Definition stable (L: {preLattice T}) (S : {fset T}) :=
+Definition premeet_closed (L: {preLattice T}) (S : {fset T}) :=
   [forall x : S, [forall y : S, premeet L S (fsval x) (fsval y) \in S]].
 
-Lemma stableP (L: {preLattice T}) (S : {fset T}) :
+(*TODO : Change S by a predicate*)
+
+Lemma premeet_closedP (L: {preLattice T}) (S : {fset T}) :
   reflect (forall x y, x \in S -> y \in S ->
     premeet L S x y \in S)
-    (stable L S).
+    (premeet_closed L S).
 Proof.
 apply/(iffP idP).
 - by move => + x y xS yS; move/forallP/(_ [`xS])/forallP/(_ [`yS]).
-- move=> stableH; apply/forallP => x; apply/forallP => y.
-  apply: stableH; exact: fsvalP.
+- move=> premeet_closedH; apply/forallP => x; apply/forallP => y.
+  apply: premeet_closedH; exact: fsvalP.
 Qed.
 
 Variable (L: {preLattice T}).
 
 Record finLattice :=
   FinLattice { elements :> {fset T};
-  _ : stable L elements && stable ([preLattice of (<=:(L^~))]) elements }.
+  _ : premeet_closed L elements && premeet_closed ([preLattice of (<=:(L^~))]) elements }.
 
 Canonical finLattice_subType := Eval hnf in [subType for elements].
 
@@ -404,10 +406,12 @@ Section FinLatticeDual.
 
 Context {T : choiceType} (L : {preLattice T}) (S : {finLattice L}).
 
-Lemma stableDual : (stable [preLattice of (<=:(L^~))] S) && (stable L S).
-Proof. by case: S => S0 stableS0; rewrite andbC. Defined.
+(*TODO : *)
 
-Canonical FinLatticeDual := FinLattice stableDual.
+Lemma premeet_closedDual : (premeet_closed [preLattice of (<=:(L^~))] S) && (premeet_closed L S).
+Proof. by case: S => S0 premeet_closedS0; rewrite andbC. Defined.
+
+Canonical FinLatticeDual := FinLattice premeet_closedDual.
 
 Lemma dual_fjoinE:
   \fjoin_(FinLatticeDual)= \fmeet_S.
@@ -424,11 +428,11 @@ Notation "S ^~s" := (FinLatticeDual S)
 Section FinLatticeStructure.
 
 Context {T : choiceType}.
-Lemma stable_fun (L : {preLattice T}) (S : {finLattice L}) (x y : S) :
+Lemma premeet_closed_fun (L : {preLattice T}) (S : {finLattice L}) (x y : S) :
   (\fmeet_S (fsval x) (fsval y) \in S).
 Proof.
 rewrite /fmeet inE; move: S x y; case => /= S + x y.
-by case/andP => /stableP /(_ _ _ (fsvalP x) (fsvalP y)).
+by case/andP => /premeet_closedP /(_ _ _ (fsvalP x) (fsvalP y)).
 Qed.
 
 Context (L : {preLattice T}) (S : {finLattice L}).
@@ -458,8 +462,8 @@ Definition Sle_mixin :=
   POrder.Mixin Slexx Sle_anti Sle_trans Slt_def dSlt_def.
 
 
-Definition Smeet : S -> S -> S := fun x y : S => [`stable_fun x y].
-Definition Sjoin : S -> S -> S := fun x y : S => [` @stable_fun _ S^~s x y].
+Definition Smeet : S -> S -> S := fun x y : S => [`premeet_closed_fun x y].
+Definition Sjoin : S -> S -> S := fun x y : S => [` @premeet_closed_fun _ S^~s x y].
 
 
 Lemma SmeetC : commutative Smeet.
@@ -472,11 +476,11 @@ Lemma SmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
   val (Smeet x (Smeet y z)) <=_L val t.
 Proof.
 move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->  /=.
-+ by rewrite premeet_minl ?fsvalP ?stable_fun.
++ by rewrite premeet_minl ?fsvalP ?premeet_closed_fun.
 + apply:(le_trans _ (premeet_minl L (fsvalP y) (fsvalP z))).
-  by rewrite premeet_minr ?fsvalP ?stable_fun.
+  by rewrite premeet_minr ?fsvalP ?premeet_closed_fun.
 + apply:(le_trans _ (premeet_minr L (fsvalP y) (fsvalP z))).
-  by rewrite premeet_minr ?fsvalP ?stable_fun.
+  by rewrite premeet_minr ?fsvalP ?premeet_closed_fun.
 Qed.
 
 Lemma SmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
@@ -484,10 +488,10 @@ Lemma SmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
 Proof.
 move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP -> /=.
 + apply:(le_trans _ (premeet_minl L (fsvalP x) (fsvalP y))).
-  by rewrite premeet_minl ?fsvalP ?stable_fun.
+  by rewrite premeet_minl ?fsvalP ?premeet_closed_fun.
 + apply:(le_trans _ (premeet_minr L (fsvalP x) (fsvalP y))).
-  by rewrite premeet_minl ?fsvalP ?stable_fun.
-+ by rewrite premeet_minr ?fsvalP ?stable_fun.
+  by rewrite premeet_minl ?fsvalP ?premeet_closed_fun.
++ by rewrite premeet_minr ?fsvalP ?premeet_closed_fun.
 Qed.
 
 Lemma SmeetA : associative Smeet.
@@ -511,7 +515,7 @@ Definition Smeet_class := Meet.Class Sle_mixin Smeet_mixin.
 Lemma SjoinC : commutative Sjoin.
 Proof.
 move=> x y; apply/val_inj/(@le_anti _ L^~)=> /=.
-by rewrite !prejoin_sup ?prejoin_maxl ?prejoin_maxr ?stable_fun ?fsvalP.
+by rewrite !prejoin_sup ?prejoin_maxl ?prejoin_maxr ?premeet_closed_fun ?fsvalP.
 Qed.
 
 Lemma SjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
@@ -583,8 +587,8 @@ Proof. move=> Pval x y z xS yS zS; exact: (Pval [`xS] [`yS] [`zS]). Qed.
 
 Lemma mem_fmeet L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y \in S}.
 Proof.
-move=> x y; case: S => S stables; rewrite /fmeet !inE /= => xS yS.
-by case/andP: stables => /stableP/(_ x y xS yS).
+move=> x y; case: S => S premeet_closeds; rewrite /fmeet !inE /= => xS yS.
+by case/andP: premeet_closeds => /premeet_closedP/(_ x y xS yS).
 Qed.
 
 Lemma mem_fjoin L (S: {finLattice L}): {in S &, forall x y, \fjoin_S x y \in S}.
@@ -1021,14 +1025,14 @@ Lemma mem_fbot L (S : {finLattice L}) x0 :
   x0 \in S -> \fbot_S \in S.
 Proof.
 move => x0S; rewrite (fbot_def x0S) big_seq.
-by apply/big_stable => //; apply/mem_fmeet.
+by apply/big_premeet_closed => //; apply/mem_fmeet.
 Qed.
 
 Lemma le0f L (S : {finLattice L}) : {in S, forall x, \fbot_S <=_L x}.
 Proof.
 move => x xS; rewrite (fbot_def xS) big_seq.
 rewrite (big_mem_sub _ _ _ _ xS xS)  ?leIfl //. (* TODO: FIX IT *)
-apply/big_stable => //; apply/mem_fmeet.
+apply/big_premeet_closed => //; apply/mem_fmeet.
 - exact: fmeetC.
 - exact: fmeetA.
 - exact: mem_fmeet.
@@ -1112,17 +1116,17 @@ Section FinLattice1.
 Context {T : choiceType}.
 Implicit Type (L : {preLattice T}) (a : T).
 
-Lemma stable1 L a : stable L [fset a].
+Lemma premeet_closed1 L a : premeet_closed L [fset a].
 Proof.
-apply/stableP=> ?? /fset1P-> /fset1P->; apply/fset1P.
+apply/premeet_closedP=> ?? /fset1P-> /fset1P->; apply/fset1P.
 apply/(@le_anti _ L)/andP; split.
 - by apply/premeet_minl; rewrite fset11.
 - by apply/premeet_inf; rewrite ?fset11.
 Qed.
 
 Lemma is_lat1 L a :
-  stable L [fset a] && stable [preLattice of <=:(L^~)] [fset a].
-Proof. by apply/andP; split; apply/stable1. Qed.
+  premeet_closed L [fset a] && premeet_closed [preLattice of <=:(L^~)] [fset a].
+Proof. by apply/andP; split; apply/premeet_closed1. Qed.
 
 Definition lat1 L a := FinLattice (is_lat1 L a).
 
@@ -1183,7 +1187,7 @@ rewrite big_seq.
 have filtS: forall i, i \in [seq F j | j <- S & P j] -> i \in S by
   move=> i /mapP [j]; rewrite mem_filter => /andP [_ jS] ->; exact: FS.
 rewrite (big_mem_sub _ _ _ filtS _ FxS) ?lefIl ?(filtS _ FxS)
-  ?(big_stable _ filtS) ?(mem_ftop xS) //.
+  ?(big_premeet_closed _ filtS) ?(mem_ftop xS) //.
 - exact: mem_fmeet.
 - exact: fmeetC.
 - exact: fmeetA.
@@ -1225,7 +1229,7 @@ suff : ((\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) \in S) &&
   le L a (\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) by
   case/andP.
 rewrite big_seq_cond.
-rewrite (@big_stable _ _ _ (fun i => (i \in S) && (le L a i))) //.
+rewrite (@big_premeet_closed _ _ _ (fun i => (i \in S) && (le L a i))) //.
 Admitted.
 (*- move=> x y /andP [xS alex] /andP [yS aley].
   by rewrite mem_fmeet //= lefI ?alex ?aley.
@@ -1261,7 +1265,7 @@ Lemma dual_intv_fset_eq L (S: {finLattice L}) a b:
   interval S a b = interval S^~s b a :> {fset _}.
 Proof. by apply/eqP/fset_eqP=> x; rewrite !in_fsetE !inE [X in _ && X]andbC. Qed.
 
-Lemma premeet_intv_stable L (S : {finLattice L}) x y a b:
+Lemma premeet_intv_premeet_closed L (S : {finLattice L}) x y a b:
   x \in interval S a b -> y \in interval S a b ->
   premeet L S x y \in interval S a b.
 Proof.
@@ -1280,16 +1284,16 @@ move=> x_in y_in.
 move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
 move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
 apply/(@le_anti _ L)/andP; split.
-- by apply: premeet_inf=> //; first exact: premeet_intv_stable;
+- by apply: premeet_inf=> //; first exact: premeet_intv_premeet_closed;
      case: (premeet_min L xS yS).
 - apply: premeet_incr=> //; apply/fsubsetP=> ?; exact: in_intv_support.
 Qed.
 
-Lemma prejoin_intv_stable L (S : {finLattice L}) x y a b:
+Lemma prejoin_intv_premeet_closed L (S : {finLattice L}) x y a b:
   x \in interval S a b -> y \in interval S a b ->
   prejoin L S x y \in interval S a b.
 Proof.
-rewrite dual_intv_fset_eq -dual_premeet; exact: premeet_intv_stable. Qed.
+rewrite dual_intv_fset_eq -dual_premeet; exact: premeet_intv_premeet_closed. Qed.
 
 Lemma prejoin_intvE L (S: {finLattice L}) a b x y:
   x \in interval S a b -> y \in interval S a b ->
@@ -1298,16 +1302,16 @@ Proof.
 rewrite dual_intv_fset_eq -dual_premeet; exact: premeet_intvE.
 Qed.
 
-Lemma stable_interval L (S:{finLattice L}) a b:
-  stable L (interval S a b) && stable ([preLattice of (<=:(L^~))]) (interval S a b).
+Lemma premeet_closed_interval L (S:{finLattice L}) a b:
+  premeet_closed L (interval S a b) && premeet_closed ([preLattice of (<=:(L^~))]) (interval S a b).
 Proof.
-apply/andP; split; apply/stableP.
-- by move=> ????;rewrite -premeet_intvE // premeet_intv_stable.
-- by move=> ????; rewrite /= -prejoin_intvE // prejoin_intv_stable.
+apply/andP; split; apply/premeet_closedP.
+- by move=> ????;rewrite -premeet_intvE // premeet_intv_premeet_closed.
+- by move=> ????; rewrite /= -prejoin_intvE // prejoin_intv_premeet_closed.
 Qed.
 
 Definition FinLatInterval L (S: {finLattice L}) a b :=
-  FinLattice (@stable_interval L S a b).
+  FinLattice (@premeet_closed_interval L S a b).
 
 End Interval.
 End Interval.
@@ -1623,7 +1627,7 @@ Section MorphismTheory.
 Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
 Context (f g : {fmorphism S1 >-> S2}).
 
-Lemma fmorph_stable : {in S1, forall x, f x \in S2}.
+Lemma fmorph_premeet_closed : {in S1, forall x, f x \in S2}.
 Proof. by case: f => ? []. Qed.
 
 Lemma fmorphU : {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}.
@@ -1642,14 +1646,14 @@ Lemma fmorph_homo : {in S1&, {homo f : x y / x <=_L y}}.
 Proof.
 move=> x y xS yS; rewrite (leEfjoin xS) // => /eqP.
 move/(congr1 f); rewrite fmorphU // => <-.
-by apply/lefUr; apply: fmorph_stable.
+by apply/lefUr; apply: fmorph_premeet_closed.
 Qed.
 
 Lemma omorph_mono :
   {in S1&, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
 Proof.
 move=> f_inj x y xS yS; rewrite (leEfjoin xS) //.
-rewrite (leEfjoin (fmorph_stable xS)) ?(fmorph_stable yS) //.
+rewrite (leEfjoin (fmorph_premeet_closed xS)) ?(fmorph_premeet_closed yS) //.
 by rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; apply: mem_fjoin.
 Qed.
 End MorphismTheory.
@@ -1811,7 +1815,7 @@ case: (x =P \fbot_S1) => [->|]; first by rewrite rank0.
 move/eqP; rewrite -(rank_eq0 rk1) // -lt0n => /graded_rankS -/(_ xS1).
 case=> y [yS1 lt_yx <-]; apply: (leq_ltn_trans (ih _ _ _)) => //.
 + by apply: homo_rank_lt.
-apply/homo_rank_lt; try by apply/fmorph_stable.
+apply/homo_rank_lt; try by apply/fmorph_premeet_closed.
 by apply/(inj_homo_lt_in inj_f (fmorph_homo f)).
 Qed.
 End FMorphismRank.
