@@ -1221,6 +1221,11 @@ move=> xS yS; apply/(le_anti L)/andP; split; last first.
 - by apply/fmeetsP=> ???; rewrite leUf.
 Qed.
 
+Lemma fmeet_joins L (S: {finLattice L}) x y :
+  x \in S -> y \in S ->
+  \fmeet_S x y = \big[\fjoin_S / \fbot_S]_(i <- S | (x >=_L i) && (y >=_L i)) i.
+Proof. exact: (@fjoin_meets _ S^~s). Qed.
+
 Definition interval L (S : {finLattice L}) (a b : T) :=
   [fset x | x in S & (\big[\fmeet_S / \ftop_S]_(i <- S | i >=_L a) i <=_L
                      x <=_L \big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i)].
@@ -1537,8 +1542,6 @@ by rewrite (le_gtF ylebot).
 Qed.
 End IndIncr.
 
-
-
 (* -------------------------------------------------------------------- *)
 Section IndDecr.
 Lemma dualK (L : {preLattice T}) (S : {finLattice L}) : (S^~s)^~s = S.
@@ -1632,6 +1635,19 @@ Include Morphism.Exports.
 (* -------------------------------------------------------------------- *)
 Section MorphismTheory.
 Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
+
+Lemma meet_fmorphism (f : T -> T) :
+  {in S1, forall x, f x \in S2} ->
+  {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
+  f \ftop_S1 = \ftop_S2 -> fmorphism S1 S2 f.
+Admitted.
+
+Lemma join_fmorphism (f : T -> T) :
+  {in S1, forall x, f x \in S2} ->
+  {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}} ->
+  f \fbot_S1 = \fbot_S2 -> fmorphism S1 S2 f.
+Admitted.
+
 Context (f g : {fmorphism S1 >-> S2}).
 
 Lemma fmorph_premeet_closed : {in S1, forall x, f x \in S2}.
@@ -1656,13 +1672,14 @@ move/(congr1 f); rewrite fmorphU // => <-.
 by apply/lefUr; apply: fmorph_premeet_closed.
 Qed.
 
-Lemma omorph_mono :
+Lemma fmorph_mono :
   {in S1&, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
 Proof.
 move=> f_inj x y xS yS; rewrite (leEfjoin xS) //.
 rewrite (leEfjoin (fmorph_premeet_closed xS)) ?(fmorph_premeet_closed yS) //.
 by rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; apply: mem_fjoin.
 Qed.
+
 End MorphismTheory.
 
 (* -------------------------------------------------------------------- *)
