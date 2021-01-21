@@ -1,4 +1,6 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_ssreflect finmap.
+
+Open Scope fset_scope.
 
 Section BigOpSub.
 
@@ -127,3 +129,27 @@ elim: r.
 Qed.
 
 End BigOpSubF.
+
+(*Section BigOpFset.
+
+Context {T: choiceType} {S : {fset T}}.
+Definition fun_val {A : Type} (f : T -> A) (x : S) := f (val x).
+Definition fun2_val {A : Type} (f : T -> T -> A) (x y : S) :=
+  f (val x) (val y).
+
+Context {op : T -> T -> T} {F : T -> T} {P : pred T} {x0 : T}.
+Hypothesis x0S : x0 \in S.
+Hypothesis opS : {in S &, forall x y, op x y \in S}.
+Hypothesis FS : {in S, forall x, F x \in S}.
+
+Definition val_op (x y : S) := [`opS (val x) (val y) (valP x) (valP y)].
+Definition val_F (x : S) := [` FS (val x) (valP x)].
+
+Lemma big_val :
+  \big[op / x0]_(i <- S | P i) F i =
+  val (\big[val_op / [`x0S]]_(i : S | fun_val P i) val_F i).
+Proof.
+symmetry; rewrite (@big_morph _ _ val x0 op) //.
+Admitted.
+
+End BigOpFset.*)
