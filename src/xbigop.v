@@ -130,26 +130,36 @@ Qed.
 
 End BigOpSubF.
 
-(*Section BigOpFset.
+Section BigOpFset.
 
-Context {T: choiceType} {S : {fset T}}.
-Definition fun_val {A : Type} (f : T -> A) (x : S) := f (val x).
-Definition fun2_val {A : Type} (f : T -> T -> A) (x y : S) :=
-  f (val x) (val y).
+Context {T: Type} {P : pred T} {S : subType P} (a : S).
+Definition fun_val (f : T -> T) (x : S) := insubd a (f (val x)).
+Definition fun2_val (f : T -> T -> T) (x y : S) :=
+  insubd a (f (val x) (val y)).
 
-Context {op : T -> T -> T} {F : T -> T} {P : pred T} {x0 : T}.
-Hypothesis x0S : x0 \in S.
-Hypothesis opS : {in S &, forall x y, op x y \in S}.
-Hypothesis FS : {in S, forall x, F x \in S}.
+Context {op : T -> T -> T} {x0 : T}.
+Hypothesis Px0 : P x0.
+Hypothesis Pop : {in P &, forall x y, P (op x y)}.
 
-Definition val_op (x y : S) := [`opS (val x) (val y) (valP x) (valP y)].
-Definition val_F (x : S) := [` FS (val x) (valP x)].
+Definition vop := fun2_val op.
+Definition vx0 := insubd a x0.
 
-Lemma big_val :
-  \big[op / x0]_(i <- S | P i) F i =
-  val (\big[val_op / [`x0S]]_(i : S | fun_val P i) val_F i).
-Proof.
-symmetry; rewrite (@big_morph _ _ val x0 op) //.
+Hypothesis vopA : associative vop.
+Hypothesis vop0x : left_id vx0 vop.
+Hypothesis vopx0 : right_id vx0 vop.
+
+Definition vmop := Monoid.Law vopA vop0x vopx0.
+
+Hypothesis vopC : commutative vmop.
+
+Definition vcop := Monoid.ComLaw vopC.
+
+Context {I : Type} {F : I -> T}.
+Hypothesis FP: forall i, P (F i).
+
+Lemma big_val (r : seq I) (Q : pred I) :
+  \big[op / x0]_(i <- r | Q i) F i =
+  val (\big[vcop / vx0]_(i <- r | Q i) insubd a (F i)).
 Admitted.
 
-End BigOpFset.*)
+End BigOpFset.
