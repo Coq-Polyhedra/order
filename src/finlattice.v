@@ -378,7 +378,7 @@ Definition finLattice_choiceMixin := [choiceMixin of finLattice by <:].
 Canonical  finLattice_choiceType  :=
   Eval hnf in ChoiceType finLattice finLattice_choiceMixin.
 
-Canonical finLattice_finType (S : finLattice) := [finType of S].
+(*Canonical finLattice_finType (S : finLattice) := [finType of S].*)
 
 Coercion mem_finLattice (S: finLattice) : {pred T} :=
   fun x : T => (x \in (elements S)).
@@ -387,7 +387,7 @@ Canonical finLattice_predType := PredType mem_finLattice.
 Lemma in_finLatticeE (S: finLattice) x : (x \in S) = (x \in elements S).
 Proof. by []. Qed.
 
-Definition inE := (in_finLatticeE, inE).
+Definition inE := (@in_finLatticeE, inE).
 
 Definition fmeet (S: finLattice) := premeet L S.
 Definition fjoin (S: finLattice) := prejoin L S.
@@ -1147,7 +1147,7 @@ Section TestTBFinLattice.
 Context {T : choiceType} {L : {preLattice T}} {S : {finLattice L}}.
 Context (a : S).
 
-Goal forall (r1 r2 : seq S), perm_eq r1 r2 -> 
+Goal forall (r1 r2 : seq S), perm_eq r1 r2 ->
   \big[meet S^[a] / top S^[a]]_(i <- r1) i =
   \big[meet S^[a] / top S^[a]]_(i <- r2) i.
 Proof. move=> r1 r2 permr; exact: perm_big. Qed.
