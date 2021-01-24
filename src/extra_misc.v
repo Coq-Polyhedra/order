@@ -36,9 +36,13 @@ exists g; split.
   by case/andP: (xchooseP (f_surj _ P2y)) => _ /eqP/esym.
 Qed.
 
-Lemma bij_in_on_inj T1 T2 (P1 : mem_pred T1) (P2 : mem_pred T2) f :
+Lemma in_on_bij_inj {T1 T2} {P1 : mem_pred T1} {P2 : mem_pred T2} {f} :
   {in P1 & on P2, bijective f} -> {in P1 &, injective f}.
 Proof. by case => g [_ /can_in_inj]. Qed.
+
+Lemma in_on_bij_id T (P : mem_pred T) :
+  {in P & on P, bijective id}.
+Proof. by exists id; split; move=> ?. Qed.
 
 End Bijective.
 
