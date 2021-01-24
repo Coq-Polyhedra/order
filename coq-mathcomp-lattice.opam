@@ -17,9 +17,9 @@ license:      "CECILL-B"
 depends: [
   "coq"                    { >= "8.12" & < "8.14~" }
   "dune"                   { >= "2.5.0" }
-  "coq-mathcomp-ssreflect" { >= "1.12" & < "1.13~" }
+  "coq-mathcomp-ssreflect" { = "dev" }
   "coq-mathcomp-algebra"
-  "coq-mathcomp-finmap"    { >= "1.5" & < "1.6~" }
+  "coq-mathcomp-finmap"    { = "dev" }
 ]
 
 build: [ "dune" "build" "-p" name "-j" jobs ]
