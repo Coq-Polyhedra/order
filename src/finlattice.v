@@ -1124,7 +1124,7 @@ Section BigOpFinLattice.
 
 Lemma mem_bigfmeet L (S: {finLattice L})
   (r : seq T) (P : pred T) (F : T -> T):
-  {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
+  {in S, forall y, F y \in S} -> {subset r <= S} ->
   \big[\fmeet_S / \ftop_S]_(i <- r | P i) F i \in S.
 Proof.
 move=> FS rS; rewrite big_seq_cond; apply: (big_ind (fun x => x \in S)).
@@ -1135,13 +1135,13 @@ Qed.
 
 Lemma mem_bigfjoin L (S: {finLattice L})
   (r : seq T) (P : pred T) (F : T -> T):
-  {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
+  {in S, forall y, F y \in S} -> {subset r <= S} ->
   \big[\fjoin_S / \fbot_S]_(i <- r | P i) F i \in S.
 Proof. exact: (@mem_bigfmeet _ S^~s). Qed.
 
 Lemma fmeet_inf_seq L (S: {finLattice L})
   (r: seq T) (P : pred T) (F : T -> T) x :
-  {in r, forall y, y \in S} -> {in S, forall y, F y \in S} -> x \in r -> P x ->
+  {subset r <= S} -> {in S, forall y, F y \in S} -> x \in r -> P x ->
      \big[\fmeet_S / \ftop_S]_(i <- r | P i) F i <=_L F x.
 Proof.
 move=> rS FS xr Px; rewrite big_map_fun.
@@ -1160,10 +1160,32 @@ Qed.
 
 Lemma fjoin_sumeet_seq L (S: {finLattice L})
   (r : seq T) (P : pred T) (F : T -> T) x :
-  {in r, forall y, y \in S} -> {in S, forall y, F y \in S} -> x \in r -> P x ->
+  {subset r <= S} -> {in S, forall y, F y \in S} -> x \in r -> P x ->
      F x <=_L \big[\fjoin_S / \fbot_S]_(i <- r | P i) F i.
 Proof. exact: (@fmeet_inf_seq _ S^~s). Qed.
 
+Lemma fmeetsP L (S : {finLattice L}) (P : pred T) (F : T -> T) x :
+  {in S, forall y, P y -> x <=_L F y} -> x <=_L \big[\fmeet_S / \ftop_S]_(y <- S | P y) F y.
+Admitted.
+
+Lemma fjoin_meets L (S: {finLattice L}) x y :
+  x \in S -> y \in S ->
+  \fjoin_S x y = \big[\fmeet_S / \ftop_S]_(i <- S | (x <=_L i) && (y <=_L i)) i.
+Proof.
+move=> xS yS; apply/(le_anti L)/andP; split; last first.
+- apply/fmeet_inf_seq; rewrite ?mem_fjoin //.
+  by apply/andP; split; rewrite ?lefUl ?lefUr.
+- by apply/fmeetsP=> ???; rewrite leUf.
+Qed.
+
+Lemma fjoinsP L (S : {finLattice L}) (P : pred T) (F : T -> T) x :
+  {in S, forall y, P y -> F y <=_L x} -> \big[\fjoin_S / \fbot_S]_(y <- S | P y) F y <=_L x.
+Proof. exact: (@fmeetsP _ S^~s). Qed.
+
+Lemma fmeet_joins L (S: {finLattice L}) x y :
+  x \in S -> y \in S ->
+  \fmeet_S x y = \big[\fjoin_S / \fbot_S]_(i <- S | (x >=_L i) && (y >=_L i)) i.
+Proof. exact: (@fjoin_meets _ S^~s). Qed.
 
 End BigOpFinLattice.
 End TBFinLatticeTheory.
@@ -1289,31 +1311,11 @@ Section Interval.
 Context {T : choiceType}.
 Implicit Type (L : {preLattice T}).
 
-Lemma fmeetsP L (S : {finLattice L}) (P : pred T) (F : T -> T) x :
-  {in S, forall y, P y -> x <=_L F y} -> x <=_L \big[\fmeet_S / \ftop_S]_(y <- S | P y) F y.
-Admitted.
-
-Lemma fjoin_meets L (S: {finLattice L}) x y :
-  x \in S -> y \in S ->
-  \fjoin_S x y = \big[\fmeet_S / \ftop_S]_(i <- S | (x <=_L i) && (y <=_L i)) i.
-Proof.
-move=> xS yS; apply/(le_anti L)/andP; split; last first.
-- apply/fmeet_inf_seq; rewrite ?mem_fjoin //.
-  by apply/andP; split; rewrite ?lefUl ?lefUr.
-- by apply/fmeetsP=> ???; rewrite leUf.
-Qed.
-
-Lemma fmeet_joins L (S: {finLattice L}) x y :
-  x \in S -> y \in S ->
-  \fmeet_S x y = \big[\fjoin_S / \fbot_S]_(i <- S | (x >=_L i) && (y >=_L i)) i.
-Proof. exact: (@fjoin_meets _ S^~s). Qed.
-
 Definition umeet L (S : {finLattice L}) a :=
   \big[\fmeet_S / \ftop_S]_(i <- S | i >=_L a) i.
 
 Definition djoin L (S : {finLattice L}) b :=
   \big[\fjoin_S / \fbot_S]_(i <- S | i <=_L b) i.
-
 
 Definition interval L (S : {finLattice L}) (a b : T) :=
   [fset x | x in S &
@@ -1333,8 +1335,6 @@ apply/andP; split.
 - apply : leUfr => //;
     [exact: mem_bigfmeet |exact: mem_bigfjoin |exact: fjoin_sumeet_seq].
 Qed.
-
-
 
 Lemma umeetE L (S : {finLattice L}) a : a \in S -> umeet S a = a.
 Proof.
@@ -1358,7 +1358,6 @@ Proof. exact: mem_bigfmeet. Qed.
 Lemma mem_djoin L (S : {finLattice L}) b : djoin S b \in S.
 Proof. exact: mem_bigfjoin. Qed.
 
-
 Lemma itv_prop0 L (S : {finLattice L}) a b :
   interval S a b != fset0.
 Proof.
@@ -1367,7 +1366,6 @@ rewrite !inE; apply/and3P; split => //.
 - apply: mem_fmeet; [exact: mem_bigfmeet |exact: mem_bigfjoin].
 - by rewrite lefIl ?mem_fjoin ?lefUl ?mem_umeet ?mem_djoin.
 Qed.
-
 
 Lemma intervalE L (S : {finLattice L}) a b x :
   a \in S -> b \in S -> a <=_L b ->
@@ -1465,6 +1463,14 @@ Section IntervalTheory.
 
 Context {T : choiceType}.
 Implicit Type (L : {preLattice T}).
+
+Lemma fmeet_itvE L (S : {finLattice L}) a b :
+  {in [<a; b>]_S &, \fmeet_([< a ; b >]_S) =2 \fmeet_S}.
+Proof. by move => x y x_in y_in; rewrite /fmeet -Interval.premeet_itvE. Qed.
+
+Lemma fjoin_itvE L (S : {finLattice L}) a b :
+  {in [<a; b>]_S &, \fjoin_([< a ; b >]_S) =2 \fjoin_S}.
+Proof. by move => x y x_in y_in; rewrite /fjoin -Interval.prejoin_itvE. Qed.
 
 Lemma mem_itv L (S : {finLattice L}) a b x :
   x \in S -> a <=_L x -> x <=_L b -> x \in [< a ; b >]_S.
@@ -1767,21 +1773,88 @@ Include Morphism.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section MorphismTheory.
-Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {finLattice L}).
+Context (T : choiceType).
 
-Lemma meet_fmorphism (f : T -> T) :
+Implicit Type (L : {preLattice T}).
+
+Lemma fmorphismP L (S1 S2 : {finLattice L}) (f : {fmorphism S1 >-> S2}) :
+  fmorphism S1 S2 f.
+Proof. by case : f. Qed.
+
+Lemma meet_morph_homo L (S1 S2 : {finLattice L}) f :
+  {in S1, forall x, f x \in S2} ->
+  {in S1 &, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
+  {in S1 &, {homo f : x y / x <=_L y}}.
+Proof.
+move=> f_im f_morph.
+move=> x y xS yS; rewrite (leEfmeet xS) // => /eqP.
+move/(congr1 f); rewrite f_morph // => <-.
+by apply/lefIr =>//; apply/f_im.
+Qed.
+
+Lemma meet_morph_mono L (S1 S2 : {finLattice L}) f :
+  {in S1, forall x, f x \in S2} ->
+  {in S1 &, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
+  {in S1 &, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
+Proof.
+move=> f_im f_morph f_inj.
+move=> x y xS yS; rewrite (leEfmeet xS) //.
+rewrite (leEfmeet (f_im _ xS)) ?f_im //.
+by rewrite -f_morph //; apply/(inj_in_eq f_inj) => //; apply: mem_fjoin.
+Qed.
+
+Lemma meet_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
   {in S1, forall x, f x \in S2} ->
   {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
-  f \ftop_S1 = \ftop_S2 -> fmorphism S1 S2 f.
-Admitted.
+  {in S1 & on S2, bijective f} -> fmorphism S1 S2 f.
+Proof.
+move=> f_im f_morph [g] [g_im fgK gfK].
+have f_mono := (meet_morph_mono f_im f_morph (can_in_inj fgK)).
+split => //.
++ move=> x y xS yS.
+  apply/(le_anti L)/andP; split.
+  - rewrite -[X in (_ <=__ X)]gfK ?f_mono ?leUf ?g_im ?mem_fjoin ?f_im //.
+    rewrite -f_mono ?g_im ?mem_fjoin ?f_im //.
+    rewrite -[X in _ && X]f_mono ?g_im ?mem_fjoin ?f_im //.
+    by rewrite gfK ?lefUl ?lefUr ?mem_fjoin ?f_im.
+  - by rewrite leUf ?f_mono ?lefUl ?lefUr ?f_im ?mem_fjoin.
++ apply/(le_anti L)/andP; split; rewrite ?le0f ?f_im ?mem_fbot //.
+  by rewrite -[X in (_ <=__ X)]gfK ?f_mono ?le0f ?g_im ?mem_fbot.
++ apply/(le_anti L)/andP; split; rewrite ?lef1 ?f_im ?mem_fbot //.
+  by rewrite -[X in (X <=__ _)]gfK ?f_mono ?lef1 ?g_im ?mem_fbot.
+Qed.
 
-Lemma join_fmorphism (f : T -> T) :
+Lemma dual_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
+  fmorphism S1 S2 f <-> fmorphism S1^~s S2^~s f.
+Proof. by split; case; split. Qed.
+
+Lemma join_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
   {in S1, forall x, f x \in S2} ->
   {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}} ->
-  f \fbot_S1 = \fbot_S2 -> fmorphism S1 S2 f.
+  {in S1 & on S2, bijective f} -> fmorphism S1 S2 f.
+Proof. by move=>???; apply/dual_fmorphism/(@meet_fmorphism _ S1^~s S2^~s). Qed.
+
+Lemma comp_fmorphism L (S1 S2 S3 : {finLattice L}) (f g : T -> T) :
+  fmorphism S1 S2 f -> fmorphism S2 S3 g -> fmorphism S1 S3 (g \o f).
 Admitted.
 
-Context (f g : {fmorphism S1 >-> S2}).
+Definition fcomp L (S1 S2 S3 : {finLattice L})
+           (f : {fmorphism S1 >-> S2}) (g : {fmorphism S2 >-> S3}) :=
+  FMorphism (comp_fmorphism (fmorphismP f) (fmorphismP g)).
+
+Lemma fmorphism_id L (S : {finLattice L}) :
+  fmorphism S S id.
+Admitted.
+
+Lemma fcomp_bij L (S1 S2 S3 : {finLattice L})
+      (f : {fmorphism S1 >-> S2}) (g : {fmorphism S2 >-> S3}) :
+  {in S1 & on S2, bijective f} -> {in S1 & on S2, bijective g} ->
+  {in S1 & on S3, bijective (fcomp f g)}.
+Admitted.
+
+Definition fmorph_id L (S : {finLattice L}) := FMorphism (fmorphism_id S).
+
+Context (L : {preLattice T}) (S1 S2 : {finLattice L}) (f g : {fmorphism S1 >-> S2}).
 
 Lemma fmorph_premeet_closed : {in S1, forall x, f x \in S2}.
 Proof. by case: f => ? []. Qed.
@@ -1811,6 +1884,38 @@ Proof.
 move=> f_inj x y xS yS; rewrite (leEfjoin xS) //.
 rewrite (leEfjoin (fmorph_premeet_closed xS)) ?(fmorph_premeet_closed yS) //.
 by rewrite -fmorphU //; apply/(inj_in_eq f_inj)=> //; apply: mem_fjoin.
+Qed.
+
+Lemma fmorph_itv a b :
+  {in S1 & on S2, bijective f} ->
+  a \in S1 -> b \in S1 -> a <=_L b ->
+     exists g : {fmorphism [<a; b>]_S1 >-> [<f a; f b>]_S2},
+       {in [<a; b>]_S1 & on [<f a; f b>]_S2, bijective g}.
+Proof.
+case=> f' [f'_im fK f'K] aS1 bS1 a_le_b.
+have faS2: f a \in S2 by apply/fmorph_premeet_closed.
+have fbS2: f b \in S2 by apply/fmorph_premeet_closed.
+have fa_le_fb : f a <=_L f b by apply/fmorph_homo.
+have f_itv: {in [< a; b >]_S1, forall x : T, f x \in [< f a; f b >]_S2}.
++ move=> x; case/intervalP=> // xS1 /andP [??].
+  by apply/mem_itv; rewrite ?fmorph_premeet_closed ?fmorph_homo.
+have H: fmorphism  [< a; b >]_S1 [< f a; f b >]_S2 f.
++ split=> //.
+  + move=> x y x_in y_in.
+    rewrite !fjoin_itvE ?f_itv //.
+    by rewrite fmorphU ?(itv_subset x_in) ?(itv_subset y_in).
+  + move=> x y x_in y_in.
+    rewrite !fmeet_itvE ?f_itv //.
+    by rewrite fmorphI ?(itv_subset x_in) ?(itv_subset y_in).
+  + by rewrite ?itvE0.
+  + by rewrite ?itvE1.
+exists (FMorphism H); exists f'; split.
++ move=> x; case/intervalP=> // xS2.
+  have {-3}->: x = f (f' x) by rewrite f'K.
+  rewrite 2?fmorph_mono ?f'_im //; try by apply/(can_in_inj fK).
+  by case/andP=>??; apply/mem_itv=>//; exact: f'_im.
++ move=> x /itv_subset /=; exact: fK.
++ move=> x /itv_subset /=; exact: f'K.
 Qed.
 
 End MorphismTheory.

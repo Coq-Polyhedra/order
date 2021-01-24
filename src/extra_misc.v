@@ -1,7 +1,52 @@
 From mathcomp Require Import all_ssreflect finmap.
 
-Local Open Scope fset_scope.
+Section Bijective.
 
+Definition bijective_in_on {T1 T2}
+           (P1 : mem_pred T1) (P2 : mem_pred T2) f :=
+  exists g, [/\ prop_in1 P2 (inPhantom (forall y, g y \in P1)),
+          prop_in1 P1 (inPhantom (cancel f g))
+        & prop_in1 P2 (inPhantom (cancel g f))].
+
+Notation "{ 'in' P1 & 'on' P2 , 'bijective' f }" :=
+  (bijective_in_on (mem P1) (mem P2) f)
+    (at level 0, f at level 8, format "'[hv' { 'in'  P1  &  'on'  P2 , '/ '  'bijective'  f } ']'") : type_scope.
+
+Lemma inj_surj_bij (T1 T2 : choiceType)
+      (P1 : mem_pred T1) (P2 : mem_pred T2) (f : T1 -> T2) y0 :
+  y0 \in P2 -> {in P1, forall x, (f x) \in P2 } ->
+  {in P1 & , injective f} ->
+  {in P2, forall y, exists2 x, x \in P1 & y = f x} ->
+  {in P1 & on P2, bijective f}.
+Proof.
+move => P2y0 f_im f_inj f_surj.
+have {}f_surj: forall y, P2 y -> exists x, (P1 x) && (y == f x).
++ by move => y /f_surj [x ??]; exists x; apply/andP; split => //; apply/eqP.
+pose g y := match @idP (P2 y) with
+           | ReflectT P2y => xchoose (f_surj _ P2y)
+           | _ => xchoose (f_surj _ P2y0)
+           end.
+exists g; split.
++ move=> y ?; rewrite /g; case: {-}_/idP=> // P2y.
+  by case/andP: (xchooseP (f_surj _ P2y)).
++ move=> x P1x; rewrite /g; case: {-}_/idP=> [P2fx |].
+  - by case/andP: (xchooseP (f_surj _ P2fx))=> ? /eqP?; apply/f_inj.
+  - by move/f_im: P1x.
++ move => y ?; rewrite /g; case: {-}_/idP=> // P2y.
+  by case/andP: (xchooseP (f_surj _ P2y)) => _ /eqP/esym.
+Qed.
+
+Lemma bij_in_on_inj T1 T2 (P1 : mem_pred T1) (P2 : mem_pred T2) f :
+  {in P1 & on P2, bijective f} -> {in P1 &, injective f}.
+Proof. by case => g [_ /can_in_inj]. Qed.
+
+End Bijective.
+
+Notation "{ 'in' P1 & 'on' P2 , 'bijective' f }" :=
+  (bijective_in_on (mem P1) (mem P2) f)
+    (at level 0, f at level 8, format "'[hv' { 'in'  P1  &  'on'  P2 , '/ '  'bijective'  f } ']'") : type_scope.
+
+Local Open Scope fset_scope.
 
 Section FSetLemmas.
 
