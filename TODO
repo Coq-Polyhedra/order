@@ -5,4 +5,4 @@
 * cpo, for program verification logic (weakly memory models)
 * nonunique complements of lattices (parameterized by lattice instances) -> vector subspaces
 * cubical model of type theory (!)
-
+* interface between the unbundled view and the subtype/bundled view, automation. In Coq-Polyhedra, the communication between 'poly[R]_n and {poly base} (subtypes of polyhedra that can be expressed using a certain set of (in)equalities). In order, interface between finlattices and the corresponding tbLattice (on the associated subtype). Problems for induced morphisms (need to change the domain).
