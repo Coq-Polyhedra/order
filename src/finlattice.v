@@ -843,7 +843,6 @@ Proof.
 move=> ??; exact: (@fmeet_idPr _ S^~s).
 Qed.
 
-
 Lemma fjoin_idPl L (S: {finLattice L}) {x y} : x \in S -> y \in S ->
   reflect (\fjoin_S x y = x) (y <=_L x).
 Proof.
@@ -2146,7 +2145,7 @@ End FMorphismRank.
 Section Atomistic.
 Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
 
-Definition atomistic_r (a : S) :=
+Definition atomistic_r (a : T) :=
   [exists A : {fset S},
        [forall x in A, atom S (val x)]
     && (a == (\big[join S/bottom (S)]_(x in A) x))].
@@ -2161,4 +2160,6 @@ Definition coatomistic_r (a : S) :=
 
 Definition coatomistic (a : T) :=
   if @idP (a \in S) is  ReflectT h then coatomistic_r [` h] else false.
+
+
 End Atomistic.

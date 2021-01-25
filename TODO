@@ -1,0 +1,8 @@
+* automation to deal with duplicated statements
+* automation to generate order.v
+* remove lemmas in order.v -> solve the issues regarding displays
+* in finlattices, we need to think (hard) about morphims
+* cpo, for program verification logic (weakly memory models)
+* nonunique complements of lattices (parameterized by lattice instances) -> vector subspaces
+* cubical model of type theory (!)
+
