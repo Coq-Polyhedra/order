@@ -444,150 +444,181 @@ Notation "S ^~s" := (FinLatticeDual S)
 Module FinLatticeStructure.
 Section FinLatticeStructure.
 
-Context {T : choiceType}.
+Context {T : choiceType} {L : {preLattice T}} {S : {finLattice L}}.
 
-Definition fun_val {A : Type} {S : {fset T}} (f : T -> A) (x : S) :=
-  f (fsval x).
-Definition fun2_val {A : Type} {S : {fset T}} (f : T -> T -> A)
-  (x y : S) :=
-  f (fsval x) (fsval y).
+Lemma finLattice_prop0 : S != fset0 :> {fset _}.
+Proof. by case: S => S0 /= /and3P []. Qed.
 
-Lemma premeet_closed_fun (L : {preLattice T}) (S : {finLattice L}) (x y : S) :
-  (fun2_val (\fmeet_S) x y \in S).
-Proof.
-rewrite /fmeet inE; move: S x y; case => /= S + x y.
-by case/andP => /premeet_closedP /(_ _ _ (fsvalP x) (fsvalP y)).
+Definition witness := [`xchooseP (fset0Pn S finLattice_prop0)].
+
+Lemma mem_meet : forall x y, x \in S -> y \in S -> \fmeet_S x y \in S.
+Proof. 
+case: S => S0 i x y; rewrite !inE /fmeet /=.
+case/and3P: i => /premeet_closedP + _ _; exact.
 Qed.
 
-Context (L : {preLattice T}) (S : {finLattice L}).
-
-Local Notation Sle := (@fun2_val _ S (<=:L)).
-Local Notation Slt := (@fun2_val _ S (<:L)).
-
-Lemma Slexx : reflexive Sle.
-Proof. by move=> x; rewrite /fun2_val. Qed.
-
-Lemma Sle_anti : forall (x y : S), Sle x y -> Sle y x -> x = y.
+Lemma mem_join : forall x y, x \in S -> y \in S -> \fjoin_S x y \in S.
 Proof.
-move=> x y; rewrite /fun2_val => le1 le2; apply/val_inj/(@le_anti _ L).
+case: S => S0 i x y; rewrite !inE /fjoin /=.
+case/and3P : i => _ /premeet_closedP + _; exact.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+
+Definition finle (x y : S) := (val x <=_L val y). 
+Definition finlt (x y : S) := (val x <_L val y).
+
+Lemma finlexx : reflexive finle.
+Proof. by rewrite /finle. Qed.
+
+Lemma finle_anti : forall (x y : S), finle x y -> finle y x -> x = y.
+Proof.
+move=> x y; rewrite /finle /fun2_val => le1 le2.
+apply/val_inj/(@le_anti _ L).
 by rewrite le1 le2.
 Qed.
 
-Lemma Sle_trans : transitive Sle.
-Proof. move=> y x z; rewrite /fun2_val; exact: le_trans. Qed.
+Lemma finle_trans : transitive finle.
+Proof. move=> y x z; rewrite /finle; exact: le_trans. Qed.
 
-Lemma Slt_def : forall (x y : S), Slt x y = (x != y) && Sle x y.
-Proof. move=> x y; rewrite /fun2_val lt_def; congr (_ && _). Qed.
+Lemma finlt_def : forall (x y : S), finlt x y = (x != y) && finle x y.
+Proof. move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
 
-Lemma dSlt_def : forall (x y : S), Slt y x = (x != y) && Sle y x.
-Proof. move=> x y; rewrite /fun2_val lt_def eq_sym; congr (_ && _). Qed.
+Lemma dfinlt_def : forall (x y : S), finlt y x = (x != y) && finle y x.
+Proof. move=> x y; rewrite finlt_def eq_sym; congr (_ && _). Qed.
 
-Definition Sle_mixin :=
-  POrder.Mixin Slexx Sle_anti Sle_trans Slt_def dSlt_def.
-
-
-Definition Smeet (x y : S) := [`premeet_closed_fun x y].
-Definition Sjoin (x y : S) := [` @premeet_closed_fun _ S^~s x y].
+Definition finle_mixin :=
+  POrder.Mixin finlexx finle_anti finle_trans finlt_def dfinlt_def.
 
 
-Lemma SmeetC : commutative Smeet.
+(* --------------------------------------------------------------- *)
+
+Definition finmeet (x y : S) := fun2_val witness (\fmeet_S) x y.
+Definition finjoin (x y : S) := fun2_val witness (\fjoin_S) x y.
+
+Lemma finmeet_minl : forall x y, finle (finmeet x y) x.
+Proof. by move=> x y; rewrite /finle insubdK ?mem_meet ?premeet_minl ?fsvalP. Qed.
+
+Lemma finmeet_minr : forall x y, finle (finmeet x y) y.
+Proof. by move=> x y; rewrite /finle insubdK ?mem_meet ?premeet_minr ?fsvalP. Qed.
+
+Lemma finmeet_inf : forall x y z, finle z x -> finle z y ->
+  finle z (finmeet x y).
 Proof.
-move=> x y; apply/val_inj/(@le_anti _ L).
-by rewrite !premeet_inf // ?premeet_minl ?premeet_minr ?fsvalP.
+move=> x y z; rewrite /finle insubdK ?mem_meet ?fsvalP //.
+apply: premeet_inf; exact: fsvalP.
 Qed.
 
-Lemma SmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
-  val (Smeet x (Smeet y z)) <=_L val t.
+Lemma finjoin_maxl : forall x y, finle x (finjoin x y).
+Proof.
+move=> x y; rewrite /finle insubdK ?mem_join ?fsvalP //.
+apply: prejoin_maxl; exact: fsvalP.
+Qed.
+
+Lemma finjoin_maxr : forall x y, finle y (finjoin x y).
+Proof.
+move=> x y; rewrite /finle insubdK ?mem_join ?fsvalP //.
+apply: prejoin_maxr; exact: fsvalP.
+Qed.
+
+Lemma finjoin_sup : forall x y z, finle x z -> finle y z ->
+  finle (finjoin x y) z.
+Proof.
+move=> x y z; rewrite /finle insubdK ?mem_join ?fsvalP //.
+apply: prejoin_sumeet; exact: fsvalP.
+Qed.
+
+(* ------------------------------------------------------------------ *)
+
+Lemma finmeetC : commutative finmeet.
+Proof.
+by move=> x y; apply/finle_anti; 
+  rewrite finmeet_inf ?finmeet_minl ?finmeet_minr.
+Qed.
+
+Lemma finmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
+  finle (finmeet x (finmeet y z)) t.
 Proof.
 move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->  /=.
-+ by rewrite premeet_minl ?fsvalP ?premeet_closed_fun.
-+ apply:(le_trans _ (premeet_minl L (fsvalP y) (fsvalP z))).
-  by rewrite premeet_minr ?fsvalP ?premeet_closed_fun.
-+ apply:(le_trans _ (premeet_minr L (fsvalP y) (fsvalP z))).
-  by rewrite premeet_minr ?fsvalP ?premeet_closed_fun.
++ exact: finmeet_minl.
++ exact/(finle_trans _ (finmeet_minl y z))/finmeet_minr.
++ exact/(finle_trans _ (finmeet_minr y z))/finmeet_minr.
 Qed.
 
-Lemma SmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
-  val (Smeet (Smeet x y) z) <=_L val t.
+Lemma finmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
+  finle (finmeet (finmeet x y) z) t.
 Proof.
 move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP -> /=.
-+ apply:(le_trans _ (premeet_minl L (fsvalP x) (fsvalP y))).
-  by rewrite premeet_minl ?fsvalP ?premeet_closed_fun.
-+ apply:(le_trans _ (premeet_minr L (fsvalP x) (fsvalP y))).
-  by rewrite premeet_minl ?fsvalP ?premeet_closed_fun.
-+ by rewrite premeet_minr ?fsvalP ?premeet_closed_fun.
++ exact/(finle_trans _ (finmeet_minl x y))/finmeet_minl.
++ exact/(finle_trans _ (finmeet_minr x y))/finmeet_minl.
++ exact:finmeet_minr.
 Qed.
 
-Lemma SmeetA : associative Smeet.
+Lemma finmeetA : associative finmeet.
 Proof.
-move=> x y z; apply/val_inj/(@le_anti _ L).
-by rewrite !premeet_inf ?fsvalP ?SmeetAl ?SmeetAr //
-  !in_fsetE eq_refl ?orbT.
+by move=> x y z; apply: finle_anti;
+rewrite !finmeet_inf ?finmeetAr ?finmeetAl ?in_fsetE ?eq_refl ?orbT.
 Qed.
 
-Lemma leSmeet : forall x y : S, Sle x y = (Smeet x y == x).
+Lemma lefinmeet : forall x y : S, finle x y = (finmeet x y == x).
 Proof.
 move=> x y; apply/(sameP idP)/(iffP idP).
-- by move/eqP => <-; rewrite /Sle premeet_minr ?fsvalP.
-- rewrite /Sle => xley; apply/eqP/val_inj/(@le_anti _ L).
-  by rewrite premeet_minl ?premeet_inf ?fsvalP.
+- move/eqP => <-; exact: finmeet_minr.
+- by move=> xley; apply/eqP/finle_anti;
+  rewrite ?finmeet_minl ?finmeet_inf ?finlexx.
 Qed.
 
-Definition Smeet_mixin := Meet.Mixin SmeetC SmeetA leSmeet.
-Definition Smeet_class := Meet.Class Sle_mixin Smeet_mixin.
+Definition finmeet_mixin := Meet.Mixin finmeetC finmeetA lefinmeet.
+Definition finmeet_class := Meet.Class finle_mixin finmeet_mixin.
 
-Lemma SjoinC : commutative Sjoin.
+(* ----------------------------------------------------------------- *)
+
+Lemma finjoinC : commutative finjoin.
 Proof.
-move=> x y; apply/val_inj/(@le_anti _ L^~)=> /=.
-by rewrite !prejoin_sumeet ?prejoin_maxl ?prejoin_maxr ?premeet_closed_fun ?fsvalP.
+by move=> x y; apply: finle_anti;
+  rewrite finjoin_sup ?finjoin_maxl ?finjoin_maxr.
 Qed.
 
-Lemma SjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
-  val (Sjoin x (Sjoin y z)) <=_(L^~) val t.
-Proof.
-move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
-- by rewrite prejoin_maxl ?fsvalP.
-- apply:(le_trans _ (prejoin_maxl L (fsvalP y) (fsvalP z))).
-  by rewrite prejoin_maxr ?fsvalP.
-- apply:(le_trans _ (prejoin_maxr L (fsvalP y) (fsvalP z))).
-  by rewrite prejoin_maxr ?fsvalP.
-Qed.
-
-Lemma SjoinAr : forall (x y z t : S), t \in [fset x; y; z] ->
-  val (Sjoin (Sjoin x y) z) <=_(L^~) val t.
+Lemma finjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
+  finle t (finjoin x (finjoin y z)).
 Proof.
 move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
-- apply: (le_trans _ (prejoin_maxl L (fsvalP x) (fsvalP y))).
-  by rewrite prejoin_maxl ?fsvalP.
-- apply: (le_trans _ (prejoin_maxr L (fsvalP x) (fsvalP y))).
-  by rewrite prejoin_maxl ?fsvalP.
-- by rewrite prejoin_maxr ?fsvalP.
+- exact: finjoin_maxl.
+- exact/(finle_trans (finjoin_maxl y z))/finjoin_maxr.
+- exact/(finle_trans (finjoin_maxr y z))/finjoin_maxr.
 Qed.
 
-Lemma SjoinA : associative Sjoin.
+Lemma finjoinAr : forall (x y z t : S), t \in [fset x; y; z] ->
+  finle t (finjoin (finjoin x y) z).
 Proof.
-move=> x y z; apply/val_inj/(@le_anti _ L^~).
-by rewrite !prejoin_sumeet ?fsvalP ?SjoinAl ?SjoinAr //
-  !in_fsetE eq_refl ?orbT.
+move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
+- exact/(finle_trans (finjoin_maxl x y))/finjoin_maxl.
+- exact/(finle_trans (finjoin_maxr x y))/finjoin_maxl.
+- exact:finjoin_maxr.
 Qed.
 
-Lemma leSjoin : forall x y : S, dual_rel Sle x y = (Sjoin x y == x).
+Lemma finjoinA : associative finjoin.
+Proof.
+by move=> x y z; apply: finle_anti;
+  rewrite ?finjoin_sup ?finjoinAl ?finjoinAr ?in_fsetE ?eq_refl ?orbT.
+Qed.
+
+Lemma lefinjoin : forall x y : S, dual_rel finle x y = (finjoin x y == x).
 Proof.
 move=> x y; apply/(sameP idP)/(iffP idP).
-- move/eqP => <-; rewrite /Sle /dual_rel.
-  exact:(prejoin_maxr L (fsvalP x) (fsvalP y)).
-- rewrite /dual_rel /Sle => ylex; apply/eqP/val_inj/(@le_anti _ L^~).
-  by rewrite prejoin_maxl ?prejoin_sumeet ?fsvalP.
+- move/eqP => <-; exact: finjoin_maxr.
+- by move=> ylex; apply/eqP/finle_anti;
+  rewrite ?finjoin_maxl ?finjoin_sup ?finlexx.
 Qed.
 
-Definition Sjoin_mixin := Meet.Mixin SjoinC SjoinA leSjoin.
-Definition SLattice_class := Lattice.Class Smeet_class Sjoin_mixin.
-Definition SLattice_pack := Lattice.Pack (Phant _) SLattice_class.
+Definition finjoin_mixin := Meet.Mixin finjoinC finjoinA lefinjoin.
+Definition finLattice_class := Lattice.Class finmeet_class finjoin_mixin.
+Definition finLattice_pack := Lattice.Pack (Phant _) finLattice_class.
 
 End FinLatticeStructure.
 Module Exports.
-Coercion SLattice_pack : finLattice >-> Lattice.order.
-Canonical SLattice_pack.
+Coercion finLattice_pack : finLattice >-> Lattice.order.
+Canonical finLattice_pack.
 End Exports.
 End FinLatticeStructure.
 Include FinLatticeStructure.Exports.
@@ -624,28 +655,55 @@ Proof. exact: (@mem_fmeet _ S^~s). Qed.
 Lemma finLattice_prop0 L (S : {finLattice L}): S != fset0 :> {fset _}.
 Proof. by case: S => S /= /and3P []. Qed.
 
+Lemma finLattice_leE L (S : {finLattice L}) : forall x y : S,
+  x <=_S y = fsval x <=_L fsval y.
+Proof. by []. Qed.
+
+Lemma finLattice_meetE L (S : {finLattice L}) : forall x y : S,
+  fsval (meet S x y) = \fmeet_S (fsval x) (fsval y).
+Proof. by move=> x y; rewrite insubdK ?mem_fmeet ?fsvalP. Qed.
+
+Lemma finLattice_joinE L (S : {finLattice L}) : forall x y : S,
+  fsval (join S x y) = \fjoin_S (fsval x) (fsval y).
+Proof. by move=> x y; rewrite insubdK ?mem_fjoin ?fsvalP. Qed.
+
+(*Goal forall L, forall S : {finLattice L}, forall x y, join S x y = meet (S^~s) x y.
+Proof. by move=> L S x y; apply/val_inj; rewrite !insubdK ?mem_fmeet ?fsvalP.*)
+
 Section FMeetTheory.
 
 Lemma leIfl L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y <=_L x}.
-Proof. apply: sub_pred2; exact: (@leIl _ S). Qed.
+Proof. 
+apply: sub_pred2 => x y; move: (@leIl _ S x y).
+by rewrite finLattice_leE finLattice_meetE.
+Qed.
 
 
 Lemma leIfr L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S y x <=_L x}.
-Proof. apply: sub_pred2; exact: (@leIr _ S). Qed.
+Proof.
+apply: sub_pred2 => x y; move: (@leIr _ S x y).
+by rewrite finLattice_leE finLattice_meetE.
+Qed.
 
 Lemma lefI L (S : {finLattice L}) :
   {in S & &, forall x y z, (x <=_L \fmeet_S y z) = (x <=_L y) && (x <=_L z)}.
-Proof. apply: sub_pred3; exact (@lexI _ S). Qed.
+Proof.
+apply: sub_pred3 => x y z; move: (@lexI _ S x y z).
+by rewrite !finLattice_leE finLattice_meetE. 
+Qed.
 
 Lemma fmeetC L (S : {finLattice L}) : {in S &, commutative (\fmeet_S)}.
 Proof.
 apply: sub_pred2=> x y; move: (@meetC _ S x y).
-exact: (@congr1 _ _ (@fsval _ S)).
+by move/(@congr1 _ _ (@fsval _ S)); rewrite !finLattice_meetE.
 Qed.
 
 Lemma lefIl L (S : {finLattice L}) :
   {in S & &, forall x y z, y <=_L x -> \fmeet_S y z <=_L x}.
-Proof. apply: sub_pred3; exact: (@leIxl _ S). Qed.
+Proof.
+apply: sub_pred3 => x y z; move: (@leIxl _ S x y z).
+by rewrite !finLattice_leE !finLattice_meetE.
+Qed.
 
 Lemma lefIr L (S : {finLattice L}) :
   {in S & &, forall x y z, z <=_L x -> \fmeet_S y z <=_L x}.
@@ -654,31 +712,34 @@ Proof. move=> x y z xS yS zS zlex; rewrite fmeetC //; exact: lefIl. Qed.
 Lemma fmeetA L (S : {finLattice L}) : {in S & &, associative (\fmeet_S) }.
 Proof.
 apply: sub_pred3=> x y z; move:(@meetA _ S x y z).
-exact: (@congr1 _ _ (@fsval _ S)).
+by move/(@congr1 _ _ (@fsval _ S)); rewrite !finLattice_meetE.
 Qed.
 
 Lemma fmeetxx L (S : {finLattice L}) : {in S, idempotent (\fmeet_S)}.
 Proof.
 apply: sub_pred1=> x; move:(@meetxx _ S x).
-exact: (@congr1 _ _ (@fsval _ S)).
+by move/(@congr1 _ _ (@fsval _ S)); rewrite finLattice_meetE.
 Qed.
 
 Lemma leEfmeet L (S : {finLattice L}) :
   {in S &, forall x y, (x <=_L y) = (\fmeet_S x y == x)}.
-Proof. apply: sub_pred2; exact:(@leEmeet _ S). Qed.
+Proof.
+apply: sub_pred2 => x y; move:(@leEmeet _ S x y).
+by rewrite finLattice_leE -val_eqE /= finLattice_meetE.
+Qed.
 
 Lemma fmeetAC L (S : {finLattice L}) :
   {in S & &, right_commutative (\fmeet_S)}.
 Proof.
 apply: sub_pred3=> x y z; move:(@meetAC _ S x y z).
-exact: (@congr1 _ _ (@fsval _ S)).
+by move/(@congr1 _ _ (@fsval _ S)); rewrite !finLattice_meetE.
 Qed.
 
 Lemma fmeetCA L (S : {finLattice L}) :
   {in S & &, left_commutative (\fmeet_S)}.
 Proof.
 apply: sub_pred3=> x y z; move:(@meetCA _ S x y z).
-exact: (@congr1 _ _ (@fsval _ S)).
+by move/(@congr1 _ _ (@fsval _ S)); rewrite !finLattice_meetE.
 Qed.
 
 
@@ -688,7 +749,7 @@ Lemma fmeetACA L (S : {finLattice L}) x y z t:
   \fmeet_S (\fmeet_S x z) (\fmeet_S y t).
 Proof.
 move=> xS yS zS tS; move:(@meetACA _ S [`xS] [`yS] [`zS] [`tS]).
-exact: (@congr1 _ _ (@fsval _ S)).
+by move/(@congr1 _ _ (@fsval _ S)); rewrite ?finLattice_meetE.
 Qed.
 
 Lemma fmeetKI L (S : {finLattice L}) :
@@ -750,7 +811,10 @@ Proof. by move=> ????; rewrite fmeetC ?eq_fmeetl. Qed.
 Lemma lefI2 L (S : {finLattice L}) x y z t :
   x \in S -> y \in S -> z \in S -> t \in S ->
   x <=_L z -> y <=_L t -> \fmeet_S x y <=_L \fmeet_S z t.
-Proof. move=> xS yS zS tS; exact:(@leI2 _ S [`xS] [`yS] [`zS] [`tS]). Qed.
+Proof. 
+move=> xS yS zS tS; move:(@leI2 _ S [`xS] [`yS] [`zS] [`tS]).
+by rewrite !finLattice_leE !finLattice_meetE.
+Qed.
 
 End FMeetTheory.
 
@@ -1194,27 +1258,28 @@ Section FinTBLatticeStructure.
 
 Context {T: choiceType} (L : {preLattice T}) (S : {finLattice L}) (x0 : S).
 
-Definition Sbot := [`mem_fbot S].
-Lemma Sbot_mixin : BPOrder.mixin_of (<=:S) Sbot.
+Definition finbot := [`mem_fbot S].
+Lemma finbot_mixin : BPOrder.mixin_of (<=:S) finbot.
 Proof. move=> x; exact/le0f/fsvalP. Qed.
 
 Definition BSLattice_class :=
-  BLattice.Class (FinLatticeStructure.SLattice_class S) Sbot_mixin.
+  BLattice.Class FinLatticeStructure.finLattice_class finbot_mixin.
 
-Definition Stop := [`mem_ftop S].
-Lemma Stop_mixin : TPOrder.mixin_of (<=:S) Stop.
+Definition fintop := [`mem_ftop S].
+Lemma fintop_mixin : TPOrder.mixin_of (<=:S) fintop.
 Proof. move=> x; exact/lef1/fsvalP. Qed.
 
-Definition TBSLattice_class :=
-  TBLattice.Class BSLattice_class Stop_mixin.
-Definition TBSLattice_pack := TBLattice.Pack (Phant _) (TBSLattice_class).
+Definition TBfinLattice_class :=
+  TBLattice.Class BSLattice_class fintop_mixin.
+Definition TBfinLattice_pack :=
+  TBLattice.Pack (Phant _) (TBfinLattice_class).
 
 End FinTBLatticeStructure.
 Module Exports.
-Coercion TBSLattice_pack : finLattice >-> TBLattice.order.
-Canonical TBSLattice_pack.
-Notation Sbot := Sbot.
-Notation Stop := Stop.
+Coercion TBfinLattice_pack : finLattice >-> TBLattice.order.
+Canonical TBfinLattice_pack.
+Notation finbot := finbot.
+Notation fintop := fintop.
 End Exports.
 
 End FinTBLatticeStructure.
@@ -1233,7 +1298,27 @@ Goal forall (r : seq I),
 \big[\fmeet_S / \ftop_S]_(i <- r | P i) F i =
 (val (\big[meet S / top S]_(i <- r | P i) insubd a (F i))).
 Proof.
-Admitted.
+move=> r. rewrite (big_val a) /vop /vx0 /fun2_val.
+- move=> x y z; apply/val_inj.
+  by rewrite ?insubdK ?mem_fmeet ?fmeetA ?fsvalP.
+- move=> x; apply/val_inj.
+  by rewrite !insubdK ?mem_fmeet ?mem_ftop ?fmeet1f ?fsvalP.
+- move=> x; apply/val_inj.
+  by rewrite !insubdK ?mem_fmeet ?mem_ftop ?fmeetf1 ?fsvalP.
+- move=> opA op1x opx1 x y; apply/val_inj.
+  rewrite ?insubdK ?mem_fmeet ?fsvalP //; apply: fmeetC; exact: fsvalP.
+- move=> opA op1x opx1 opC; congr fsval.
+  have eq_idx: insubd a \ftop_S = top S by
+    apply/val_inj; rewrite !insubdK ?mem_ftop.
+  rewrite {1}eq_idx; apply: (eq_big_op (fun x => val x \in S)).
+    + exact: mem_ftop.
+    + by move=> x y xS yS; rewrite insubdK ?mem_fmeet.
+    + by move=> x y xS yS; apply/val_inj; rewrite !insubdK ?mem_fmeet.
+    + by move=> i Pi; rewrite insubdK ?FS.
+- exact: mem_ftop.
+- exact: mem_fmeet.
+- exact: FS.
+Qed.
 
 End TestTBFinLattice.
 
