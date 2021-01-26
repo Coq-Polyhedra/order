@@ -1289,16 +1289,14 @@ Section TestTBFinLattice.
 
 Context {T : choiceType} {L : {preLattice T}} {S : {finLattice L}}.
 Context (a : S).
-Context (I : Type) (F : I -> T).
+Context (I : Type) (F : I -> S).
 Context (P : pred I).
 
-Hypothesis FS : forall i, F i \in S.
-
-Goal forall (r : seq I),
+(*Goal forall (r : seq I),
 \big[\fmeet_S / \ftop_S]_(i <- r | P i) F i =
 (val (\big[meet S / top S]_(i <- r | P i) insubd a (F i))).
 Proof.
-move=> r. rewrite (big_val a) /vop /vx0 /fun2_val.
+move=> r; rewrite (big_val a) /vop /vx0 /fun2_val.
 - move=> x y z; apply/val_inj.
   by rewrite ?insubdK ?mem_fmeet ?fmeetA ?fsvalP.
 - move=> x; apply/val_inj.
@@ -1318,6 +1316,18 @@ move=> r. rewrite (big_val a) /vop /vx0 /fun2_val.
 - exact: mem_ftop.
 - exact: mem_fmeet.
 - exact: FS.
+Qed.*)
+
+Goal forall (r : seq I),
+  val (\big[meet S / top S]_(i <- r | P i) F i) =
+  \big[\fmeet_S / \ftop_S]_(i <- r | P i) val (F i).
+Proof.
+move=> r0; rewrite big_val_foo /=.
+have ->: fsval (top S) = \ftop_S by [].
+rewrite (eq_big_op (fun x => x \in S) \fmeet_S) ?mem_ftop //.
+- move=> ????; exact:fsvalP.
+- by move=> x y xS yS; rewrite /val_fun2 !insubdK ?mem_fmeet.
+- move=> ??; exact: fsvalP.
 Qed.
 
 End TestTBFinLattice.
@@ -1556,6 +1566,34 @@ Section IntervalTheory.
 Context {T : choiceType}.
 Implicit Type (L : {preLattice T}).
 
+Section UmeetDjoin.
+
+Lemma mem_umeet L (S : {finLattice L}) a: umeet S a \in S.
+Proof. exact: Interval.mem_umeet. Qed.
+
+Lemma mem_djoin L (S : {finLattice L}) b: djoin S b \in S.
+Proof. exact: Interval.mem_djoin. Qed.
+
+Lemma umeetE L (S : {finLattice L}) a: a \in S -> umeet S a = a.
+Proof. exact: Interval.umeetE. Qed.
+
+Lemma djoinE L (S : {finLattice L}) b: b \in S -> djoin S b = b.
+Proof. exact: Interval.djoinE. Qed.
+
+Lemma le_umeet L (S : {finLattice L}) a b :
+  b \in S -> a <=_L b -> umeet S a <=_L b.
+Proof.
+by move=> bS aleb; apply: fmeet_inf_seq.
+Qed.
+
+Lemma le_djoin L (S : {finLattice L}) a b :
+  a \in S -> a <=_L b -> djoin S b >=_L a.
+Proof.
+by move=> aS aleb; apply: fjoin_sumeet_seq.
+Qed.
+
+End UmeetDjoin.
+
 Lemma fmeet_itvE L (S : {finLattice L}) a b :
   {in [<a; b>]_S &, \fmeet_([< a ; b >]_S) =2 \fmeet_S}.
 Proof. by move => x y x_in y_in; rewrite /fmeet -Interval.premeet_itvE. Qed.
@@ -1590,12 +1628,17 @@ Proof. by rewrite !inE /=; case/andP. Qed.
 
 Lemma itv_geL L (S: {finLattice L}) a b x :
   a \in S -> a <=_L b -> x \in [< a ; b >]_S -> a <=_L x.
-Admitted.
-(* Proof. move=> aS; rewrite !inE Interval.umeetE // => /and3P []. Qed.*)
+Proof.
+move=> aS aleb /itv_bigrange /andP [+ _].
+by rewrite (umeetE aS) (fmeet_l aS (mem_djoin S b) (le_djoin aS aleb)).
+Qed.
 
 Lemma itv_leR L (S: {finLattice L}) a b x :
   b \in S -> a <=_L b -> x \in [< a ; b >]_S -> x <=_L b.
-Admitted.
+Proof.
+move=> bS aleb /itv_bigrange /andP [_].
+by rewrite (djoinE bS) (fjoin_r (mem_umeet S a) bS (le_umeet bS aleb)).
+Qed.
 (*Proof. by move=> bS; rewrite !inE Interval.join_bar // => /and3P []. Qed.*)
 
 Lemma itv_id L (S: {finLattice L}) : [<\fbot_S; \ftop_S>]_S = S.
@@ -1607,20 +1650,20 @@ by rewrite fmeet_l ?fjoin_r ?le0f ?lef1 ?mem_fbot.
 Qed.
 
 Lemma mono_itv L (S : {finLattice L}) (A B a b : T) :
-  A \in S -> B \in S -> a \in [< A; B >]_S -> b \in [<A ; B >]_S ->
+  A \in S -> B \in S -> A <=_L B ->
+  a \in [< A; B >]_S -> b \in [<A ; B >]_S -> a <=_L b ->
   [< a; b >]_[< A; B >]_S = [< a; b >]_S.
-Admitted.
-(*Proof.
-move=> AS BS; rewrite intervalE // => /and3P [aS Alea aleB].
-rewrite intervalE // => /and3P [bS Aleb bleB].
-apply/eqP/fset_eqP=> z.
-apply/(sameP idP)/(iffP idP).
-- case/intervalP => // zS /andP [alez zleb].
-  rewrite !intervalE ?alez ?zleb ?andbT ?aS ?bS ?zS ?Aleb ?Alea //=.
-  by rewrite (le_trans Alea) ?(le_trans _ bleB).
-- case/intervalP; rewrite intervalE ?aS ?bS ?Alea ?Aleb //.
-  by case/and3P => zS _ _ alezleb; apply/intervalP.
-Qed.*)
+Proof.
+move=> AS BS AleB; rewrite intervalE // => /and3P [aS Alea aleB].
+rewrite intervalE // => /and3P [bS Aleb bleB] aleb.
+apply/eqP/fset_eqP => z; apply/(sameP idP)/(iffP idP).
+- case/intervalP => // zS /andP [alez zleb]; rewrite !mem_itv //.
+  + exact: (le_trans Alea).
+  + exact: (le_trans zleb).
+- case/intervalP => //;
+    rewrite !intervalE ?aS ?Alea ?aleB ?bS ?Aleb ?bleB //.
+  by case/andP => -> _ /andP [-> ->].
+Qed.
 
 Lemma sub_itv L (S : {finLattice L}) a b c d:
   a \in S -> b \in S -> c \in S -> d \in S ->
@@ -1659,8 +1702,7 @@ Qed.
 
 Lemma mem_0itv L (S : {finLattice L}) (y : T) :
   y \in S -> \fbot_S \in [< \fbot_S; y >]_S.
-Admitted.
-(*Proof. by move=> yS; rewrite mem_itvL ?(mem_fbot yS) ?le0f. Qed.*)
+Proof. by move=> yS; rewrite mem_itv ?le0f ?mem_fbot. Qed.
 
 
 Lemma mem_itv1 L (S : {finLattice L}) (x : T) :
@@ -1672,12 +1714,10 @@ Qed.
 
 Lemma itvE0 L (S : {finLattice L}) :
   {in S &, forall a b, a <=_L b -> \fbot_([<a; b>]_S) = a}.
-Admitted.
-(*Proof.
-move=> a b aS bS aleb; apply: fbot_id;
-  rewrite ?mem_itvL //.
-by move=> x /intervalP; case/(_ aS bS) => _ /andP [].
-Qed.*)
+Proof.
+move=> a b aS bS aleb; apply: fbot_id; rewrite ?mem_itv //.
+move=> x; exact: itv_geL.
+Qed.
 
 
 Lemma itvE1 L (S : {finLattice L}):
@@ -1691,33 +1731,29 @@ Qed.
 Lemma sub_atomic L (S: {finLattice L}) x:
   x \in S -> \fbot_S <_L x ->
   exists2 y, atom S y & y <=_L x.
-Admitted.
-(*Proof.
-set S' := ([< \fbot_S; x >]_S `\` [fset \fbot_S; x])%fset.
-move=> x_in_S bot_lt_x.
-have Sprop0: S != fset0 :> {fset _} by apply/fset0Pn; exists x.
+Proof.
+set S' := ([< \fbot_S; x >]_S `\` [fset \fbot_S; x]).
+move=> xS botltx.
 case/boolP: (S' == fset0).
 - rewrite fsetD_eq0 => /fsubsetP intv_sub.
-  exists x => //.
-  apply/atomP; split => // y y_in_S; apply: contraTN => y_lt_x.
-  rewrite lt_neqAle le0f ?andbT //.
-  have/intv_sub: (y \in [<\fbot_S; x>]_S)
-    by apply/mem_itv=> //; rewrite (le0f, ltW).
-  by rewrite !inE (lt_eqF y_lt_x) orbF => /eqP ->; rewrite eq_refl.
+  exists x => //; apply/atomP; rewrite xS botltx; split=> //.
+  move=> y yS; apply: contraTN => yltx.
+  have/intv_sub : y \in [< \fbot_S; x >]_S by
+    rewrite mem_itv ?le0f ?(ltW yltx).
+  by rewrite !inE (lt_eqF yltx) orbF; move/eqP => ->; rewrite ltxx.
 - case/(minset_neq0 L)/fset0Pn => y /mem_minsetE.
-  rewrite in_fsetD intervalE ?(mem_fbot x_in_S) // !inE negb_or.
-  case => /and4P [/andP [yNbot y_neq_x] y_in_S bot_le_y y_le_x mini_y].
-  exists y => //. apply/atomP; split => //.
-    by rewrite lt_neqAle eq_sym yNbot bot_le_y.
-  move=> x0 x0_in_S bot_lt_x0; apply: contraT; rewrite negbK => x0_lt_y.
-  have/mini_y: x0 \in S'.
-  + rewrite in_fsetD intervalE ?(mem_fbot x_in_S) //.
-    rewrite ?le0f ?x0_in_S //.
-    rewrite ?(ltW (lt_le_trans x0_lt_y y_le_x)) ?andbT.
-    rewrite !inE negb_or (gt_eqF bot_lt_x0) /=.
-    by rewrite (lt_eqF (lt_le_trans x0_lt_y y_le_x)).
-  by rewrite x0_lt_y.
-Qed.*)
+  rewrite in_fsetD intervalE ?mem_fbot //; [|rewrite le0f //].
+  case => /and3P [].
+  rewrite !inE negb_or => /andP [ynbot ynx] yS /andP [boty ylex] miny.
+  exists y=> //.
+  apply/atomP; rewrite yS lt_neqAle boty eq_sym ynbot; split => //.
+  move=> z zS botltz; apply: contraT; rewrite negbK => zlty.
+  suff/miny: z \in S' by rewrite zlty.
+  rewrite in_fsetD intervalE ?le0f ?zS ?mem_fbot //= ?inE.
+  rewrite negb_or eq_sym (lt_eqF botltz).
+  have zltx := (lt_le_trans zlty ylex).
+  by rewrite (lt_eqF zltx) (ltW zltx).
+Qed.
 
 Lemma sub_coatomic L (S: {finLattice L}) x:
   x \in S -> x <_L \ftop_S -> exists2 y, coatom S y & x <=_L y.
@@ -1734,14 +1770,13 @@ Hypothesis (P_incr : forall S, forall x,
 
 Lemma ind_incr (S : {finLattice L}) (x : T) :
   x \in S -> P S -> P [<x; \ftop_S>]_S.
-Admitted.
-(*Proof.
+Proof.
 move=> xS PS.
 move: {2}#|`_| (leqnn #|`[< \fbot_S; x >]_S|) => n.
 elim: n S xS PS => [|n ih] S xS PS.
 - rewrite leqn0 => /eqP /cardfs0_eq /(congr1 (fun S => x \in S)).
   by rewrite in_fset0 intervalE ?le0f ?lexx
-    ?(mem_fbot xS) ?xS.
+    ?mem_fbot ?xS.
 case/boolP: (atom S x) => [atom_Sx|atomN_Sx];
   first by move=> _; apply: P_incr.
 case: (x =P \fbot_S) => [-> _|/eqP neq0_x];
@@ -1753,11 +1788,11 @@ move=> sz; case: (sub_atomic xS bot_lt_x) =>
 have yS: y \in S by case/atomP: atom_Sy.
 have ne_xy: x != y by apply: contraNneq atomN_Sx => ->.
 have: x \in [< y; \ftop_S >]_S by
-  rewrite intervalE ?ylex ?lef1 ?(mem_ftop xS) ?xS ?yS.
+  rewrite intervalE ?ylex ?lef1 ?mem_ftop ?xS ?yS.
 move/ih => /(_ (P_incr atom_Sy PS)).
-rewrite !(itvE0, itvE1) ?(mem_ftop xS) ?lef1 //.
+rewrite !(itvE0, itvE1) ?mem_ftop ?lef1 //.
 rewrite !mono_itv ?mem_itv1 ?mem_itvL
-  ?intervalE ?yS ?(mem_ftop xS) ?xS ?ylex ?lef1 //.
+  ?intervalE ?yS ?mem_ftop ?xS ?ylex ?lef1 //.
 apply.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // mem_0itv.
@@ -1766,11 +1801,11 @@ rewrite fsetD1K ?mem_0itv //.
 apply: (@fsub_proper_trans _ ([< \fbot_S; x >]_S `\ \fbot_S)); last first.
 - by apply/fproperD1; rewrite mem_0itv.
 apply/fsubsetD1P; split.
-- rewrite sub_itv ?le0f ?(mem_fbot xS) ?xS ?yS //=.
+- rewrite sub_itv ?le0f ?mem_fbot ?xS ?yS //=.
 apply: contraL atom_Sy; rewrite intervalE //.
 case/and3P => _ ylebot _; apply/negP => /atomP[].
 by rewrite (le_gtF ylebot).
-Qed.*)
+Qed.
 End IndIncr.
 
 (* -------------------------------------------------------------------- *)
@@ -1815,15 +1850,14 @@ Hypothesis (P_decr : forall (S:{finLattice L}), forall x,
 
 Lemma ind_id (S : {finLattice L}) (x y : T) :
   x \in S -> y \in S -> x <=_L y -> P S -> P [<x; y>]_S.
-Admitted.
-(*Proof.
+Proof.
 move=> xS yS xley PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
 have Sprop0 : S != fset0 :> {fset _} by apply/fset0Pn; exists x.
 suff: P [< \fbot_[< x; \ftop_S >]_S; y >]_[< x; \ftop_S >]_S.
   rewrite itvE0 ?mono_itv ?andbT ?mem_itvL ?intervalE
-    ?yS ?xley ?(mem_ftop xS) ?lef1 //.
-by apply: ind_decr; rewrite ?intervalE // ?xley ?lef1 ?yS ?(mem_ftop xS).
-Qed.*)
+    ?yS ?xley ?mem_ftop ?lef1 //.
+by apply: ind_decr; rewrite ?intervalE // ?xley ?lef1 ?yS ?mem_ftop.
+Qed.
 End Ind.
 
 End IntervalTheory.

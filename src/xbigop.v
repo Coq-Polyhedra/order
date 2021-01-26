@@ -130,7 +130,7 @@ Qed.
 
 End BigOpSubF.
 
-Section BigOpFset.
+Section BigOpVal1.
 
 Context {T: Type} {P : pred T} {S : subType P} (a : S).
 Definition fun_val (f : T -> T) (x : S) := insubd a (f (val x)).
@@ -162,4 +162,29 @@ Lemma big_val (r : seq I) (Q : pred I) :
   val (\big[vcop / vx0]_(i <- r | Q i) insubd a (F i)).
 Admitted.
 
-End BigOpFset.
+End BigOpVal1.
+
+Section BigOpVal2.
+
+Context {T: Type} {P : pred T} {S : subType P} {x0 : S}.
+Context {op : Monoid.com_law x0}.
+
+
+Definition val_fun (f: S -> S) (x : T) :=
+  val (f (insubd x0 x)).
+Definition val_fun2 (f : S -> S -> S) (x y: T) :=
+  val (f (insubd x0 x) (insubd x0 y)).
+
+Context {I : Type} {F : I -> S}.
+Lemma big_val_foo (r : seq I) (Q : pred I):
+  val (\big[op / x0]_(i <- r | Q i) F i) = 
+  \big[val_fun2 op / val x0]_(i <- r | Q i) val (F i).
+Proof.
+elim : r; rewrite ?big_nil //.
+move=> a l Hind; rewrite !big_cons; case : (Q a).
+- by rewrite -Hind /val_fun2 !valKd.
+- by rewrite -Hind.
+Qed.
+
+
+End BigOpVal2.
