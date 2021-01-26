@@ -2264,10 +2264,10 @@ End FMorphismRank.
 Section Atomistic.
 Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
 
-Definition atomistic_r (a : T) :=
+Definition atomistic_r (a : S) :=
   [exists A : {fset S},
        [forall x in A, atom S (val x)]
-    && (a == (\big[join S/bottom (S)]_(x in A) x))].
+    && (a == (\big[join S/bottom S]_(x in A) x))].
 
 Definition atomistic (a : T) :=
   if @idP (a \in S) is  ReflectT h then atomistic_r [` h] else false.
