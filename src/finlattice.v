@@ -234,7 +234,7 @@ Implicit Type L: {preLattice T}.
 (* TO IMPROVE *)
 Definition mixin L := (PreLattice.mixin (PreLattice.class L)).
 
-Lemma premeet_min L S:
+Lemma premeet_min_r L S:
   {in S &, forall x y, premeet L S x y <=_L x /\ premeet L S x y <=_L y}.
 Proof. exact: (PreLattice.premeet_min (mixin L)). Qed.
 
@@ -246,6 +246,8 @@ Lemma premeet_minr L S:
   {in S &, forall x y, premeet L S x y <=_L y}.
 Proof. by move=> x y xS yS; case: (PreLattice.premeet_min (mixin L) xS yS). Qed.
 
+Definition premeet_min := (premeet_minl, premeet_minr).
+
 Lemma premeet_inf L S:
   {in S & &, forall x y z, z <=_L x -> z <=_L y -> z <=_L premeet L S x y}.
 Proof. exact: (PreLattice.premeet_inf (mixin L)). Qed.
@@ -254,7 +256,7 @@ Lemma premeet_incr L S S': S `<=` S' ->
   {in S &, forall x y, premeet L S x y <=_L premeet L S' x y}.
 Proof. move=> ?????; exact: (PreLattice.premeet_incr (mixin L)). Qed.
 
-Lemma prejoin_max L S:
+Lemma prejoin_max_r L S:
   {in S &, forall x y, prejoin L S x y <=_(L^~) x /\ prejoin L S x y <=_(L^~) y}.
 Proof. exact: (PreLattice.prejoin_max (mixin L)). Qed.
 
@@ -265,6 +267,8 @@ Proof. by move=> x y xS yS; case: (PreLattice.prejoin_max (mixin L) xS yS). Qed.
 Lemma prejoin_maxr L S:
   {in S &, forall x y, prejoin L S x y <=_(L^~) y}.
 Proof. by move=> x y xS yS; case: (PreLattice.prejoin_max (mixin L) xS yS). Qed.
+
+Definition prejoin_max := (prejoin_maxl, prejoin_maxr).
 
 Lemma prejoin_sumeet L S:
   {in S & &, forall x y z, z <=_(L^~) x -> z <=_(L^~) y -> z <=_(L^~) prejoin L S x y}.
@@ -1180,10 +1184,25 @@ move=> t tS ttop; apply/(@le_anti _ L).
 by rewrite lef1 //= andbT; apply/ttop; rewrite mem_ftop.
 Qed.
 
-
 Lemma fbot_id L (S: {finLattice L}) :
   {in S, forall t, (forall x, x \in S -> x >=_L t) -> \fbot_S = t}.
 Proof. exact: (@ftop_id _ S^~s). Qed.
+
+Lemma fmeet0f L (S : {finLattice L}) :
+  {in S, left_zero \fbot_S \fmeet_S}.
+Proof. by move=> x xS; apply/eqP; rewrite -leEfmeet ?le0f ?mem_fbot. Qed.
+
+Lemma fmeetf0 L (S : {finLattice L}) :
+  {in S, right_zero \fbot_S \fmeet_S}.
+Proof. by move=> x xS; apply/eqP; rewrite fmeetC -?leEfmeet ?le0f ?mem_fbot. Qed.
+
+Lemma fjoin1f L (S : {finLattice L}) :
+  {in S, left_zero \ftop_S \fjoin_S}.
+Proof. exact: (@fmeet0f _ S^~s). Qed.
+
+Lemma fjoinf1 L (S : {finLattice L}) :
+  {in S, right_zero \ftop_S \fjoin_S}.
+Proof. exact: (@fmeetf0 _ S^~s). Qed.
 
 (* ------------------------------------------------------------------ *)
 
@@ -1513,7 +1532,7 @@ rewrite !in_fsetE => /and3P[xS alex xleb] /and3P[yS aley yleb].
 apply/and3P; split.
 - exact: mem_fmeet.
 - by apply/premeet_inf=> //; apply/mem_fmeet; rewrite ?mem_umeet ?mem_djoin.
-- by apply:(le_trans _ xleb); case: (premeet_min L xS yS).
+- by apply:(le_trans _ xleb); rewrite premeet_min.
 Qed.
 
 Lemma premeet_itvE L (S : {finLattice L}) a b x y:
@@ -1525,7 +1544,7 @@ move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
 move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
 apply/(@le_anti _ L)/andP; split.
 - by apply: premeet_inf=> //; first exact: itv_premeet_closed;
-     case: (premeet_min L xS yS).
+    rewrite premeet_min.
 - apply: premeet_incr=> //; apply/fsubsetP=> ?; exact: itv_subset.
 Qed.
 
@@ -1869,70 +1888,150 @@ End IntervalTheory.
 (* -------------------------------------------------------------------- *)
 Module Morphism.
 Section ClassDef.
-Context (T : choiceType) (L : {preLattice T}) (S1 S2 : {fset T}).
+Context (T : choiceType) (L : {preLattice T}) (S: {fset T}).
 
 Definition axiom (f : T -> T) :=
-  [/\ {in S1, forall x, f x \in S2}
-    , {in S1&, {morph f : x y / premeet L S1 x y >-> premeet L S2 x y}}
-    & {in S1&, {morph f : x y / prejoin L S1 x y >-> prejoin L S2 x y}}
-    ].
+  {in S&, {morph f : x y / premeet L S x y >-> premeet L (f @` S) x y}}
+  /\ {in S&, {morph f : x y / prejoin L S x y >-> prejoin L (f @`S) x y}}.
 
-Structure map (phS1 : phant S1) (phS2 : phant S2) :=
+Structure map (phS : phant S) :=
   Pack {apply; _ : axiom apply}.
 Local Coercion apply : map >-> Funclass.
 
-Context (phS1 : phant S1) (phS2 : phant S2).
-Context (f g : T -> T) (cF : map phS1 phS2).
+Context (phS : phant S).
+Context (f g : T -> T) (cF : map phS).
 
 Definition class := let: Pack _ c as cF' := cF return axiom cF' in c.
 Definition clone fA of phant_id g (apply cF) & phant_id fA class :=
-  @Pack phS1 phS2 f fA.
+  @Pack phS f fA.
 End ClassDef.
 
 Module Exports.
 Notation fmorphism f := (axiom f).
 Coercion apply : map >-> Funclass.
-Notation FMorphism fM := (Pack (Phant _) (Phant _) fM).
-Notation "{ L : 'fmorphism' S1 '>->' S2 }" := (map L (Phant S1) (Phant S2))
-  (at level 0, L at level 0, format "{ L  :  'fmorphism'  S1  '>->'  S2 }").
+Notation FMorphism fM := (Pack (Phant _) fM).
+Notation "{ 'fmorphism' S 'on' L }" := (map L (Phant S))
+  (at level 0, L at level 0, format "{ 'fmorphism'  S  'on'  L }").
 End Exports.
 End Morphism.
 
 Include Morphism.Exports.
 
 (* -------------------------------------------------------------------- *)
+
+Section FinLatticeMorphism.
+
+Context {T : choiceType} {L : {preLattice T}}.
+Context {S : {finLattice L}} (f : {fmorphism S on L}).
+
+Definition finLatImg := (f @`(S : {fset _})).
+
+Lemma finLatImg_prop0 : finLatImg != fset0.
+Proof. 
+case/fset0Pn : (finLattice_prop0 S) => x xS; apply/fset0Pn; exists (f x).
+exact: in_imfset.
+Qed.
+
+Lemma fmorph_premeet :
+  {in S&, {morph f : x y / premeet L S x y >-> premeet L finLatImg x y}}.
+Proof. by rewrite /finLatImg; case: f => ? []. Qed.
+
+Lemma fmorph_prejoin :
+  {in S&, {morph f : x y / prejoin L S x y >-> prejoin L finLatImg x y}}.
+Proof. by rewrite /finLatImg; case: f => ? []. Qed.
+
+
+Lemma finLatImg_premeet_closed : premeet_closed L finLatImg.
+Proof.
+apply/premeet_closedP => x y /imfsetP + /imfsetP.
+case => x' x'S -> [y' y'S ->].
+rewrite -fmorph_premeet ?in_imfset //.
+exact : (mem_fmeet x'S y'S).
+Qed.
+
+Lemma finLatImg_prejoin_closed : premeet_closed (L^~pl) finLatImg.
+Proof.
+apply/premeet_closedP => x y /imfsetP + /imfsetP /=.
+case => x' x'S -> [y' y'S ->].
+rewrite -fmorph_prejoin ?in_imfset //.
+exact : (mem_fjoin x'S y'S).
+Qed.
+
+Lemma finLatImg_finLat :
+  [&& premeet_closed L finLatImg,
+  premeet_closed (L^~pl) finLatImg &
+  finLatImg != fset0].
+Proof.
+by rewrite finLatImg_prop0 finLatImg_premeet_closed
+  finLatImg_prejoin_closed.
+Qed.
+
+Canonical finLatImg_finLattice := FinLattice finLatImg_finLat.
+
+End FinLatticeMorphism.
+
+Check @finLatImg_finLattice.
+
+Notation "f '@%' S" := (@finLatImg_finLattice _ _ S f)
+  (at level 24, format "f  '@%'  S").
+
 Section MorphismTheory.
 Context (T : choiceType).
 
 Implicit Type (L : {preLattice T}).
 
-Lemma fmorphismP L (S1 S2 : {finLattice L}) (f : {L : fmorphism S1 >-> S2}) :
-  fmorphism L S1 S2 f.
+Lemma fmorphismP L (S : {finLattice L}) (f : {fmorphism S on L}) :
+  fmorphism L S f.
 Proof. by case : f. Qed.
 
-Lemma meet_morph_homo L (S1 S2 : {finLattice L}) f :
-  {in S1, forall x, f x \in S2} ->
-  {in S1 &, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
-  {in S1 &, {homo f : x y / x <=_L y}}.
+Lemma fmorphI L (S : {finLattice L}) (f : {fmorphism S on L}) :
+  {in S &, {morph f : x y / \fmeet_S x y >-> \fmeet_(f @% S) x y}}.
+Proof. by case: (fmorphismP f). Qed.
+
+Lemma fmorphU L (S : {finLattice L}) (f : {fmorphism S on L}) :
+  {in S &, {morph f : x y / \fjoin_S x y >-> \fjoin_(f @% S) x y}}.
+Proof. by case: (fmorphismP f). Qed.
+
+(* ------------------------------------------------------------------- *)
+
+Lemma meet_morph_homo L (S: {finLattice L}) f :
+  {in S &, {morph f : x y / premeet L S x y >->
+    premeet L (f @` (S : {fset _})) x y}} ->
+  {in S &, {homo f : x y / x <=_L y}}.
 Proof.
-move=> f_im f_morph.
-move=> x y xS yS; rewrite (leEfmeet xS) // => /eqP.
-move/(congr1 f); rewrite f_morph // => <-.
-by apply/lefIr =>//; apply/f_im.
+move=> f_morph x y xS yS xley.
+suff <-: premeet L (f @` (S : {fset _})) (f x) (f y) = f x by
+  rewrite premeet_minr // in_imfset.
+rewrite -f_morph //; congr f; apply: (le_anti L).
+by rewrite premeet_minl ?premeet_inf.
 Qed.
 
-Lemma meet_morph_mono L (S1 S2 : {finLattice L}) f :
-  {in S1, forall x, f x \in S2} ->
-  {in S1 &, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
-  {in S1 &, injective f} -> {in S1&, {mono f : x y / x <=_L y}}.
+Lemma meet_morph_mono L (S : {finLattice L}) f :
+  {in S &, {morph f : x y / premeet L S x y >->
+    premeet L (f @` (S : {fset _})) x y}} ->
+  {in S &, injective f} -> {in S &, {mono f : x y / x <=_L y}}.
 Proof.
-move=> f_im f_morph f_inj.
-move=> x y xS yS; rewrite (leEfmeet xS) //.
-rewrite (leEfmeet (f_im _ xS)) ?f_im //.
-by rewrite -f_morph //; apply/(inj_in_eq f_inj) => //; apply: mem_fjoin.
+move=> f_morph f_inj x y xS yS.
+apply/(sameP idP)/(iffP idP); first exact: (meet_morph_homo f_morph).
+move=> fxlefy.
+suff: premeet L (f @` (S : {fset _})) (f x) (f y) == (f x).
+- rewrite -f_morph ?(inj_in_eq f_inj) ?(mem_fmeet xS) //.
+  move/eqP => <-; exact: premeet_minr.
+by apply/eqP/(le_anti L); rewrite premeet_minl ?premeet_inf ?in_imfset.
 Qed.
 
-Lemma meet_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
+Lemma meet_fmorphism L (S : {finLattice L}) f :
+  {in S &, {morph f : x y / premeet L S x y >->
+    premeet L (f @` (S : {fset _})) x y}} ->
+  {in S &, injective f} -> fmorphism L S f.
+Proof.
+move=> f_morph f_inj; rewrite /(fmorphism _).
+have f_mono := (meet_morph_mono f_morph f_inj).
+split; first exact: f_morph.
+move=> x y xS yS; apply/(le_anti L)/andP; split.
+Admitted.
+
+(*Lemma meet_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
   {in S1, forall x, f x \in S2} ->
   {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}} ->
   {in S1 & on S2, bijective f} -> fmorphism L S1 S2 f.
@@ -1951,38 +2050,41 @@ apply/(le_anti L)/andP; split.
   by rewrite -[X in (_ <=__ X)]gfK ?f_mono ?le0f ?g_im ?mem_fbot.
 + apply/(le_anti L)/andP; split; rewrite ?lef1 ?f_im ?mem_fbot //.
   by rewrite -[X in (X <=__ _)]gfK ?f_mono ?lef1 ?g_im ?mem_fbot.*)
-Qed.
+Qed.*)
 
-Lemma dual_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
-  fmorphism L S1 S2 f <-> fmorphism L S1^~s S2^~s f.
+Lemma dual_fmorphism L (S : {finLattice L}) (f : T -> T) :
+  fmorphism L S f <-> fmorphism L S^~s f.
 Proof. by split; case; split. Qed.
 
-Lemma join_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
-  {in S1, forall x, f x \in S2} ->
-  {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}} ->
-  {in S1 & on S2, bijective f} -> fmorphism L S1 S2 f.
+Lemma join_fmorphism L (S : {finLattice L}) (f : T -> T) :
+  {in S &, {morph f : x y / prejoin L S x y >->
+    prejoin L (f @` (S : {fset _})) x y}} ->
+  {in S &, injective f} -> fmorphism L S f.
 Proof.
-move=> in_mem morph_join bij; apply/dual_fmorphism.
-by move: (@meet_fmorphism _ S1^~s S2^~s f) => /(_ in_mem morph_join bij) [].
+move=> morph_join inj; apply/dual_fmorphism.
+by move: (@meet_fmorphism _ S^~s f) => /(_ morph_join inj) [].
 Qed.
 
-Context (L : {preLattice T}) (S1 S2 : {finLattice L})
-  (f g : { L : fmorphism S1 >-> S2}).
+(* ----------------------------------------------------------------- *)
+(*Context (L : {preLattice T}) (S : {finLattice L}).
+Context (f g : {fmorphism S on L}).*)
 
-Lemma mem_fmorph : {in S1, forall x, f x \in S2}.
-Proof. by case: f => ? []. Qed.
 
-Lemma fmorphU : {in S1&, {morph f : x y / \fjoin_S1 x y >-> \fjoin_S2 x y}}.
-Proof. by case: f => ? []. Qed.
 
-Lemma fmorphI : {in S1&, {morph f : x y / \fmeet_S1 x y >-> \fmeet_S2 x y}}.
-Proof. by case: f => ? []. Qed.
+Lemma fmorph0 L (S : {finLattice L}) (f : {fmorphism S on L}):
+  f \fbot_S = \fbot_(f @% S).
+Proof.
+symmetry; apply: fbot_id; first exact/in_imfset/mem_fbot.
+move=> y /imfsetP [x xS ->].
+have fxfS: f x \in (f @% S) by rewrite in_imfset.
+by rewrite (leEfmeet _ fxfS) ?in_imfset -?fmorphI ?mem_fbot ?fmeet0f.
+Qed.
 
-(*Lemma fmorph0 : f \fbot_S1 = \fbot_S2.
-Proof. symmetry; apply: fbot_id; first exact/mem_fmorph/mem_fbot. Qed.
+Lemma fmorph1 L (S : {finLattice L}) (f : {fmorphism S on L}):
+  f \ftop_S = \ftop_(f @% S).
+Proof.
 
-Lemma fmorph1: f \ftop_S1 = \ftop_S2.
-Proof. by case: f => ? []. Qed.*)
+exact: (@fmorph0 _ S^~s f). Qed.
 
 Lemma fmorph_homo : {in S1&, {homo f : x y / x <=_L y}}.
 Proof.
