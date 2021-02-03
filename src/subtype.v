@@ -18,15 +18,12 @@ Record S := SubType { xval :> T; _ : P xval }.
 Lemma xvalP (x : S) : P (xval x).
 Proof. by case: x. Qed.
 
-Context (f : T -> T -> T). (*(f' : S -> S -> S).*)
+Context (f : T -> T -> T).
 
 Hypothesis Hf : forall x y, P x -> P y -> P (f x y).
 Canonical f' x y := SubType (Hf (xvalP x) (xvalP y)).
 
-(*Lemma Pf x y : P (f (xval x) (xval y)).
-rewrite Hf; exact: xvalP. Defined.*)
-
-Canonical foo x (Hx : expose (P x)) := SubType Hx.
+Canonical xinsub x (Hx : expose (P x)) := SubType Hx.
 
 Definition my_insub (x' : S) & (phantom T (xval x')) := x'.
 
@@ -46,6 +43,6 @@ Proof. by move=> ?; rewrite f'xx. Qed.
 Hypothesis f'C : forall x y, f' x y = f' y x.
 
 Lemma fC x y : P x -> P y -> f x (f y x) = f x (f x y).
-Proof. by move=> ? ?; rewrite [f y x](congr1 xval (f'C _ _)) /=. Qed.
+Proof. by move=> ??; rewrite [f y x](congr1 xval (f'C _ _)) /=. Qed.
 
 End SubType.
