@@ -104,3 +104,9 @@ Proof. by move=> /rwP Pb /rwP Qc; apply: (iffP implyP); intuition. Qed.
 
 Notation "'imply_[ view1 , view2 ]" := (@implyPP _ _ _ _ view1 view2)
   (at level 4, right associativity, format "''imply_[' view1 ,  view2 ]").
+
+Lemma and3PP (P Q R: Prop) (b c d : bool) :
+  reflect P b -> reflect Q c -> reflect R d ->
+  reflect ([/\ P, Q & R]) ([&& b, c & d]).
+Proof. by move=> /rwP Pb /rwP Qc /rwP Rd; apply: (iffP and3P); case; intuition. Qed.
+
