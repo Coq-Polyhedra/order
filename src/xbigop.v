@@ -130,6 +130,29 @@ Qed.
 
 End BigOpSubF.
 
+Section BigOpSubMorph.
+
+Context {T : eqType} {op1 op2 : T -> T -> T} {P Q : pred T}.
+Context {x : T} {f : T -> T}.
+
+Hypothesis f_morph : {in Q&, {morph f : x y / op1 x y >-> op2 x y}}.
+Hypothesis PQ : forall x, P x -> Q x.
+Hypothesis opQ : {in Q&, forall x y, Q (op1 x y)}.
+Hypothesis Qx : Q x.
+
+Lemma big_morph_sub (r : seq T) :
+  f (\big[op1/x]_(i <- r | P i) i) =
+  \big[op2/f x]_(i <- r| P i) f i.
+Proof.
+elim r; first by rewrite !big_nil.
+move=> a l Hind; rewrite !big_cons; case E: (P a) => //.
+rewrite f_morph ?Hind //.
++ exact: PQ.
++ exact: big_stable.
+Qed.
+
+End BigOpSubMorph.
+
 Section BigOpVal1.
 
 Context {T: Type} {P : pred T} {S : subType P} (a : S).
