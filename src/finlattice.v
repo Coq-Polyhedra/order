@@ -2213,6 +2213,12 @@ Lemma misof_isof (f : T -> T):
   misof f -> isof.
 Proof. by move=> ?; exists f. Qed.
 
+Lemma misof_fmorph (f : {fmorphism S1 on L}) :
+  {in S1&, injective f} -> f @` (S1 : {fset _}) = S2 ->
+  misof f.
+Proof. move=> f_inj f_surj; apply/misofP; split => //; exact: fmorphismP. Qed.
+
+
 Lemma isofP :
   (exists2 f : {fmorphism S1 on L}, f @` S1 = S2 & {in S1&, injective f}) <->
   (isof).
