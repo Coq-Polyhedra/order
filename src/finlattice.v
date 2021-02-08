@@ -2396,6 +2396,16 @@ by rewrite in_imfset //=; congr (_ && _);
   ?(inj_in_eq f_inj) ?eq_fmeetl ?mem_fmeet ?inE -?f_surj ?in_imfset.
 Qed.
 
+Lemma misof0 (L : {preLattice T}) (S1 S2: {finLattice L})
+  (f : {fmorphism S1 on L}) :
+  misof L S1 S2 f -> f \fbot_S1 = \fbot_S2.
+Proof. case/misofP => _ _ ?; rewrite fmorph0; congr fbot; exact: val_inj. Qed.
+
+Lemma misof1 (L : {preLattice T}) (S1 S2: {finLattice L})
+  (f : {fmorphism S1 on L}) :
+  misof L S1 S2 f -> f \ftop_S1 = \ftop_S2.
+Proof. case/misofP => _ _ ?; rewrite fmorph1; congr fbot; exact: val_inj. Qed.
+
 (*Lemma comp_fmorphism L (S1 S2 S3 : {finLattice L})
       (f : {L : fmorphism S1 >-> S2}) (g : {L : fmorphism S2 >-> S3}) :
   fmorphism L S1 S2 f -> fmorphism L S2 S3 g -> fmorphism L S1 S3 (g \o f).
