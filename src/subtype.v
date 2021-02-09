@@ -11,7 +11,7 @@ Hint Extern 0 (expose (is_true _)) => (match goal with H : is_true _ |- _ => exa
 
 Section SubType.
 
-Context (T : choiceType) (P : pred T) (x0 : T).
+Context (T : choiceType) (P : pred T).
 
 Record S := SubType { xval :> T; _ : P xval }.
 

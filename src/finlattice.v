@@ -466,7 +466,7 @@ Proof. by case: S => S0 /= /and3P []. Qed.
 Definition witness := [`xchooseP (fset0Pn S finLattice_prop0)].
 
 Lemma mem_meet : forall x y, x \in S -> y \in S -> \fmeet_S x y \in S.
-Proof. 
+Proof.
 case: S => S0 i x y; rewrite !inE /fmeet /=.
 case/and3P: i => /premeet_closedP + _ _; exact.
 Qed.
@@ -479,7 +479,7 @@ Qed.
 
 (* ------------------------------------------------------------------ *)
 
-Definition finle (x y : S) := (val x <=_L val y). 
+Definition finle (x y : S) := (val x <=_L val y).
 Definition finlt (x y : S) := (val x <_L val y).
 
 Lemma finlexx : reflexive finle.
@@ -546,7 +546,7 @@ Qed.
 
 Lemma finmeetC : commutative finmeet.
 Proof.
-by move=> x y; apply/finle_anti; 
+by move=> x y; apply/finle_anti;
   rewrite finmeet_inf ?finmeet_minl ?finmeet_minr.
 Qed.
 
@@ -695,7 +695,7 @@ Proof. by move=> L S x y; apply/val_inj; rewrite !insubdK ?mem_fmeet ?fsvalP.*)
 Section FMeetTheory.
 
 Lemma leIfl L (S : {finLattice L}) : {in S &, forall x y, \fmeet_S x y <=_L x}.
-Proof. 
+Proof.
 apply: sub_pred2 => x y; move: (@leIl _ S x y).
 by rewrite finLattice_leE finLattice_meetE.
 Qed.
@@ -711,7 +711,7 @@ Lemma lefI L (S : {finLattice L}) :
   {in S & &, forall x y z, (x <=_L \fmeet_S y z) = (x <=_L y) && (x <=_L z)}.
 Proof.
 apply: sub_pred3 => x y z; move: (@lexI _ S x y z).
-by rewrite !finLattice_leE finLattice_meetE. 
+by rewrite !finLattice_leE finLattice_meetE.
 Qed.
 
 Lemma fmeetC L (S : {finLattice L}) : {in S &, commutative (\fmeet_S)}.
@@ -833,7 +833,7 @@ Proof. by move=> ????; rewrite fmeetC ?eq_fmeetl. Qed.
 Lemma lefI2 L (S : {finLattice L}) x y z t :
   x \in S -> y \in S -> z \in S -> t \in S ->
   x <=_L z -> y <=_L t -> \fmeet_S x y <=_L \fmeet_S z t.
-Proof. 
+Proof.
 move=> xS yS zS tS; move:(@leI2 _ S [`xS] [`yS] [`zS] [`tS]).
 by rewrite !finLattice_leE !finLattice_meetE.
 Qed.
@@ -1590,6 +1590,7 @@ apply/and3P; split.
 Qed.
 
 Definition FinLatInterval L (S: {finLattice L}) a b :=
+  (* TODO: lock this definition *)
   FinLattice (@closed_itv L S a b).
 
 End Interval.
@@ -1945,7 +1946,7 @@ Context {S : {finLattice L}} (f : {fmorphism S on L}).
 Notation finLatImg := (f @`(S : {fset _})).
 
 Lemma finLatImg_prop0 : finLatImg != fset0.
-Proof. 
+Proof.
 case/fset0Pn : (finLattice_prop0 S) => x xS; apply/fset0Pn; exists (f x).
 exact: in_imfset.
 Qed.
@@ -2156,12 +2157,12 @@ Context (S1 S2 : {fset T}).
 
 Definition morphic_fmeet (f : T -> T) :=
   [forall x: S1, [forall y : S1,
-  f (premeet L S1 (fsval x) (fsval y)) == 
+  f (premeet L S1 (fsval x) (fsval y)) ==
   premeet L (f @` (S1 : {fset _})) (f (fsval x)) (f (fsval y))]].
-  
+
 Definition morphic_fjoin (f : T -> T) :=
   [forall x: S1, [forall y : S1,
-  f (prejoin L S1 (fsval x) (fsval y)) == 
+  f (prejoin L S1 (fsval x) (fsval y)) ==
   prejoin L (f @` (S1 : {fset _})) (f (fsval x)) (f (fsval y))]].
 
 Definition morphic (f : T -> T) := morphic_fmeet f && morphic_fjoin f.
@@ -2492,7 +2493,7 @@ have prejoin_img: prejoin L S2 (f x') (f y') \in fmorph_img.
   exact/in_imfset/mem_fmeet.
 suff ->: prejoin L fmorph_img (f x') (f y') =
   prejoin L S2 (f x') (f y') by [].
-apply/(le_anti L)/andP; split; last apply: prejoin_decr; 
+apply/(le_anti L)/andP; split; last apply: prejoin_decr;
   rewrite ?fmorph_img_sub ?in_imfset //.
 by apply: prejoin_sumeet;
   rewrite ?in_imfset ?prejoin_maxl ?prejoin_maxr ?mem_fmorph.
