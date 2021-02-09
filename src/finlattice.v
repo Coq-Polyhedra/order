@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect all_algebra finmap.
-Require Import xbigop extra_misc relorder.
+Require Import xbigop extra_misc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -14,6 +14,58 @@ Import RelOrder.
 Import RelOrder.Theory.
 
 (* -------------------------------------------------------------------- *)
+Section FsetOrderTheory.
+
+Context {T : choiceType} (L : {pOrder T}).
+
+Implicit Types (K : {fset T}).
+
+Lemma ex_min_elt K : K != fset0 ->
+  exists2 m, m \in K & forall x, x \in K -> ~~ (x <_L m).
+Proof.
+elim/fset_ind: K => //= [x S _ _ _]; elim/fset_ind: S => /= [|y S _ ih].
+- exists x; first by rewrite !in_fsetE eqxx.
+  by move=> y; rewrite !in_fsetE orbF => /eqP->; rewrite ltxx.
+case: ih => m m_in_xS min_m; exists (if y <_L m then y else m).
+- case: ifP => _; first by rewrite !in_fsetE eqxx !Monoid.simpm.
+  by rewrite fsetUCA in_fsetU m_in_xS orbT.
+move=> z; rewrite fsetUCA in_fsetU in_fset1 => /orP[].
+- by move/eqP=> ->; case: ifP =>[|/negbT//]; rewrite ltxx.
+move=> z_in_xS; case: ifPn => [le_ym|leN_ym].
+- by apply: contra (min_m _ z_in_xS) => /lt_trans; apply.
+- by apply: min_m.
+Qed.
+
+Definition minset K :=
+  [fset x in K | [forall y : K, ~~(fsval y <_L x)]].
+
+Lemma mem_minsetP K x : x \in K ->
+  reflect
+    (forall y, y \in K -> ~~ (y <_L x))
+    (x \in minset K).
+Proof.
+move=> xK; apply: (iffP idP).
+- rewrite !inE /= => /andP[_ /forall_inP /= h].
+  by move=> y yK; apply/negP => /(h [`yK]).
+- by move=> h; rewrite !inE /= xK /=; apply/forallP => z; apply/h.
+Qed.
+
+Lemma mem_minsetE K x :
+  x \in minset K -> x \in K /\ (forall y, y \in K -> ~~ (y <_L x)).
+Proof.
+move=> min_x; have xK: x \in K by move: min_x; rewrite !inE => /andP[].
+by split=> //; apply/mem_minsetP.
+Qed.
+
+Lemma minset_neq0 (K : {fset T}) : K != fset0 -> minset K != fset0.
+Proof.
+case/ex_min_elt => x x_in_K min_x.
+by apply/fset0Pn; exists x; apply/mem_minsetP.
+Qed.
+
+End FsetOrderTheory.
+
+(* -------------------------------------------------------------------- *)
 (* TODO: move this section to relorder.v                                *)
 Section POrderMonotonyTheory.
 Context (T T' : choiceType) (r : {pOrder T}) (r' : {pOrder T'}).
@@ -24,7 +76,7 @@ Hint Resolve lt_neqAle le_anti : core.
 Lemma ltW_homo :
      {homo f : x y / x <_r  y >-> x <_r'  y}
   -> {homo f : x y / x <=_r y >-> x <=_r' y}.
-Proof. by apply: homoW. Qed.
+Proof. exact: homoW. Qed.
 
 Lemma inj_homo_lt :
      injective f
@@ -172,7 +224,7 @@ Variable (leT ltT : rel T) (wT : T)
          (prejoinT : {fset T} -> T -> T -> T).
 
 Definition clone c of phant_id class c :=
-  @Pack phT leT ltT wT premeetT prejoinT c.
+  @Pack phT leT ltT wT premeetT prejoinT (nosimpl c).
 
 Definition pack (m0 : mixin_of leT wT premeetT prejoinT) :=
   fun (bord : POrder.order phT) b
@@ -201,7 +253,7 @@ Notation prejoin := prejoin.
 End Exports.
 
 End PreLattice.
-Include PreLattice.Exports.
+Import PreLattice.Exports.
 
 Section DualPreLattice.
 
@@ -211,7 +263,7 @@ Variable (L : {preLattice T}).
 Definition DualPreLatticeMixin :=
   let: PreLattice.Class _ m := PreLattice.class L in
   @PreLattice.Mixin T
-    (dual_rel <=:L)
+    _
     (PreLattice.witness L)
     (prejoin L) (premeet L)
       (PreLattice.prejoin_max m) (PreLattice.prejoin_sumeet m)
@@ -220,11 +272,11 @@ Definition DualPreLatticeMixin :=
       (PreLattice.premeet_incr m).
 
 Canonical DualPreLatticePack :=
-  PreLattice (dual_rel <=:L) _ _ _ _ DualPreLatticeMixin.
+  PreLattice (dual_rel <=:L) (dual_rel <:L) _ _ _ DualPreLatticeMixin.
 
 End DualPreLattice.
 
-Notation "L ^~pl" := ([preLattice of (<=:(L^~))]) (at level 0, only parsing).
+Notation "L ^~pl" := ([preLattice of dual_rel <=:L]) (at level 0, only parsing).
 
 Section PreLatticeTheory.
 
@@ -256,34 +308,32 @@ Lemma premeet_incr L S S': S `<=` S' ->
   {in S &, forall x y, premeet L S x y <=_L premeet L S' x y}.
 Proof. move=> ?????; exact: (PreLattice.premeet_incr (mixin L)). Qed.
 
-Lemma prejoin_max_r L S:
-  {in S &, forall x y, prejoin L S x y <=_(L^~) x /\ prejoin L S x y <=_(L^~) y}.
+Lemma prejoin_max L S:
+  {in S &, forall x y, x <=_L prejoin L S x y /\ y <=_L prejoin L S x y}.
 Proof. exact: (PreLattice.prejoin_max (mixin L)). Qed.
 
 Lemma prejoin_maxl L S:
-  {in S &, forall x y, prejoin L S x y <=_(L^~) x}.
+  {in S &, forall x y, x <=_L prejoin L S x y}.
 Proof. by move=> x y xS yS; case: (PreLattice.prejoin_max (mixin L) xS yS). Qed.
 
 Lemma prejoin_maxr L S:
-  {in S &, forall x y, prejoin L S x y <=_(L^~) y}.
+  {in S &, forall x y, y <=_L prejoin L S x y}.
 Proof. by move=> x y xS yS; case: (PreLattice.prejoin_max (mixin L) xS yS). Qed.
 
-Definition prejoin_max := (prejoin_maxl, prejoin_maxr).
-
 Lemma prejoin_sumeet L S:
-  {in S & &, forall x y z, z <=_(L^~) x -> z <=_(L^~) y -> z <=_(L^~) prejoin L S x y}.
+  {in S & &, forall x y z, x <=_L z -> y <=_L z -> prejoin L S x y <=_L z}.
 Proof. exact: (PreLattice.prejoin_sumeet (mixin L)). Qed.
 
 Lemma prejoin_decr L S S': S `<=` S' ->
-  {in S &, forall x y, prejoin L S x y <=_(L^~) prejoin L S' x y}.
+  {in S &, forall x y, prejoin L S' x y <=_L prejoin L S x y}.
 Proof. move=> ?????; exact: (PreLattice.prejoin_decr (mixin L)). Qed.
 
 Lemma dual_premeet L S x y:
-  premeet [preLattice of <=:(L^~)] S x y = prejoin L S x y.
+  premeet [preLattice of dual_rel <=:L] S x y = prejoin L S x y.
 Proof. by []. Qed.
 
 Lemma dual_prejoin L S x y:
-  prejoin [preLattice of <=:(L^~)] S x y = premeet L S x y.
+  prejoin [preLattice of dual_rel <=:L] S x y = premeet L S x y.
 Proof. by []. Qed.
 
 End PreLatticeTheory.
@@ -313,18 +363,17 @@ Proof. by []. Qed.
 
 Lemma Mjoin_max S x y :
   x \in S -> y \in S ->
-  Mjoin S x y <=_(M^~) x /\ Mjoin S x y <=_(M^~) y.
+  x <=_M Mjoin S x y /\ y <=_M Mjoin S x y.
 Proof. by move=> xS yS; split; apply/meetsP_seq => ?? /andP []. Qed.
 
 Lemma Mjoin_sumeet S x y z :
   x \in S -> y \in S -> z \in S ->
-  z <=_(M^~) x -> z <=_(M^~) y ->
-  z <=_(M^~) Mjoin S x y.
+  x <=_M z -> y <=_M z -> Mjoin S x y <=_M z.
 Proof. by move=> xS yS zS xlez ylez; apply: meet_inf_seq => //; apply/andP. Qed.
 
 Lemma Mjoin_decr S S' x y :
   S `<=` S' -> x \in S -> y \in S ->
-  Mjoin S x y <=_(M^~) Mjoin S' x y.
+  Mjoin S' x y <=_M Mjoin S x y.
 Proof.
 move=> /fsubsetP Ssub xS yS; apply/meetsP_seq => z zS /andP [xlez ylez].
 apply: meet_inf_seq; rewrite ?xlez ?ylez //.
@@ -345,7 +394,7 @@ Section JoinToPreLattice.
 Context {T: choiceType} (J : {bJoinOrder T}).
 
 Definition JoinPreLatticeMixin :=
-  MeetPreLatticeMixin [tMeetOrder of (<=:(J^~))].
+  MeetPreLatticeMixin [tMeetOrder of dual_rel <=:J].
 
 End JoinToPreLattice.
 
@@ -388,6 +437,7 @@ Canonical  finLattice_choiceType  :=
 
 (*Canonical finLattice_finType (S : finLattice) := [finType of S].*)
 
+(* FIXME: ambiguous path *)
 Coercion mem_finLattice (S: finLattice) : {pred T} :=
   fun x : T => (x \in (elements S)).
 Canonical finLattice_predType := PredType mem_finLattice.
@@ -485,25 +535,19 @@ Definition finlt (x y : S) := (val x <_L val y).
 Lemma finlexx : reflexive finle.
 Proof. by rewrite /finle. Qed.
 
-Lemma finle_anti : forall (x y : S), finle x y -> finle y x -> x = y.
-Proof.
-move=> x y; rewrite /finle /fun2_val => le1 le2.
-apply/val_inj/(@le_anti _ L).
-by rewrite le1 le2.
-Qed.
+Lemma finle_anti : antisymmetric finle.
+Proof. by move=> x y ?; apply/val_inj/(@le_anti _ L). Qed.
 
 Lemma finle_trans : transitive finle.
-Proof. move=> y x z; rewrite /finle; exact: le_trans. Qed.
+Proof. by move=> y x z; rewrite /finle; exact: le_trans. Qed.
 
-Lemma finlt_def : forall (x y : S), finlt x y = (x != y) && finle x y.
-Proof. move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
-
-Lemma dfinlt_def : forall (x y : S), finlt y x = (x != y) && finle y x.
-Proof. move=> x y; rewrite finlt_def eq_sym; congr (_ && _). Qed.
+Lemma finlt_def : forall (x y : S), finlt x y = (y != x) && finle x y.
+Proof. by move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
 
 Definition finle_mixin :=
-  POrder.Mixin finlexx finle_anti finle_trans finlt_def dfinlt_def.
+  LePOrderMixin finlt_def finlexx finle_anti finle_trans.
 
+Local Canonical fin_pOrder := POrder finle finlt finle_mixin.
 
 (* --------------------------------------------------------------- *)
 
@@ -547,13 +591,13 @@ Qed.
 Lemma finmeetC : commutative finmeet.
 Proof.
 by move=> x y; apply/finle_anti;
-  rewrite finmeet_inf ?finmeet_minl ?finmeet_minr.
+  rewrite !finmeet_inf ?finmeet_minl ?finmeet_minr.
 Qed.
 
 Lemma finmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
   finle (finmeet x (finmeet y z)) t.
 Proof.
-move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->  /=.
+move=> x y z t; rewrite !in_fsetE -orbA; case/or3P => /eqP ->.
 + exact: finmeet_minl.
 + exact/(finle_trans _ (finmeet_minl y z))/finmeet_minr.
 + exact/(finle_trans _ (finmeet_minr y z))/finmeet_minr.
@@ -562,7 +606,7 @@ Qed.
 Lemma finmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
   finle (finmeet (finmeet x y) z) t.
 Proof.
-move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP -> /=.
+move=> x y z t; rewrite !in_fsetE -orbA; case/or3P => /eqP ->.
 + exact/(finle_trans _ (finmeet_minl x y))/finmeet_minl.
 + exact/(finle_trans _ (finmeet_minr x y))/finmeet_minl.
 + exact:finmeet_minr.
@@ -576,21 +620,16 @@ Qed.
 
 Lemma lefinmeet : forall x y : S, finle x y = (finmeet x y == x).
 Proof.
-move=> x y; apply/(sameP idP)/(iffP idP).
-- move/eqP => <-; exact: finmeet_minr.
-- by move=> xley; apply/eqP/finle_anti;
-  rewrite ?finmeet_minl ?finmeet_inf ?finlexx.
+move=> x y; apply/idP/eqP => [lexy | <-]; last exact: finmeet_minr.
+by apply/finle_anti; rewrite finmeet_minl finmeet_inf ?finlexx.
 Qed.
-
-Definition finmeet_mixin := Meet.Mixin finmeetC finmeetA lefinmeet.
-Definition finmeet_class := Meet.Class finle_mixin finmeet_mixin.
 
 (* ----------------------------------------------------------------- *)
 
 Lemma finjoinC : commutative finjoin.
 Proof.
 by move=> x y; apply: finle_anti;
-  rewrite finjoin_sup ?finjoin_maxl ?finjoin_maxr.
+  rewrite !finjoin_sup ?finjoin_maxl ?finjoin_maxr.
 Qed.
 
 Lemma finjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
@@ -619,23 +658,39 @@ Qed.
 
 Lemma lefinjoin : forall x y : S, dual_rel finle x y = (finjoin x y == x).
 Proof.
-move=> x y; apply/(sameP idP)/(iffP idP).
-- move/eqP => <-; exact: finjoin_maxr.
-- by move=> ylex; apply/eqP/finle_anti;
-  rewrite ?finjoin_maxl ?finjoin_sup ?finlexx.
+move=> x y; apply/idP/eqP => [leyx | <-]; last by exact: finjoin_maxr.
+by apply/finle_anti; rewrite finjoin_maxl finjoin_sup ?finlexx.
 Qed.
 
-Definition finjoin_mixin := Meet.Mixin finjoinC finjoinA lefinjoin.
-Definition finLattice_class := Lattice.Class finmeet_class finjoin_mixin.
-Definition finLattice_pack := Lattice.Pack (Phant _) finLattice_class.
+(* TODO: Would using MeetJoinMixin be better? *)
+Definition fin_meetMixin := MeetRelMixin finmeetC finmeetA lefinmeet.
+Definition fin_joinMixin := JoinRelMixin finjoinC finjoinA lefinjoin.
+
+Local Canonical fin_meetOrder := MeetOrder finle finlt finmeet fin_meetMixin.
+Local Canonical fin_joinOrder := JoinOrder finle finlt finjoin fin_joinMixin.
+Local Canonical fin_lattice := [lattice of finle].
 
 End FinLatticeStructure.
 Module Exports.
-Coercion finLattice_pack : finLattice >-> Lattice.order.
-Canonical finLattice_pack.
+Arguments finle {T L S} x y.
+Arguments finlt {T L S} x y.
+Arguments finmeet {T L S} x y.
+Arguments finjoin {T L S} x y.
+Notation finle := finle.
+Notation finlt := finlt.
+Notation finmeet := finmeet.
+Notation finjoin := finjoin.
+Coercion fin_pOrder : finLattice >-> POrder.order.
+Coercion fin_meetOrder : finLattice >-> Meet.order.
+Coercion fin_joinOrder : finLattice >-> Join.order.
+Coercion fin_lattice : finLattice >-> Lattice.order.
+Canonical fin_pOrder.
+Canonical fin_meetOrder.
+Canonical fin_joinOrder.
+Canonical fin_lattice.
 End Exports.
 End FinLatticeStructure.
-Include FinLatticeStructure.Exports.
+Import FinLatticeStructure.Exports.
 
 (* ========================================================================= *)
 
@@ -847,20 +902,14 @@ Lemma fjoinC L (S : {finLattice L}) : {in S &, commutative (\fjoin_S)}.
 Proof. exact: (@fmeetC _ S^~s). Qed.
 
 Lemma lefUr L (S: {finLattice L}) : {in S &, forall x y, x <=_L \fjoin_S y x}.
-Proof.
-move=> ????; exact: (@leIfr _ S^~s).
-Qed.
+Proof. exact: (@leIfr _ S^~s). Qed.
 
 Lemma lefUl L (S : {finLattice L}) : {in S &, forall x y, x <=_L \fjoin_S x y}.
-Proof.
-move=> ????; exact: (@leIfl _ S^~s).
-Qed.
+Proof. exact: (@leIfl _ S^~s). Qed.
 
 Lemma leUf L (S : {finLattice L}) : {in S & &, forall x y z,
   (\fjoin_S y z <=_L x) = (y <=_L x) && (z <=_L x)}.
-Proof.
-move=> ????; exact: (@lefI _ S^~s).
-Qed.
+Proof. exact: (@lefI _ S^~s). Qed.
 
 Lemma fjoinA L (S : {finLattice L}) : {in S & &, associative (\fjoin_S)}.
 Proof. exact: (@fmeetA _ S^~s). Qed.
@@ -906,70 +955,48 @@ Proof. exact: (@fmeetIKC _ S^~s). Qed.
 
 Lemma leUfl L (S: {finLattice L}) :
   {in S & &, forall x y z, x <=_L y -> x <=_L \fjoin_S y z}.
-Proof.
-move=> ??????; exact: (@lefIl _ S^~s).
-Qed.
+Proof. exact: (@lefIl _ S^~s). Qed.
 
 Lemma leUfr L (S : {finLattice L}) :
   {in S & &, forall x y z, x <=_L z -> x <=_L \fjoin_S y z}.
-Proof.
-move=> ??????; exact: (@lefIr _ S^~s).
-Qed.
+Proof. exact: (@lefIr _ S^~s). Qed.
 
 Lemma lefU2 L (S : {finLattice L}) :
   {in S & &, forall x y z, (x <=_L y) || (x <=_L z) ->
   x <=_L \fjoin_S y z}.
-Proof.
-move=> ??????; exact: (@leIf2 _ S^~s).
-Qed.
+Proof. exact: (@leIf2 _ S^~s). Qed.
 
 Lemma fjoin_idPr L (S : {finLattice L}) {x y}: x \in S -> y \in S ->
   reflect (\fjoin_S y x = x) (y <=_L x).
-Proof.
-move=> ??; exact: (@fmeet_idPr _ S^~s).
-Qed.
+Proof. exact: (@fmeet_idPr _ S^~s). Qed.
 
 Lemma fjoin_idPl L (S: {finLattice L}) {x y} : x \in S -> y \in S ->
   reflect (\fjoin_S x y = x) (y <=_L x).
-Proof.
-move=> ??; exact: (@fmeet_idPl _ S^~s).
-Qed.
+Proof. exact: (@fmeet_idPl _ S^~s). Qed.
 
 Lemma fjoin_l L (S : {finLattice L}) :
   {in S &, forall x y, y <=_L x -> \fjoin_S x y = x}.
-Proof.
-move=> ????; exact: (@fmeet_l _ S^~s).
-Qed.
+Proof. exact: (@fmeet_l _ S^~s). Qed.
 
 Lemma fjoin_r L (S : {finLattice L}) :
   {in S &, forall x y, x <=_L y -> \fjoin_S x y = y}.
-Proof.
-move=> ????; exact: (@fmeet_r _ S^~s).
-Qed.
+Proof. exact: (@fmeet_r _ S^~s). Qed.
 
 Lemma leUfidl L (S: {finLattice L}) :
   {in S &, forall x y, (\fjoin_S x y <=_L x) = (y <=_L x)}.
-Proof.
-move=> ????; exact: (@lefIidl _ S^~s).
-Qed.
+Proof. exact: (@lefIidl _ S^~s). Qed.
 
 Lemma leUfidr L (S : {finLattice L}) :
   {in S &, forall x y, (\fjoin_S y x <=_L x) = (y <=_L x)}.
-Proof.
-move=> ????; exact: (@lefIidr _ S^~s).
-Qed.
+Proof. exact: (@lefIidr _ S^~s). Qed.
 
 Lemma eq_fjoinl L (S : {finLattice L}) :
   {in S &, forall x y, (\fjoin_S x y == x) = (y <=_L x)}.
-Proof.
-move=> ????; exact: (@eq_fmeetl _ S^~s).
-Qed.
+Proof. exact: (@eq_fmeetl _ S^~s). Qed.
 
 Lemma eq_fjoinr L (S : {finLattice L}) :
   {in S &, forall x y, (\fjoin_S x y == y) = (x <=_L y)}.
-Proof.
-move=> ????; exact: (@eq_fmeetr _ S^~s).
-Qed.
+Proof. exact: (@eq_fmeetr _ S^~s). Qed.
 
 Lemma leUf2 L (S: {finLattice L}) x y z t :
   x \in S -> y \in S -> z \in S -> t \in S ->
@@ -1276,7 +1303,7 @@ Lemma fjoin_meets L (S: {finLattice L}) x y :
   x \in S -> y \in S ->
   \fjoin_S x y = \big[\fmeet_S / \ftop_S]_(i <- S | (x <=_L i) && (y <=_L i)) i.
 Proof.
-move=> xS yS; apply/(le_anti L)/andP; split; last first.
+move=> xS yS; apply/(@le_anti _ L)/andP; split; last first.
 - apply/fmeet_inf_seq; rewrite ?mem_fjoin //.
   by apply/andP; split; rewrite ?lefUl ?lefUr.
 - by apply/fmeetsP=> ???; rewrite leUf.
@@ -1300,31 +1327,45 @@ Section FinTBLatticeStructure.
 Context {T: choiceType} (L : {preLattice T}) (S : {finLattice L}) (x0 : S).
 
 Definition finbot := [`mem_fbot S].
-Lemma finbot_mixin : BPOrder.mixin_of (<=:S) finbot.
+Lemma finbot_mixin : BPOrder.mixin_of S finbot.
 Proof. move=> x; exact/le0f/fsvalP. Qed.
 
-Definition BSLattice_class :=
-  BLattice.Class FinLatticeStructure.finLattice_class finbot_mixin.
-
 Definition fintop := [`mem_ftop S].
-Lemma fintop_mixin : TPOrder.mixin_of (<=:S) fintop.
+Lemma fintop_mixin : TPOrder.mixin_of S fintop.
 Proof. move=> x; exact/lef1/fsvalP. Qed.
 
-Definition TBfinLattice_class :=
-  TBLattice.Class BSLattice_class fintop_mixin.
-Definition TBfinLattice_pack :=
-  TBLattice.Pack (Phant _) (TBfinLattice_class).
+Local Canonical bPOrder := BPOrder finle finlt finbot finbot_mixin.
+
+Local Canonical tPOrder := TPOrder finle finlt fintop fintop_mixin.
+
+Local Canonical bMeetOrder := [bMeetOrder of finle].
+Local Canonical tMeetOrder := [tMeetOrder of finle].
+Local Canonical tbMeetOrder := [tMeetOrder of finle].
+Local Canonical bJoinOrder := [bJoinOrder of finle].
+Local Canonical tJoinOrder := [tJoinOrder of finle].
+Local Canonical tbJoinOrder := [tbJoinOrder of finle].
+Local Canonical bLattice := [bLattice of finle].
+Local Canonical tLattice := [tLattice of finle].
+Local Canonical tbLattice := [tbLattice of finle].
 
 End FinTBLatticeStructure.
 Module Exports.
-Coercion TBfinLattice_pack : finLattice >-> TBLattice.order.
-Canonical TBfinLattice_pack.
 Notation finbot := finbot.
 Notation fintop := fintop.
+Coercion tbLattice : finLattice >-> TBLattice.order.
+Canonical bMeetOrder.
+Canonical tMeetOrder.
+Canonical tbMeetOrder.
+Canonical bJoinOrder.
+Canonical tJoinOrder.
+Canonical tbJoinOrder.
+Canonical bLattice.
+Canonical tLattice.
+Canonical tbLattice.
 End Exports.
 
 End FinTBLatticeStructure.
-Include FinTBLatticeStructure.Exports.
+Import FinTBLatticeStructure.Exports.
 
 Section TestTBFinLattice.
 
@@ -1578,8 +1619,8 @@ Proof. rewrite dual_itv_fset_eq -dual_premeet; exact: premeet_itvE. Qed.
 
 Lemma closed_itv L (S:{finLattice L}) a b:
   [&& premeet_closed L (interval S a b),
-  premeet_closed ([preLattice of (<=:(L^~))]) (interval S a b) &
-  interval S a b != fset0].
+      premeet_closed [preLattice of dual_rel <=:L] (interval S a b) &
+      interval S a b != fset0].
 Proof.
 apply/and3P; split.
 - apply/premeet_closedP; move=> ????.
@@ -1601,7 +1642,7 @@ Notation umeet := umeet.
 Notation djoin := djoin.
 End Exports.
 End Interval.
-Include Interval.Exports.
+Import Interval.Exports.
 
 Section IntervalTheory.
 
@@ -1729,7 +1770,7 @@ Lemma dual_itv_r L (S : {finLattice L}) a b :
 Proof.  by apply/val_inj/Interval.dual_itv_fset_eq.  Qed.
 
 Definition dual_itv :=
-  (@dual_itv_r, fun L => @dual_itv_r [preLattice of (<=:(L^~))]).
+  (@dual_itv_r, fun L => @dual_itv_r [preLattice of dual_rel <=:L]).
 
 Lemma mem_itvL L (S : {finLattice L}) (x y : T) :
   x \in S -> x <=_L y -> x \in [< x; y >]_S.
@@ -1823,8 +1864,7 @@ case/boolP: (atom S x) => [atom_Sx|atomN_Sx];
   first by move=> _; apply: P_incr.
 case: (x =P \fbot_S) => [-> _|/eqP neq0_x];
   first by rewrite itv_id.
-have bot_lt_x: \fbot_S <_L x by
-  rewrite lt_def eq_sym neq0_x le0f.
+have bot_lt_x: \fbot_S <_L x by rewrite lt_def neq0_x le0f.
 move=> sz; case: (sub_atomic xS bot_lt_x) =>
   y atom_Sy ylex.
 have yS: y \in S by case/atomP: atom_Sy.
@@ -1858,7 +1898,7 @@ Proof. by exact/val_inj. Qed.
 Lemma fbot_dual_r (L : {preLattice T}) (S : {finLattice L}) :
   \fbot_(S^~s) = \ftop_S.
 Proof. by []. Qed.
-Notation dualize := (fun f => (@f, fun L => @f [preLattice of (<=:(L^~))])).
+Notation dualize := (fun f => (@f, fun L => @f [preLattice of dual_rel <=:L])).
 
 Definition fbot_dual := dualize fbot_dual_r.
 
@@ -1873,7 +1913,7 @@ Lemma ind_decr (S : {finLattice L}) (x : T) :
 Proof.
 move=> x_in_S PS.
 rewrite -[S]dualK -dual_itv fbot_dual.
-apply: (ind_incr (P := fun S' : finLattice [preLattice of (<=:(L^~))] => P S'^~s)) => //.
+apply: (ind_incr (P := fun S' : finLattice [preLattice of dual_rel <=:L] => P S'^~s)) => //.
 - by move=> S' x' ??; rewrite dual_itv; apply: P_decr.
 - by rewrite dualK.
 Qed.
@@ -1933,8 +1973,7 @@ Notation "{ 'fmorphism' S 'on' L }" := (map L (Phant S))
   (at level 0, L at level 0, format "{ 'fmorphism'  S  'on'  L }").
 End Exports.
 End Morphism.
-
-Include Morphism.Exports.
+Import Morphism.Exports.
 
 (* -------------------------------------------------------------------- *)
 
@@ -2024,7 +2063,7 @@ Proof.
 move=> f_morph x y xS yS xley.
 suff <-: premeet L (f @` (S : {fset _})) (f x) (f y) = f x by
   rewrite premeet_minr // in_imfset.
-rewrite -f_morph //; congr f; apply: (le_anti L).
+rewrite -f_morph //; congr f. apply: (@le_anti _ L).
 by rewrite premeet_minl ?premeet_inf.
 Qed.
 
@@ -2039,7 +2078,7 @@ move=> fxlefy.
 suff: premeet L (f @` (S : {fset _})) (f x) (f y) == (f x).
 - rewrite -f_morph ?(inj_in_eq f_inj) ?(mem_fmeet xS) //.
   move/eqP => <-; exact: premeet_minr.
-by apply/eqP/(le_anti L); rewrite premeet_minl ?premeet_inf ?in_imfset.
+by apply/eqP/(@le_anti _ L); rewrite premeet_minl ?premeet_inf ?in_imfset.
 Qed.
 
 Lemma meet_fmorphism L (S : {finLattice L}) f :
@@ -2050,7 +2089,7 @@ Proof.
 move=> f_morph f_inj; rewrite /(fmorphism _).
 have f_mono := (meet_morph_mono f_morph f_inj).
 split; first exact: f_morph.
-move=> x y xS yS; apply/(le_anti L)/andP; split.
+move=> x y xS yS; apply/(@le_anti _ L)/andP; split.
 Admitted.
 
 (*Lemma meet_fmorphism L (S1 S2 : {finLattice L}) (f : T -> T) :
@@ -2061,17 +2100,17 @@ Proof.
 move=> f_im f_morph [g] [g_im fgK gfK].
 have f_mono := (meet_morph_mono f_im f_morph (can_in_inj fgK)).
 split => //.
-move=> x y xS yS.
-apply/(le_anti L)/andP; split.
-- rewrite -[X in (_ <=__ X)]gfK ?f_mono ?leUf ?g_im ?mem_fjoin ?f_im //.
-  rewrite -f_mono ?g_im ?mem_fjoin ?f_im //.
-  rewrite -[X in _ && X]f_mono ?g_im ?mem_fjoin ?f_im //.
-  by rewrite gfK ?lefUl ?lefUr ?mem_fjoin ?f_im.
-- by rewrite leUf ?f_mono ?lefUl ?lefUr ?f_im ?mem_fjoin.
-(*+ apply/(le_anti L)/andP; split; rewrite ?le0f ?f_im ?mem_fbot //.
++ move=> x y xS yS.
+  apply/(@le_anti _ L)/andP; split.
+  - rewrite -[X in (_ <=__ X)]gfK ?f_mono ?leUf ?g_im ?mem_fjoin ?f_im //.
+    rewrite -f_mono ?g_im ?mem_fjoin ?f_im //.
+    rewrite -[X in _ && X]f_mono ?g_im ?mem_fjoin ?f_im //.
+    by rewrite gfK ?lefUl ?lefUr ?mem_fjoin ?f_im.
+  - by rewrite leUf ?f_mono ?lefUl ?lefUr ?f_im ?mem_fjoin.
++ apply/(@le_anti _ L)/andP; split; rewrite ?le0f ?f_im ?mem_fbot //.
   by rewrite -[X in (_ <=__ X)]gfK ?f_mono ?le0f ?g_im ?mem_fbot.
-+ apply/(le_anti L)/andP; split; rewrite ?lef1 ?f_im ?mem_fbot //.
-  by rewrite -[X in (X <=__ _)]gfK ?f_mono ?lef1 ?g_im ?mem_fbot.*)
++ apply/(@le_anti _ L)/andP; split; rewrite ?lef1 ?f_im ?mem_fbot //.
+  by rewrite -[X in (X <=__ _)]gfK ?f_mono ?lef1 ?g_im ?mem_fbot.
 Qed.*)
 
 Lemma dual_fmorphism L (S : {finLattice L}) (f : T -> T) :
@@ -2543,8 +2582,7 @@ Notation "{ 'rank' S }" := (map (Phant S))
   (at level 0, format "{ 'rank'  S }").
 End Exports.
 End Rank.
-
-Include Rank.Exports.
+Import Rank.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section RankTheory.
@@ -2697,3 +2735,10 @@ Definition coatomistic (a : T) :=
 
 
 End Atomistic.
+
+Export PreLattice.Exports.
+Export FinLatticeStructure.Exports.
+Export FinTBLatticeStructure.Exports.
+Export Interval.Exports.
+Export Morphism.Exports.
+Export Rank.Exports.
