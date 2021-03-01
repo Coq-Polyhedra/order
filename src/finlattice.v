@@ -442,6 +442,10 @@ Coercion mem_finLattice (S: finLattice) : {pred T} :=
   fun x : T => (x \in (elements S)).
 Canonical finLattice_predType := PredType mem_finLattice.
 
+Canonical finLattice_finPredType :=
+  mkFinPredType finLattice (fun S => elements S)
+    (fun S => fset_uniq (elements S)) (fun _ _ => erefl).
+
 Lemma in_finLatticeE (S: finLattice) x : (x \in S) = (x \in elements S).
 Proof. by []. Qed.
 
@@ -460,6 +464,11 @@ Notation "{ 'finLattice' L }" := (finLattice L) (at level 0, format "{ 'finLatti
 Notation "'\fmeet_' S" := (fmeet S) (at level 8, format "'\fmeet_' S").
 Notation "'\fjoin_' S" := (fjoin S) (at level 8, format "'\fjoin_' S").
 
+(* Section Test.
+
+Context {T: choiceType} {L : {preLattice T}} {S : {finLattice L}}.
+Goal forall (f : T -> T), f @` S = S.
+ *)
 (*Section Test.
 
 Context {T : choiceType} {L : {preLattice T}}.
@@ -743,6 +752,13 @@ Proof. by move=> x y; rewrite insubdK ?mem_fmeet ?fsvalP. Qed.
 Lemma finLattice_joinE L (S : {finLattice L}) : forall x y : S,
   fsval (join S x y) = \fjoin_S (fsval x) (fsval y).
 Proof. by move=> x y; rewrite insubdK ?mem_fjoin ?fsvalP. Qed.
+
+Lemma finLattice_funE L (S : {finLattice L}) (f : T -> T):
+  f @` S = f @` (elements S).
+Proof.
+apply/fsetP => x; apply/idP/idP => /imfsetP [x' xS ->]; exact: in_imfset.
+Qed.
+
 
 (*Goal forall L, forall S : {finLattice L}, forall x y, join S x y = meet (S^~s) x y.
 Proof. by move=> L S x y; apply/val_inj; rewrite !insubdK ?mem_fmeet ?fsvalP.*)
@@ -1951,7 +1967,7 @@ Context (T : choiceType) (L : {preLattice T}) (S: {fset T}).
 
 Definition axiom (f : T -> T) :=
   {in S&, {morph f : x y / premeet L S x y >-> premeet L (f @` S) x y}}
-  /\ {in S&, {morph f : x y / prejoin L S x y >-> prejoin L (f @`S) x y}}.
+  /\ {in S&, {morph f : x y / prejoin L S x y >-> prejoin L (f @` S) x y}}.
 
 Structure map (phS : phant S) :=
   Pack {apply; _ : axiom apply}.
@@ -1982,24 +1998,22 @@ Section FinLatticeImg.
 Context {T : choiceType} {L : {preLattice T}}.
 Context {S : {finLattice L}} (f : {fmorphism S on L}).
 
-Notation finLatImg := (f @`(S : {fset _})).
-
-Lemma finLatImg_prop0 : finLatImg != fset0.
+Lemma finLatImg_prop0 : f @` S != fset0.
 Proof.
 case/fset0Pn : (finLattice_prop0 S) => x xS; apply/fset0Pn; exists (f x).
 exact: in_imfset.
 Qed.
 
 Lemma fmorph_premeet :
-  {in S&, {morph f : x y / premeet L S x y >-> premeet L finLatImg x y}}.
-Proof. by case: f => ? []. Qed.
+  {in S&, {morph f : x y / premeet L S x y >-> premeet L (f @` S) x y}}.
+Proof. by rewrite finLattice_funE; case: f => ? []. Qed.
 
 Lemma fmorph_prejoin :
-  {in S&, {morph f : x y / prejoin L S x y >-> prejoin L finLatImg x y}}.
-Proof. by case: f => ? []. Qed.
+  {in S&, {morph f : x y / prejoin L S x y >-> prejoin L (f @` S) x y}}.
+Proof. by rewrite finLattice_funE; case: f => ? []. Qed.
 
 
-Lemma finLatImg_premeet_closed : premeet_closed L finLatImg.
+Lemma finLatImg_premeet_closed : premeet_closed L (f @` S).
 Proof.
 apply/premeet_closedP => x y /imfsetP + /imfsetP.
 case => x' x'S -> [y' y'S ->].
@@ -2007,7 +2021,7 @@ rewrite -fmorph_premeet ?in_imfset //.
 exact : (mem_fmeet x'S y'S).
 Qed.
 
-Lemma finLatImg_prejoin_closed : premeet_closed (L^~pl) finLatImg.
+Lemma finLatImg_prejoin_closed : premeet_closed (L^~pl) (f @` S).
 Proof.
 apply/premeet_closedP => x y /imfsetP + /imfsetP /=.
 case => x' x'S -> [y' y'S ->].
@@ -2016,9 +2030,9 @@ exact : (mem_fjoin x'S y'S).
 Qed.
 
 Lemma finLatImg_finLat :
-  [&& premeet_closed L finLatImg,
-  premeet_closed (L^~pl) finLatImg &
-  finLatImg != fset0].
+  [&& premeet_closed L (f @` S),
+  premeet_closed (L^~pl) (f @` S) &
+  (f @` S) != fset0].
 Proof.
 by rewrite finLatImg_prop0 finLatImg_premeet_closed
   finLatImg_prejoin_closed.
@@ -2043,14 +2057,14 @@ Proof. by case : f. Qed.
 
 Lemma fmorphI L (S : {finLattice L}) (f : {fmorphism S on L}) :
   {in S &, {morph f : x y / \fmeet_S x y >-> \fmeet_(\codom f) x y}}.
-Proof. by case: (fmorphismP f). Qed.
+Proof. by move=> ????; rewrite !fmeetE fmorph_premeet. Qed.
 
 Lemma fmorphU L (S : {finLattice L}) (f : {fmorphism S on L}) :
   {in S &, {morph f : x y / \fjoin_S x y >-> \fjoin_(\codom f) x y}}.
-Proof. by case: (fmorphismP f). Qed.
+Proof. by move=> ????; rewrite !fjoinE fmorph_prejoin. Qed.
 
 Lemma codomP L (S1 S2 : {finLattice L}) (f : {fmorphism S1 on L}) :
-  f @` (S1 : {fset _}) = S2 -> \codom f = S2.
+  f @` S1 = S2 -> \codom f = S2.
 Proof. move=> ?; exact: val_inj. Qed.
 
 (* ------------------------------------------------------------------- *)
@@ -2245,7 +2259,7 @@ Qed.
 
 Lemma misofP (f : T -> T):
   reflect
-  ([/\ fmorphism L S1 f, {in S1&, injective f} & f @` (S1 : {fset _}) = S2])
+  ([/\ fmorphism L S1 f, {in S1&, injective f} & f @` S1 = S2])
   (misof f).
 Proof. apply/and3PP; [exact/morphicP | exact/injfP |exact/eqP]. Qed.
 
@@ -2300,13 +2314,28 @@ rewrite -f_morphU ?mem_ftop //; apply/eqP; congr f.
 by rewrite -fjoinE fjoin1f.
 Qed.
 
+Lemma misof_codom (L : {preLattice T}) (S1 S2 : {finLattice L})
+  (f: {fmorphism S1 on L}):
+  misof L S1 S2 f -> \codom f = S2.
+Proof. case/misofP => _ _; rewrite -finLattice_funE; exact: codomP. Qed.
+
+Lemma misof_inj (L : {preLattice T}) (S1 S2 : {finLattice L})
+  (f: T -> T):
+  misof L S1 S2 f -> {in S1&, injective f}.
+Proof. by case/misofP. Qed.
+
+Lemma misof_surj (L : {preLattice T}) (S1 S2 : {finLattice L})
+  (f: T -> T):
+  misof L S1 S2 f -> f @`S1 = S2.
+Proof. by case/misofP; rewrite finLattice_funE. Qed.
+
 Section ItvMorph.
 
 Implicit Type L : {preLattice T}.
 
 Lemma fmorph_itv L (S : {finLattice L}) (f: {fmorphism S on L}) a b :
   a \in S -> b \in S -> a <=_L b -> {in S&, injective f} ->
-  f @` ([< a; b>]_S : {fset _}) = [< f a; f b>]_(\codom f).
+  f @` [< a; b>]_S = [< f a; f b>]_(\codom f).
 Proof.
 move=> aS bS aleb f_inj; apply/eqP/fset_eqP => x.
 apply/(sameP idP)/(iffP idP).
@@ -2319,29 +2348,52 @@ apply/(sameP idP)/(iffP idP).
   rewrite intervalE ?mem_fmorph ?fmorph_homo //.
 Qed.
 
-Lemma itv_isomorph L (S1 S2 : {finLattice L})
+Lemma fmorph_memitv L (S : {finLattice L}) (f: {fmorphism S on L}) a b:
+  a \in S -> b \in S -> a <=_L b -> {in S&, injective f} ->
+  forall x, x \in [<a; b>]_S -> (f x) \in [<f a; f b>]_(\codom f).
+Proof.
+by move=> ??????; rewrite inE -fmorph_itv // in_imfset.
+Qed. 
+
+Lemma itv_isomorph L (S1 S2: {finLattice L})
   (f : T -> T) a b:
   a \in S1 -> b \in S1 -> a <=_L b ->
   misof L S1 S2 f ->
-  misof L [<a ; b>]_S1 (f @` ([< a ; b >]_S1 : {fset _})) f.
+  misof L [<a ; b>]_S1 (f @` ([< a ; b >]_S1)) f.
 Proof.
 move=> aS1 bS1 aleb /misof_fmorph [g].
 case/misofP => _ g_inj g_surj g_eq.
 have g_fset: forall S: {fset _}, f @` S = g @` S
   by move=> S; apply/fsetP => z; apply/idP/idP => /imfsetP [x xS ->];
     rewrite -?g_eq ?in_imfset ?g_eq ?in_imfset.
-apply/misofP; split => //; first split.
+apply/misofP; split; first split.
 - move=> x y x_itv y_itv.
-  rewrite !g_eq g_fset fmorph_itv // -!fmeetE !fmeet_itvE //;
-    last 1 [rewrite inE -fmorph_itv // in_imfset |
-            rewrite inE -fmorph_itv // in_imfset]; rewrite //.
-  by apply: fmorphI; rewrite ?(itv_subset x_itv) ?(itv_subset y_itv).
+  rewrite !g_eq g_fset -finLattice_funE fmorph_itv //.
+  rewrite  -!fmeetE !fmeet_itvE ?fmorphI ?fmorph_memitv //.
+    exact: (itv_subset x_itv).
+  exact: (itv_subset y_itv).
 - move=> x y x_itv y_itv.
-  rewrite !g_eq g_fset fmorph_itv // -!fjoinE !fjoin_itvE //;
-    last 1 [rewrite inE -fmorph_itv // in_imfset |
-            rewrite inE -fmorph_itv // in_imfset]; rewrite //.
-  by apply: fmorphU; rewrite ?(itv_subset x_itv) ?(itv_subset y_itv).
-- move=> ? ? /itv_subset ? /itv_subset ?; rewrite !g_eq; exact: g_inj.
+  rewrite !g_eq g_fset -finLattice_funE fmorph_itv //.
+  rewrite -!fjoinE !fjoin_itvE ?fmorphU ?fmorph_memitv //.
+    exact: (itv_subset x_itv).
+  exact: (itv_subset y_itv).
+- move=> ?? /itv_subset ? /itv_subset ?; rewrite !g_eq; exact: g_inj.
+- by rewrite finLattice_funE.
+Qed.
+
+Lemma isomorph_itv L (S1 S2: {finLattice L})
+  (f : T -> T) a b:
+  a \in S1 -> b \in S1 -> a <=_L b ->
+  misof L S1 S2 f ->
+  misof L [<a ; b>]_S1 [< f a ; f b >]_S2 f.
+Proof.
+move=> aS1 bS1 aleb miso_f.
+move/misof_fmorph: (miso_f)=> [g miso_g].
+move/misof_codom: (miso_g)=> <- g_eq.
+rewrite !g_eq -fmorph_itv //; last exact: (misof_inj miso_g).
+have ->: g @` [< a; b >]_S1 = f @` [< a; b >]_S1 by
+  apply: eq_imfset.
+exact: (itv_isomorph (S2:=S2)).
 Qed.
 
 Lemma fmorph_atom L (S1 S2 : {finLattice L})
