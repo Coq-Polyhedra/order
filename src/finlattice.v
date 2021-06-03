@@ -9,12 +9,13 @@ Import GRing.Theory Num.Theory.
 
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
+Local Open Scope order_scope.
 
-Import RelOrder.
-Import RelOrder.Theory.
+Import Order.
+Import Order.Theory.
 
 (* -------------------------------------------------------------------- *)
-Section FsetOrderTheory.
+(*Section FsetOrderTheory.
 
 Context {T : choiceType} (L : {pOrder T}).
 
@@ -163,14 +164,121 @@ Lemma leW_mono_in_as :
   -> {in D &, {mono f : x y / x <_r  y >-> (x <  y)%O}}.
 Proof. exact: anti_mono_in. Qed.
 End POrderMonotonyTheoryCodom.
+ *)
 
 (* -------------------------------------------------------------------- *)
 Module PreLattice.
 Section ClassDef.
 
-Context {T : choiceType}.
-
 Set Primitive Projections.
+
+Record mixin_of (disp : unit) (T : porderType disp) := Mixin {
+  witness : T;
+  premeet : {fset T} -> T -> T -> T;
+  prejoin : {fset T} -> T -> T -> T;
+  premeet_min    : forall S x y, x \in S -> y \in S ->
+    (premeet S x y) <= x /\ (premeet S x y) <= y;
+  premeet_inf    : forall S x y z, x \in S -> y \in S -> z \in S ->
+    z <= x -> z <= y -> z <= (premeet S x y);
+  premeet_incr   : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
+    (premeet S x y) <= (premeet S' x y);
+  prejoin_max    : forall S x y, x \in S -> y \in S ->
+    (prejoin S x y) >= x /\ (prejoin S x y) >= y;
+  prejoin_sumeet : forall S x y z, x \in S -> y \in S -> z \in S ->
+    z >= x -> z >= y -> z >= (prejoin S x y);
+  prejoin_decr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
+    (prejoin S x y) >= (prejoin S' x y)
+}.
+
+Record class_of (disp : unit) (T : Type) := Class {
+  base : POrder.class_of T;
+  mixin : mixin_of (POrder.Pack disp base);
+}.
+
+Structure type (disp : unit) := Pack { sort; _ : class_of disp sort }.
+
+Unset Primitive Projections.
+
+Local Coercion base : class_of >-> POrder.class_of.
+
+Local Coercion sort : type >-> Sortclass.
+
+Variables (T : Type) (disp : unit) (cT : type disp).
+
+Definition class := let: Pack _ c as cT' := cT return class_of disp cT' in c.
+Definition clone c of phant_id class c := @Pack disp T c.
+Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
+
+Definition pack :=
+  fun bT b & phant_id (@POrder.class disp bT) b =>
+  fun m => Pack (@Class disp T b m).
+
+Definition eqType := @Equality.Pack cT class.
+Definition choiceType := @Choice.Pack cT class.
+Definition porderType := @POrder.Pack disp cT class.
+End ClassDef.
+
+Module Exports.
+Coercion base : class_of >-> POrder.class_of.
+Coercion mixin : class_of >-> mixin_of.
+Coercion sort : type >-> Sortclass.
+Coercion eqType : type >-> Equality.type.
+Coercion choiceType : type >-> Choice.type.
+Coercion porderType : type >-> POrder.type.
+Canonical eqType.
+Canonical choiceType.
+Canonical porderType.
+Notation prelatticeType := type.
+Notation PreLatticeType disp T m := (@pack T disp _ _ id m).
+Notation "[ 'prelatticeType' 'of' T 'for' cT ]" := (@clone T _ cT _ id)
+  (at level 0, format "[ 'prelatticeType'  'of'  T  'for'  cT ]") : form_scope.
+Notation "[ 'prelatticeType' 'of' T 'for' cT 'with' disp ]" :=
+  (@clone_with T _ cT disp _ id)
+  (at level 0, format "[ 'prelatticeType'  'of'  T  'for'  cT  'with'  disp ]") :
+  form_scope.
+Notation "[ 'prelatticeType' 'of' T ]" := [prelatticeType of T for _]
+  (at level 0, format "[ 'prelatticeType'  'of'  T ]") : form_scope.
+Notation "[ 'prelatticeType' 'of' T 'with' disp ]" :=
+  [prelatticeType of T for _ with disp]
+  (at level 0, format "[ 'prelatticeType'  'of'  T  'with' disp ]") : form_scope.
+End Exports.
+
+End PreLattice.
+Import PreLattice.Exports.
+
+Section PreLatticeDef.
+Context (disp : unit) (T : prelatticeType disp).
+Definition witness : T := PreLattice.witness (PreLattice.class T).
+Definition premeet : {fset T} -> T -> T -> T := PreLattice.premeet (PreLattice.class T).
+Definition prejoin : {fset T} -> T -> T -> T := PreLattice.prejoin (PreLattice.class T).
+End PreLatticeDef.
+
+Section DualPreLattice.
+
+Context {disp : unit} {T : prelatticeType disp}.
+
+Definition DualPreLatticeMixin :=
+  @PreLattice.Mixin (dual_display disp) [porderType of T^d] (witness T)
+                    (@prejoin _ T) (@premeet _ T)
+                    (@PreLattice.prejoin_max _ _ (PreLattice.class T))
+                    (@PreLattice.prejoin_sumeet _ _ (PreLattice.class T))
+                    (@PreLattice.prejoin_decr _ _ (PreLattice.class T))
+                    (@PreLattice.premeet_min _ _ (PreLattice.class T))
+                    (@PreLattice.premeet_inf _ _ (PreLattice.class T))
+                    (@PreLattice.premeet_incr _ _ (PreLattice.class T)).
+
+Canonical DualPreLatticeType :=
+  PreLatticeType (dual_display _) T^d DualPreLatticeMixin.
+
+End DualPreLattice.
+
+Notation dual_prejoin := (@prejoin (dual_display _) _).
+Notation dual_premeet := (@premeet (dual_display _) _).
+
+
+(*
+context {T : choiceType}.
+
 
 Record mixin_of (le : rel T) (witness : T)
        (premeet : {fset T} -> T -> T -> T)
@@ -207,7 +315,7 @@ Structure order (phT : phant T) := Pack {
   class_ : class_of le lt witness premeet prejoin
 }.
 
-Unset Primitive Projections.
+(*Unset Primitive Projections.*)
 
 Local Coercion base : class_of >-> POrder.class_of.
 
@@ -254,8 +362,9 @@ End Exports.
 
 End PreLattice.
 Import PreLattice.Exports.
+ *)
 
-Section DualPreLattice.
+(*Section DualPreLattice.
 
 Context {T: choiceType}.
 Variable (L : {preLattice T}).
@@ -277,6 +386,7 @@ Canonical DualPreLatticePack :=
 End DualPreLattice.
 
 Notation "L ^~pl" := ([preLattice of dual_rel <=:L]) (at level 0, only parsing).
+ *)
 
 Section PreLatticeTheory.
 
@@ -1779,6 +1889,11 @@ Proof. by move=> xS xy; apply/Interval.mem_itv. Qed.
 Lemma mem_itvR L (S : {finLattice L}) (x y : T) :
   y \in S -> x <=_L y -> y \in [< x; y >]_S.
 Proof.
+  L : preLattice T
+
+  S : {finLattice L}
+  S^~s : {finLattice L^~}
+
 have -> : S = (S^~s)^~s by exact/val_inj.
 rewrite -dual_itv => ??; exact: mem_itvL.
 Qed.
