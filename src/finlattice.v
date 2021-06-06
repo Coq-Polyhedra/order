@@ -401,7 +401,7 @@ exact: Ssub.
 Qed.
 
 Definition MeetPreLatticeMixin :=
-  @PreLattice.Mixin _ (POrder.class [porderType of T]) top
+  @PreLattice.Mixin _ (POrder.class T) top
                     _ _ mpremeet_min mpremeet_inf mpremeet_incr
                     mprejoin_max mprejoin_sumeet mprejoin_decr.
 
@@ -423,56 +423,82 @@ Section FinLattice.
 Definition premeet_closed {disp : unit} {T : prelatticeType disp} (S : {fset T}) :=
   [forall x : S, [forall y : S, premeet S (fsval x) (fsval y) \in S]].
 
+Definition prejoin_closed {disp : unit} {T : prelatticeType disp} (S : {fset T}) :=
+  [forall x : S, [forall y : S, prejoin S (fsval x) (fsval y) \in S]].
+
 Lemma premeet_closedP {disp : unit} {T : prelatticeType disp} (S : {fset T}) :
-  reflect (forall x y, x \in S -> y \in S ->
-    premeet S x y \in S)
-    (premeet_closed S).
+  reflect (forall x y, x \in S -> y \in S -> premeet S x y \in S)
+          (premeet_closed S).
 Proof.
-apply/(iffP idP).
-- by move => + x y xS yS; move/forallP/(_ [`xS])/forallP/(_ [`yS]).
-- move=> premeet_closedH; apply/forallP => x; apply/forallP => y.
-  apply: premeet_closedH; exact: fsvalP.
+apply: (iffP idP) => [+ x y xS yS|].
+- by move/forallP/(_ [`xS])/forallP/(_ [`yS]).
+- by move=> premeet_closedH; do 2 apply/forallP => ?; exact: premeet_closedH.
 Qed.
+
+Lemma prejoin_closedP {disp : unit} {T : prelatticeType disp} (S : {fset T}) :
+  reflect (forall x y, x \in S -> y \in S -> prejoin S x y \in S)
+          (prejoin_closed S).
+Proof. exact: (@premeet_closedP _ [prelatticeType of T^d]). Qed.
+
+Record finLattice_ (T0 : Type) (b : PreLattice.class_of T0)
+                   (T := PreLattice.Pack tt b) := FinLattice {
+  elements_ : {fset T};
+  _ : [&& premeet_closed elements_,
+          prejoin_closed elements_ & elements_ != fset0]
+}.
 
 Context {disp : unit} {T : prelatticeType disp}.
 
-Record finLattice :=
-  FinLattice { elements :> {fset T};
-  _ : [&& premeet_closed elements,
-       @premeet_closed _ [prelatticeType of T^d] elements &
-       elements != fset0]}.
+Definition finLattice : Type := @finLattice_ T (PreLattice.class T).
+Definition elements (S : finLattice) : {fset T} := elements_ S.
+Coercion elements : finLattice >-> finset_of.
 
-Canonical finLattice_subType := Eval hnf in [subType for elements].
+(* Canonical finLattice_subType := [subType for elements]. *)
+Canonical finLattice_subType :=
+  @SubType
+    {fset T}
+    (fun es : {fset T} =>
+       [&& premeet_closed es, prejoin_closed es & es != fset0])
+    finLattice elements (FinLattice (b:=PreLattice.class T))
+    (fun (K : finLattice -> Type) K_S (u : finLattice) =>
+       let: FinLattice x Px := u in K_S x Px) vrefl_rect.
 
-Definition finLattice_eqMixin := Eval hnf in [eqMixin of finLattice by <:].
-Canonical  finLattice_eqType  := Eval hnf in EqType finLattice finLattice_eqMixin.
+Definition finLattice_eqMixin := [eqMixin of finLattice by <:].
+Canonical finLattice_eqType := EqType finLattice finLattice_eqMixin.
 
 Definition finLattice_choiceMixin := [choiceMixin of finLattice by <:].
-Canonical  finLattice_choiceType  :=
-  Eval hnf in ChoiceType finLattice finLattice_choiceMixin.
+Canonical finLattice_choiceType := ChoiceType finLattice finLattice_choiceMixin.
 
 (*Canonical finLattice_finType (S : finLattice) := [finType of S].*)
 
 (* FIXME: ambiguous path *)
-Coercion mem_finLattice (S: finLattice) : {pred T} :=
-  fun x : T => (x \in (elements S)).
+Coercion mem_finLattice (S : finLattice) : {pred T} :=
+  fun x : T => x \in elements_ S.
+
 Canonical finLattice_predType := PredType mem_finLattice.
 
-Lemma in_finLatticeE (S: finLattice) x : (x \in S) = (x \in elements S).
+End FinLattice.
+
+Notation "{ 'finLattice' T }" :=
+  (@finLattice _ T) (at level 0, format "{ 'finLattice'  T }").
+
+Section FinLattice.
+
+Context {disp : unit} {T : prelatticeType disp}.
+
+Lemma in_finLatticeE (S: {finLattice T}) x : (x \in S) = (x \in elements S).
 Proof. by []. Qed.
 
 Definition inE := (@in_finLatticeE, inE).
 
-Definition fmeet (S : finLattice) := (premeet S).
-Definition fjoin (S : finLattice) := (prejoin S).
+Definition fmeet (S : {finLattice T}) := premeet S.
+Definition fjoin (S : {finLattice T}) := prejoin S.
 
-Lemma finlattice_eqP (S S' : finLattice) :
-  S =i S' <-> S = S'.
+Lemma finlattice_eqP (S S' : {finLattice T}) : S =i S' <-> S = S'.
 Proof. by split => [eq |-> //];apply/val_inj/fsetP. Qed.
 
 End FinLattice.
 
-Notation "{ 'finLattice' T }" := (@finLattice _ T) (at level 0, format "{ 'finLattice'  T }").
 Notation "'\fmeet_' S" := (fmeet S) (at level 8, format "'\fmeet_' S").
 Notation "'\fjoin_' S" := (fjoin S) (at level 8, format "'\fjoin_' S").
 
@@ -496,18 +522,15 @@ Context {disp : unit} {T : prelatticeType disp} (S : {finLattice T}).
 (* TODO: should we keep the Defined. ? *)
 Lemma premeet_closedDual :
   [&& @premeet_closed _ [prelatticeType of T^d] S,
-      (premeet_closed S) &
+      @prejoin_closed _ [prelatticeType of T^d] S &
       S != fset0 :> {fset _}].
 Proof. by case: S => S0 premeet_closedS0; rewrite andbCA. Defined.
 
-Canonical FinLatticeDual := FinLattice premeet_closedDual.
+Canonical FinLatticeDual : {finLattice [prelatticeType of T^d]} :=
+  FinLattice premeet_closedDual.
 
-Lemma dual_fjoinE:
-  \fjoin_(FinLatticeDual)= \fmeet_S.
-Proof. by []. Qed.
-
-Lemma dual_fmeetE: \fmeet_(FinLatticeDual) = \fjoin_S.
-Proof. by []. Qed.
+Lemma dual_fjoinE: \fjoin_FinLatticeDual = \fmeet_S. Proof. by []. Qed.
+Lemma dual_fmeetE: \fmeet_FinLatticeDual = \fjoin_S. Proof. by []. Qed.
 
 End FinLatticeDual.
 
@@ -524,7 +547,7 @@ Notation "S ^~s" := (FinLatticeDual S) (at level 8, format "S ^~s").
 Module FinLatticeStructure.
 Section FinLatticeStructure.
 
-Context {disp : unit} {T : prelatticeType disp} {S : {finLattice T}}.
+Context {disp : unit} {T : prelatticeType disp} (S : {finLattice T}).
 
 Lemma finLattice_prop0 : S != fset0 :> {fset _}.
 Proof. by case: S => S0 /= /and3P []. Qed.
@@ -540,7 +563,7 @@ Qed.
 Lemma mem_join : forall x y, x \in S -> y \in S -> \fjoin_S x y \in S.
 Proof.
 case: S => S0 i x y; rewrite !inE /fjoin /=.
-case/and3P: i => _ /premeet_closedP + _; exact.
+case/and3P: i => _ /prejoin_closedP + _; exact.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -672,7 +695,7 @@ by move=> x y z; apply: finle_anti;
   rewrite ?finjoin_sup ?finjoinAl ?finjoinAr ?in_fsetE ?eq_refl ?orbT.
 Qed.
 
-Lemma lefinjoin : forall x y : S, dual_rel finle x y = (finjoin x y == x).
+Lemma lefinjoin : forall x y : S, finle y x = (finjoin x y == x).
 Proof.
 move=> x y; apply/idP/eqP => [leyx | <-]; last by exact: finjoin_maxr.
 by apply/finle_anti; rewrite finjoin_maxl finjoin_sup ?finlexx.
@@ -737,8 +760,8 @@ Proof. by []. Qed.
 Lemma mem_fmeet (disp : unit) (T : prelatticeType disp) (S : {finLattice T}) :
   {in S &, forall x y, \fmeet_S x y \in S}.
 Proof.
-move=> x y; case: S => S premeet_closeds; rewrite !inE fmeetE /= => xS yS.
-by case/andP: premeet_closeds => /premeet_closedP/(_ x y xS yS).
+case: S => S premeet_closeds x y; rewrite !inE fmeetE /= => xS yS.
+by case/andP: premeet_closeds => /premeet_closedP + _; exact.
 Qed.
 
 Lemma mem_fjoin (disp : unit) (T : prelatticeType disp) (S: {finLattice T}) :
@@ -1169,13 +1192,17 @@ Proof. by case: fpickP => [->|] // x0 x0_in_S _; exists x0. Qed.
 
 End FPick.
 
-Definition fbot {disp : unit} {T : prelatticeType disp} (S : {finLattice T}) :=
+Definition fbot {disp : unit} {T : prelatticeType disp} (S : {finLattice T}) : T :=
   if fpick S is Some x0 then
     \big[\fmeet_S/x0]_(x <- S) x
   else
     witness.
 
-Definition ftop {disp : unit} {T : prelatticeType disp} (S : {finLattice T}) : T := fbot (S^~s).
+Definition ftop {disp : unit} {T : prelatticeType disp} (S : {finLattice T}) : T :=
+  if fpick S is Some x0 then
+    \big[\fjoin_S/x0]_(x <- S) x
+  else
+    witness.
 
 End TBDefs.
 
@@ -1431,10 +1458,10 @@ Goal forall (r : seq I),
   val (\meet_(i <- r | P i) F i) =
   \big[\fmeet_S / \ftop_S]_(i <- r | P i) val (F i).
 Proof.
-move=> r0; rewrite big_val_foo /=.
-have ->: fsval (@top _ S) = \ftop_S :> T by [].
-rewrite (eq_big_op (fun x => x \in S) \fmeet_S) ?mem_ftop //.
-- move=> ????; exact:fsvalP.
+move=> r0; rewrite big_val_foo.
+have ->: val (@top _ S) = \ftop_S :> T by [].
+apply: (eq_big_op (fun x => x \in S)); rewrite ?mem_ftop //.
+- move=> ????; exact: fsvalP.
 - by move=> x y xS yS; rewrite /val_fun2 !insubdK ?mem_fmeet.
 - move=> ??; exact: fsvalP.
 Qed.
@@ -1444,8 +1471,8 @@ End TestTBFinLattice.
 (* ================================================================== *)
 Section FinLattice1.
 
-Lemma premeet_closed1 {disp} {T : prelatticeType disp} a :
-  @premeet_closed disp T [fset a].
+Lemma premeet_closed1 {disp} {T : prelatticeType disp} (a : T) :
+  premeet_closed [fset a].
 Proof.
 apply/premeet_closedP=> ?? /fset1P-> /fset1P->; apply/fset1P.
 apply/le_anti/andP; split.
@@ -1453,17 +1480,15 @@ apply/le_anti/andP; split.
 - by apply/premeet_inf; rewrite ?fset11.
 Qed.
 
+Lemma prejoin_closed1 {disp} {T : prelatticeType disp} (a : T) :
+  prejoin_closed [fset a].
+Proof. exact: (@premeet_closed1 _ [prelatticeType of T^d]). Qed.
+
 Context {disp : unit} {T : prelatticeType disp} (a : T).
 
-Lemma is_lat1 :
-  [&& @premeet_closed _ T [fset a],
-      @premeet_closed _ [prelatticeType of T^d] [fset a] &
-      [fset a] != fset0].
-Proof.
-apply/and3P; split; first exact/premeet_closed1;
-  first exact/premeet_closed1.
-by apply/fset0Pn; exists a; rewrite in_fsetE.
-Qed.
+Lemma is_lat1 : [&& premeet_closed [fset a],
+                    prejoin_closed [fset a] & [fset a] != fset0].
+Proof. by rewrite premeet_closed1 prejoin_closed1 -cardfs_eq0 cardfs1. Qed.
 
 Definition lat1 := FinLattice is_lat1.
 
@@ -1478,21 +1503,20 @@ Definition atom {disp} {T : prelatticeType disp} (S : {finLattice T}) a :=
   [&& a \in S, (\fbot_S < a) &
                ~~[exists x : S, (\fbot_S < val x) && (val x < a)]].
 
-Definition coatom {disp} {T : prelatticeType disp} (S : {finLattice T}) a := atom S^~s a.
+Definition coatom {disp} {T : prelatticeType disp} (S : {finLattice T}) a :=
+  atom S^~s a.
 
 Lemma atomP {disp} {T : prelatticeType disp} {S : {finLattice T}} {a} :
   reflect
-    ([/\ a \in S, (\fbot_S < a) &
+    ([/\ a \in S, \fbot_S < a &
         forall x, x \in S -> \fbot_S < x -> ~~ (x < a)])
     (atom S a).
 Proof.
 apply/(iffP idP).
-- case/and3P; rewrite !inE => /= a_in_S bot_lt_a /existsPn atomic.
-  split => //; move=> y y_in_S bot_lt_y; move: (atomic [`y_in_S]%fset) => /=.
-  by rewrite negb_and bot_lt_y /=.
-- case; rewrite /atom => -> -> /= atomic; apply/existsPn.
-  move=> x; rewrite negb_and -implybE; apply/implyP => ?.
-  apply/atomic => //; exact: fsvalP.
+- case/and3P => /= -> -> /existsPn atomic; split => // y y_in_S bot_lt_y.
+  by move: (atomic [`y_in_S]%fset); rewrite negb_and bot_lt_y /=.
+- rewrite /atom; case=> [-> -> atomic]; apply/existsPn => x.
+  by rewrite negb_and -implybE; apply/implyP/atomic/fsvalP.
 Qed.
 
 Lemma coatomP {disp} {T : prelatticeType disp} {S : {finLattice T}} {a} :
@@ -1500,10 +1524,7 @@ Lemma coatomP {disp} {T : prelatticeType disp} {S : {finLattice T}} {a} :
     ([/\ a \in S, (a < \ftop_S) &
         forall x, x \in S -> x < \ftop_S -> ~~ (a < x)])
     (coatom S a).
-Proof. apply/(iffP idP).
-- by move/atomP.
-- move=> ?; exact/atomP.
-Qed.
+Proof. exact: (@atomP _ [prelatticeType of T^d] S^~s). Qed.
 
 Lemma mem_atom {disp} {T : prelatticeType disp} (S : {finLattice T}) x :
   atom S x -> x \in S.
@@ -1642,18 +1663,18 @@ Proof. rewrite dual_itv_fset_eq -premeetEdual; exact: (@premeet_itvE _ _ S^~s). 
 
 Lemma closed_itv {disp} {T : prelatticeType disp} (S:{finLattice T}) a b:
   [&& premeet_closed (interval S a b),
-      @premeet_closed _ [prelatticeType of T^d] (interval S a b) &
-      interval S a b != fset0].
+      prejoin_closed (interval S a b) & interval S a b != fset0].
 Proof.
 apply/and3P; split.
-- apply/premeet_closedP; move=> ????.
+- apply/premeet_closedP => ? ? ? ?.
   by rewrite -premeet_itvE // itv_premeet_closed.
-- apply/premeet_closedP; move=> ????.
-  by rewrite premeetEdual -prejoin_itvE //; apply/itv_prejoin_closed.
+- apply/prejoin_closedP => ? ? ? ?.
+  by rewrite -prejoin_itvE // itv_prejoin_closed.
 - exact: itv_prop0.
 Qed.
 
-Definition FinLatInterval {disp} {T : prelatticeType disp} (S: {finLattice T}) a b :=
+Definition FinLatInterval {disp} {T : prelatticeType disp} (S: {finLattice T}) a b :
+  {finLattice T} :=
   (* TODO: lock this definition *)
   FinLattice (@closed_itv _ _ S a b).
 
@@ -1685,15 +1706,11 @@ Proof. exact: Interval.djoinE. Qed.
 
 Lemma le_umeet {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
   b \in S -> a <= b -> umeet S a <= b.
-Proof.
-by move=> bS aleb; apply: fmeet_inf_seq.
-Qed.
+Proof. by move=> bS aleb; apply: fmeet_inf_seq. Qed.
 
 Lemma le_djoin {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
   a \in S -> a <= b -> djoin S b >= a.
-Proof.
-by move=> aS aleb; apply: fjoin_sumeet_seq.
-Qed.
+Proof. by move=> aS aleb; apply: fjoin_sumeet_seq. Qed.
 
 End UmeetDjoin.
 
@@ -1786,8 +1803,11 @@ move=> aS bS cS dS aleb cled; apply/(sameP idP)/(iffP idP).
 Qed.
 
 Lemma dual_itv_r {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
-  ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
-Proof. apply/val_inj; exact: Interval.dual_itv_fset_eq. Qed.
+  ([<a; b>]_S)^~s = [< b ; a>]_S^~s.
+Proof.
+apply/(@val_inj _ _ finLattice_subType). (* FIXME *)
+exact: Interval.dual_itv_fset_eq.
+Qed.
 
 Definition dual_itv :=
   (@dual_itv_r, fun {disp} {T : prelatticeType disp} => @dual_itv_r _ [prelatticeType of T^d]).
@@ -1922,15 +1942,20 @@ About ind_incr.
 
 (* -------------------------------------------------------------------- *)
 Section IndDecr.
-(*Lemma dualK (L : {preLattice T}) (S : {finLattice T}) : (S^~s)^~s = S.
+
+Lemma dualK (disp : unit) (T : prelatticeType disp) (S : {finLattice T}) :
+  (S^~s)^~s = S.
 Proof. by exact/val_inj. Qed.
 
-Lemma fbot_dual_r (L : {preLattice T}) (S : {finLattice T}) :
+Lemma fbot_dual_r (disp : unit) (T : prelatticeType disp) (S : {finLattice T}) :
   \fbot_(S^~s) = \ftop_S.
 Proof. by []. Qed.
+
+(*
 Notation dualize := (fun f => (@f, fun L => @f [preLattice of dual_rel <=:L])).
 
-Definition fbot_dual := dualize fbot_dual_r.*)
+Definition fbot_dual := dualize fbot_dual_r.
+*)
 
 Context {disp : unit} {T : prelatticeType disp}.
 Variable (P : {finLattice T} -> Prop).
