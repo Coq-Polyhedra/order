@@ -1661,7 +1661,8 @@ Lemma prejoin_itvE {disp} {T : prelatticeType disp} (S: {finLattice T}) a b x y:
   prejoin S x y = prejoin (interval S a b) x y.
 Proof. rewrite dual_itv_fset_eq -premeetEdual; exact: (@premeet_itvE _ _ S^~s). Qed.
 
-Lemma closed_itv {disp} {T : prelatticeType disp} (S:{finLattice T}) a b:
+Lemma closed_itv {T0} {cls : PreLattice.class_of T0}
+      (T := PreLattice.Pack tt cls) (S:{finLattice T}) a b :
   [&& premeet_closed (interval S a b),
       prejoin_closed (interval S a b) & interval S a b != fset0].
 Proof.
@@ -1967,7 +1968,8 @@ Lemma ind_decr (S : {finLattice T}) (x : T) :
   x \in S -> P S -> P [<\fbot_S; x>]_S.
 Proof.
 move=> x_in_S PS.
-rewrite -[S]dualK -dual_itv fbot_dual.
+rewrite -[S]dualK -[[<_; _>]__]dual_itv.
+rewrite fbot_dual.
 apply: (ind_incr (P := fun S' : finLattice [preLattice of dual_rel <=:L] => P S'^~s)) => //.
 - by move=> S' x' ??; rewrite dual_itv; apply: P_decr.
 - by rewrite dualK.
