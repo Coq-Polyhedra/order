@@ -1425,7 +1425,7 @@ have ->: fsval (top S) = \ftop_S by [].
 rewrite (eq_big_op (fun x => x \in S) \fmeet_S) ?mem_ftop //.
 - move=> ????; exact:fsvalP.
 - by move=> x y xS yS; rewrite /val_fun2 !insubdK ?mem_fmeet.
-- move=> ??; exact: fsvalP.
+(* - move=> ??; exact: fsvalP. *)
 Qed.
 
 End TestTBFinLattice.
