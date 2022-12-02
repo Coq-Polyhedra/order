@@ -369,14 +369,14 @@ Proof. by move=> xS yS; split; apply/meetsP_seq => ?? /andP []. Qed.
 Lemma Mjoin_sumeet S x y z :
   x \in S -> y \in S -> z \in S ->
   x <=_M z -> y <=_M z -> Mjoin S x y <=_M z.
-Proof. by move=> xS yS zS xlez ylez; apply: meet_inf_seq => //; apply/andP. Qed.
+Proof. by move=> xS yS zS xlez ylez; apply: meets_inf_seq => //; apply/andP. Qed.
 
 Lemma Mjoin_decr S S' x y :
   S `<=` S' -> x \in S -> y \in S ->
   Mjoin S' x y <=_M Mjoin S x y.
 Proof.
 move=> /fsubsetP Ssub xS yS; apply/meetsP_seq => z zS /andP [xlez ylez].
-apply: meet_inf_seq; rewrite ?xlez ?ylez //.
+apply: meets_inf_seq; rewrite ?xlez ?ylez //.
 exact: Ssub.
 Qed.
 
