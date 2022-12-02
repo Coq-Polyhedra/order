@@ -15,7 +15,7 @@ dev-repo:     "git+https://github.com/Coq-Polyhedra/order.git"
 license:      "CECILL-B"
 
 depends: [
-  "coq"                    { >= "8.12" & < "8.14~" }
+  "coq"                    { >= "8.16.0" }
   "dune"                   { >= "2.5.0" }
   "coq-mathcomp-ssreflect" { = "dev" }
   "coq-mathcomp-algebra"
