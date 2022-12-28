@@ -1450,8 +1450,7 @@ Lemma is_lat1 L a :
   premeet_closed L^~pl [fset a] &
   [fset a] != fset0].
 Proof.
-apply/and3P; split; first exact/premeet_closed1;
-  first exact/premeet_closed1.
+apply/and3P; split; try exact/premeet_closed1.
 by apply/fset0Pn; exists a; rewrite in_fsetE.
 Qed.
 
@@ -1558,7 +1557,7 @@ Proof. exact: mem_bigfmeet. Qed.
 Lemma mem_djoin L (S : {finLattice L}) b : djoin S b \in S.
 Proof. exact: mem_bigfjoin. Qed.
 
-Lemma itv_prop0 L (S : {finLattice L}) a b :
+Lemma itv_prop0 L (S : {finLattice L}) a b:
   interval S a b != fset0.
 Proof.
 apply/fset0Pn; exists (\fmeet_S (umeet S a) (djoin S b)).
@@ -1720,6 +1719,7 @@ Proof. exact: Interval.intervalP. Qed.
 Lemma itv_subset L (S: {finLattice L}) a b x :
   x \in [< a ; b >]_S -> x \in S.
 Proof. exact: Interval.itv_subset. Qed.
+
 Lemma itv_bigrange L (S: {finLattice L}) a b x :
   x \in [< a ; b >]_S ->
   \fmeet_S (umeet S a) (djoin S b) <=_L x <=_L \fjoin_S (umeet S a) (djoin S b).
@@ -2273,7 +2273,6 @@ Proof.
 case/misofP => f_morph f_inj f_surj.
 by exists (FMorphism f_morph) => //; apply/misofP.
 Qed.
-
 
 Lemma isofP :
   (exists f, [/\ fmorphism L S1 f, {in S1&, injective f} & f @` S1 = S2]) <->

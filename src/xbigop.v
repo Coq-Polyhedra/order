@@ -199,6 +199,7 @@ Definition val_fun2 (f : S -> S -> S) (x y: T) :=
   val (f (insubd x0 x) (insubd x0 y)).
 
 Context {I : Type} {F : I -> S}.
+
 Lemma big_val_foo (r : seq I) (Q : pred I):
   val (\big[op / x0]_(i <- r | Q i) F i) = 
   \big[val_fun2 op / val x0]_(i <- r | Q i) val (F i).
