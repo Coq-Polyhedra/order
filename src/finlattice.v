@@ -426,6 +426,8 @@ Record finLattice :=
       premeet_closed L^~pl elements &
       elements != fset0]}.
 
+(*TODO: separate the conjunction into three separate fields*)
+
 Canonical finLattice_subType := Eval hnf in [subType for elements].
 
 Definition finLattice_eqMixin := Eval hnf in [eqMixin of finLattice by <:].
@@ -678,6 +680,7 @@ Definition fin_joinMixin := JoinRelMixin finjoinC finjoinA lefinjoin.
 Local Canonical fin_meetOrder := MeetOrder finle finlt finmeet fin_meetMixin.
 Local Canonical fin_joinOrder := JoinOrder finle finlt finjoin fin_joinMixin.
 Local Canonical fin_lattice := [lattice of finle].
+(* TODO : are these canonical declarations mandatory ?*)
 
 End FinLatticeStructure.
 Module Exports.
@@ -1363,6 +1366,7 @@ Local Canonical tbJoinOrder := [tbJoinOrder of finle].
 Local Canonical bLattice := [bLattice of finle].
 Local Canonical tLattice := [tLattice of finle].
 Local Canonical tbLattice := [tbLattice of finle].
+(* TODO : are canonical declarations mandatory ?*)
 
 End FinTBLatticeStructure.
 Module Exports.
@@ -1488,7 +1492,8 @@ Lemma coatomP {L} {S : {finLattice L}} {a} : reflect
   ([/\ a \in S, (a <_L \ftop_S) &
   forall x, x \in S -> x <_L \ftop_S -> ~~(a <_L x)])
   (coatom S a).
-Proof. apply/(iffP idP).
+Proof.
+apply/(iffP idP).
 - by move/atomP.
 - move=> ?; exact/atomP.
 Qed.
@@ -1783,7 +1788,7 @@ Qed.
 
 Lemma dual_itv_r L (S : {finLattice L}) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
-Proof.  by apply/val_inj/Interval.dual_itv_fset_eq.  Qed.
+Proof.  by apply/val_inj/Interval.dual_itv_fset_eq. Qed.
 
 Definition dual_itv :=
   (@dual_itv_r, fun L => @dual_itv_r [preLattice of dual_rel <=:L]).
