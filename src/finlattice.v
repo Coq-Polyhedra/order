@@ -10,7 +10,6 @@ Import GRing.Theory Num.Theory.
 Local Open Scope fset_scope.
 Local Open Scope ring_scope.
 
-Import RelOrder.
 Import RelOrder.Theory.
 
 (* -------------------------------------------------------------------- *)
@@ -67,61 +66,12 @@ End FsetOrderTheory.
 
 (* -------------------------------------------------------------------- *)
 (* TODO: move this section to relorder.v                                *)
-Section POrderMonotonyTheory.
-Context (T T' : choiceType) (r : {pOrder T}) (r' : {pOrder T'}).
-Context (D D' : pred T) (f : T -> T').
-
-Hint Resolve rlt_neqAle rle_anti : core.
-
-Lemma ltW_homo :
-     {homo f : x y / x <_r  y >-> x <_r'  y}
-  -> {homo f : x y / x <=_r y >-> x <=_r' y}.
-Proof. exact: homoW. Qed.
-
-Lemma inj_homo_lt :
-     injective f
-  -> {homo f : x y / x <=_r y >-> x <=_r' y}
-  -> {homo f : x y / x <_r  y >-> x <_r'  y}.
-Proof. exact: inj_homo. Qed.
-
-Lemma inc_inj : {mono f : x y / x <=_r y >-> x <=_r' y} -> injective f.
-Proof. exact: mono_inj. Qed.
-
-Lemma leW_mono :
-     {mono f : x y / x <=_r y >-> x <=_r' y}
-  -> {mono f : x y / x <_r  y >-> x <_r'  y}.
-Proof. exact: anti_mono. Qed.
-
-Lemma ltW_homo_in :
-     {in D & D', {homo f : x y / x <_r  y >-> x <_r'  y}}
-  -> {in D & D', {homo f : x y / x <=_r y >-> x <=_r' y}}.
-Proof. exact: homoW_in. Qed.
-
-Lemma inj_homo_lt_in :
-     {in D & D', injective f}
-  -> {in D & D', {homo f : x y / x <=_r y >-> x <=_r' y}}
-  -> {in D & D', {homo f : x y / x <_r  y >-> x <_r'  y}}.
-Proof. exact: inj_homo_in. Qed.
-
-Lemma inc_inj_in :
-      {in D &, {mono f : x y / x <=_r y >-> x <=_r' y}}
-   -> {in D &, injective f}.
-Proof. exact: mono_inj_in. Qed.
-
-Lemma leW_mono_in :
-     {in D &, {mono f : x y / x <=_r y >-> x <=_r' y}}
-  -> {in D &, {mono f : x y / x <_r  y >-> x <_r'  y}}.
-Proof. exact: anti_mono_in. Qed.
-End POrderMonotonyTheory.
-
 (* -------------------------------------------------------------------- *)
-(* TODO: move this section to relorder.v                                *)
 Section POrderMonotonyTheoryCodom.
 Context (d : unit) (T : choiceType) (T' : porderType d) (r : {pOrder T}).
 Context (D D' : pred T) (f : T -> T').
 
 Hint Resolve rlt_neqAle rle_anti : core.
-Hint Resolve Order.POrderTheory.lt_neqAle Order.POrderTheory.le_anti : core.
 
 Lemma ltW_homo_as :
      {homo f : x y / x <_r  y >-> (x <  y)%O}
@@ -172,6 +122,11 @@ Context {T : choiceType}.
 
 Set Primitive Projections.
 
+(*
+TODO: redefine prelattices as a fully-bundled structure because we do not seem
+to have to attach more than one instance to a carrier type except duals. This
+would make inference of prelattice instances easier.
+*)
 Record mixin_of (le : rel T) (witness : T)
        (premeet : {fset T} -> T -> T -> T)
        (prejoin : {fset T} -> T -> T -> T) := Mixin
@@ -194,7 +149,7 @@ Record mixin_of (le : rel T) (witness : T)
 Record class_of (le lt : rel T) (witness : T)
        (premeet : {fset T} -> T -> T -> T)
        (prejoin : {fset T} -> T -> T -> T) := Class {
-  base : POrder.class_of le lt;
+  base : RelOrder.POrder.class_of le lt;
   mixin : mixin_of le witness premeet prejoin;
 }.
 
@@ -209,7 +164,7 @@ Structure order (phT : phant T) := Pack {
 
 Unset Primitive Projections.
 
-Local Coercion base : class_of >-> POrder.class_of.
+Local Coercion base : class_of >-> RelOrder.POrder.class_of.
 
 Variable (phT : phant T) (ord : order phT).
 
@@ -217,18 +172,18 @@ Definition class : class_of (le ord) (lt ord)
                             (witness ord) (premeet ord) (prejoin ord)  :=
   let: Pack _ _ _ _ _ c as ord' := ord in c.
 
-Definition pOrder := @POrder.Pack _ phT (le ord) (lt ord) class.
+Definition pOrder := @RelOrder.POrder.Pack _ phT (le ord) (lt ord) class.
 
 Variable (leT ltT : rel T) (wT : T)
          (premeetT : {fset T} -> T -> T -> T)
          (prejoinT : {fset T} -> T -> T -> T).
 
 Definition clone c of phant_id class c :=
-  @Pack phT leT ltT wT premeetT prejoinT (nosimpl c).
+  @Pack phT leT ltT wT premeetT prejoinT (unkeyed c).
 
 Definition pack (m0 : mixin_of leT wT premeetT prejoinT) :=
-  fun (bord : POrder.order phT) b
-        & phant_id (POrder.class bord) b =>
+  fun (bord : RelOrder.POrder.order phT) b
+        & phant_id (RelOrder.POrder.class bord) b =>
     fun m & phant_id m0 m =>
       @Pack phT leT ltT wT premeetT prejoinT
             (@Class leT ltT wT premeetT prejoinT b m).
@@ -237,15 +192,15 @@ End ClassDef.
 
 (* ---------------------------------------------------------------------- *)
 Module Exports.
-Coercion base : class_of >-> POrder.class_of.
-Coercion pOrder : order >-> POrder.order.
+Coercion base : class_of >-> RelOrder.POrder.class_of.
+Coercion pOrder : order >-> RelOrder.POrder.order.
 Canonical pOrder.
 Notation "{ 'preLattice' T }" := (order (Phant T))
   (at level 0, format "{ 'preLattice'  T }").
 Notation PreLattice le lt w premeet prejoin mixin :=
   (@pack _ (Phant _) le lt w premeet prejoin mixin _ _ id _ id).
 Notation "[ 'preLattice' 'of' le ]" :=
-  (@clone _ (Phant _) _ le (nosimpl _) (nosimpl _) (nosimpl _) (nosimpl _) _ id)
+  (@clone _ (Phant _) _ le (unkeyed _) (unkeyed _) (unkeyed _) (unkeyed _) _ id)
     (at level 0, format "[ 'preLattice'  'of'  le ]").
 Notation witness := witness.
 Notation premeet := premeet.
@@ -261,22 +216,20 @@ Context {T: choiceType}.
 Variable (L : {preLattice T}).
 
 Definition DualPreLatticeMixin :=
-  let: PreLattice.Class _ m := PreLattice.class L in
+  let m := PreLattice.mixin (PreLattice.class L) in
   @PreLattice.Mixin T
-    _
-    (PreLattice.witness L)
-    (prejoin L) (premeet L)
-      (PreLattice.prejoin_max m) (PreLattice.prejoin_sumeet m)
-      (PreLattice.prejoin_decr m)
-      (PreLattice.premeet_min m) (PreLattice.premeet_inf m)
-      (PreLattice.premeet_incr m).
+    (rdual_rel (RelOrder.le L)) (witness L) (prejoin L) (premeet L)
+    (PreLattice.prejoin_max m) (PreLattice.prejoin_sumeet m)
+    (PreLattice.prejoin_decr m)
+    (PreLattice.premeet_min m) (PreLattice.premeet_inf m)
+    (PreLattice.premeet_incr m).
 
 Canonical DualPreLatticePack :=
   PreLattice (rdual_rel <=:L) (rdual_rel <:L) _ _ _ DualPreLatticeMixin.
 
 End DualPreLattice.
 
-Notation "L ^~pl" := ([preLattice of rdual_rel <=:L]) (at level 0, only parsing).
+Notation "L ^~pl" := (DualPreLatticePack L) (at level 0, only parsing).
 
 Section PreLatticeTheory.
 
@@ -306,7 +259,7 @@ Proof. exact: (PreLattice.premeet_inf (mixin L)). Qed.
 
 Lemma premeet_incr L S S': S `<=` S' ->
   {in S &, forall x y, premeet L S x y <=_L premeet L S' x y}.
-Proof. move=> ?????; exact: (PreLattice.premeet_incr (mixin L)). Qed.
+Proof. move=> ???; exact: (PreLattice.premeet_incr (mixin L)). Qed.
 
 Lemma prejoin_max L S:
   {in S &, forall x y, x <=_L prejoin L S x y /\ y <=_L prejoin L S x y}.
@@ -328,12 +281,10 @@ Lemma prejoin_decr L S S': S `<=` S' ->
   {in S &, forall x y, prejoin L S' x y <=_L prejoin L S x y}.
 Proof. move=> ?????; exact: (PreLattice.prejoin_decr (mixin L)). Qed.
 
-Lemma dual_premeet L S x y:
-  premeet [preLattice of rdual_rel <=:L] S x y = prejoin L S x y.
+Lemma dual_premeet L S x y: premeet L^~pl S x y = prejoin L S x y.
 Proof. by []. Qed.
 
-Lemma dual_prejoin L S x y:
-  prejoin [preLattice of rdual_rel <=:L] S x y = premeet L S x y.
+Lemma dual_prejoin L S x y: prejoin L^~pl S x y = premeet L S x y.
 Proof. by []. Qed.
 
 End PreLatticeTheory.
@@ -342,9 +293,9 @@ End PreLatticeTheory.
 Section MeetToPreLattice.
 
 Context {T: choiceType} (M : {tMeetOrder T}).
-Definition Mmeet (S: {fset T}) := meet M.
+Definition Mmeet (S: {fset T}) := RelOrder.meet M.
 Definition Mjoin (S:{fset T}) x y :=
-  \big[ (meet M) / (top M) ]_(i <- S | (x <=_M i) && (y <=_M i)) i.
+  \big[RelOrder.meet M/RelOrder.top M]_(i <- S | (x <=_M i) && (y <=_M i)) i.
 
 Lemma Mmeet_min S x y : x \in S -> y \in S ->
   Mmeet S x y <=_M x /\ Mmeet S x y <=_M y.
@@ -381,8 +332,8 @@ exact: Ssub.
 Qed.
 
 Definition MeetPreLatticeMixin := @PreLattice.Mixin
-  T (<=:M) (top M) _ _ (Mmeet_min) (Mmeet_inf) (Mmeet_incr)
-  (Mjoin_max) (Mjoin_sumeet) (Mjoin_decr).
+  T <=:M (RelOrder.top M) _ _ Mmeet_min Mmeet_inf Mmeet_incr
+  Mjoin_max Mjoin_sumeet Mjoin_decr.
 
 (*Canonical MeetPreLattice :=
   PreLattice (<=:M) _ _ _ _ MeetPreLatticeMixin.
@@ -408,8 +359,7 @@ Definition premeet_closed (L: {preLattice T}) (S : {fset T}) :=
 (*TODO : Change S by a predicate*)
 
 Lemma premeet_closedP (L: {preLattice T}) (S : {fset T}) :
-  reflect (forall x y, x \in S -> y \in S ->
-    premeet L S x y \in S)
+  reflect (forall x y, x \in S -> y \in S -> premeet L S x y \in S)
     (premeet_closed L S).
 Proof.
 apply/(iffP idP).
@@ -420,15 +370,32 @@ Qed.
 
 Variable (L: {preLattice T}).
 
-Record finLattice :=
-  FinLattice { elements :> {fset T};
-  _ : [&& premeet_closed L elements,
-      premeet_closed L^~pl elements &
-      elements != fset0]}.
+Record finLattice := FinLattice {
+  elements :> {fset T};
+  _ : premeet_closed L elements;
+  _ : premeet_closed L^~pl elements;
+  _ : elements != fset0;
+}.
 
-(*TODO: separate the conjunction into three separate fields*)
+Definition pred_finLattice (S : {fset T}) : bool :=
+  [&& premeet_closed L S, premeet_closed (DualPreLatticePack L) S & S != fset0].
 
-Canonical finLattice_subType := Eval hnf in [subType for elements].
+Definition sub_finLattice (S : {fset T}) (w : pred_finLattice S) : finLattice :=
+  @FinLattice S (proj1 (andP w))
+                (proj1 (andP (proj2 (andP w))))
+                (proj2 (andP (proj2 (andP w)))).
+
+Lemma finLattice_rec (K : finLattice -> Type) :
+  (forall (x : {fset T}) (Px : pred_finLattice x), K (sub_finLattice Px)) ->
+  forall u : finLattice, K u.
+Proof.
+move=> HK [S HS1 HS2 HS3].
+have HS: pred_finLattice S by rewrite /pred_finLattice HS1 HS2 HS3.
+by congr (K (FinLattice _ _ _)): (HK S HS); apply: bool_irrelevance.
+Qed.
+
+Canonical finLattice_subType :=
+  SubType finLattice elements sub_finLattice finLattice_rec vrefl_rect.
 
 Definition finLattice_eqMixin := Eval hnf in [eqMixin of finLattice by <:].
 Canonical  finLattice_eqType  := Eval hnf in EqType finLattice finLattice_eqMixin.
@@ -441,11 +408,11 @@ Canonical  finLattice_choiceType  :=
 
 (* FIXME: ambiguous path *)
 Coercion mem_finLattice (S: finLattice) : {pred T} :=
-  fun x : T => (x \in (elements S)).
+  fun x : T => x \in elements S.
 Canonical finLattice_predType := PredType mem_finLattice.
 
 Canonical finLattice_finPredType :=
-  mkFinPredType finLattice (fun S => elements S)
+  mkFinPredType finLattice elements
     (fun S => fset_uniq (elements S)) (fun _ _ => erefl).
 
 Lemma in_finLatticeE (S: finLattice) x : (x \in S) = (x \in elements S).
@@ -453,12 +420,11 @@ Proof. by []. Qed.
 
 Definition inE := (@in_finLatticeE, inE).
 
-Definition fmeet (S : finLattice) := (premeet L S).
-Definition fjoin (S : finLattice) := (prejoin L S).
+Definition fmeet (S : finLattice) := premeet L S.
+Definition fjoin (S : finLattice) := prejoin L S.
 
-Lemma finlattice_eqP (S S' : finLattice) :
-  S =i S' <-> S = S'.
-Proof. by split => [eq |-> //];apply/val_inj/fsetP. Qed.
+Lemma finlattice_eqP (S S' : finLattice) : S =i S' <-> S = S'.
+Proof. by split => [eq |-> //]; apply/val_inj/fsetP. Qed.
 
 End FinLattice.
 
@@ -489,15 +455,12 @@ Context {T : choiceType} (L : {preLattice T}) (S : {finLattice L}).
 (* TODO: same for semilattices and lattice *)
 
 Lemma premeet_closedDual :
-  [&& premeet_closed L^~pl S,
-  (premeet_closed L S) &
-  S != fset0 :> {fset _}].
+  [&& premeet_closed L^~pl S, premeet_closed L S & S != fset0 :> {fset _}].
 Proof. by case: S => S0 premeet_closedS0; rewrite andbCA. Defined.
 
 Canonical FinLatticeDual := FinLattice premeet_closedDual.
 
-Lemma dual_fjoinE:
-  \fjoin_(FinLatticeDual)= \fmeet_S.
+Lemma dual_fjoinE: \fjoin_(FinLatticeDual) = \fmeet_S.
 Proof. by []. Qed.
 
 Lemma dual_fmeetE: \fmeet_(FinLatticeDual) = \fjoin_S.
@@ -505,8 +468,7 @@ Proof. by []. Qed.
 
 End FinLatticeDual.
 
-Notation "S ^~s" := (FinLatticeDual S)
-  (at level 8, format "S ^~s").
+Notation "S ^~s" := (FinLatticeDual S) (at level 8, format "S ^~s").
 
 
 (* TODO: Module FinLatticeStructure *)
@@ -692,10 +654,10 @@ Notation finle := finle.
 Notation finlt := finlt.
 Notation finmeet := finmeet.
 Notation finjoin := finjoin.
-Coercion fin_pOrder : finLattice >-> POrder.order.
-Coercion fin_meetOrder : finLattice >-> Meet.order.
-Coercion fin_joinOrder : finLattice >-> Join.order.
-Coercion fin_lattice : finLattice >-> Lattice.order.
+Coercion fin_pOrder : finLattice >-> RelOrder.POrder.order.
+Coercion fin_meetOrder : finLattice >-> RelOrder.Meet.order.
+Coercion fin_joinOrder : finLattice >-> RelOrder.Join.order.
+Coercion fin_lattice : finLattice >-> RelOrder.Lattice.order.
 Canonical fin_pOrder.
 Canonical fin_meetOrder.
 Canonical fin_joinOrder.
@@ -749,11 +711,11 @@ Lemma finLattice_leE L (S : {finLattice L}) : forall x y : S,
 Proof. by []. Qed.
 
 Lemma finLattice_meetE L (S : {finLattice L}) : forall x y : S,
-  fsval (meet S x y) = \fmeet_S (fsval x) (fsval y).
+  fsval (RelOrder.meet S x y) = \fmeet_S (fsval x) (fsval y).
 Proof. by move=> x y; rewrite insubdK ?mem_fmeet ?fsvalP. Qed.
 
 Lemma finLattice_joinE L (S : {finLattice L}) : forall x y : S,
-  fsval (join S x y) = \fjoin_S (fsval x) (fsval y).
+  fsval (RelOrder.join S x y) = \fjoin_S (fsval x) (fsval y).
 Proof. by move=> x y; rewrite insubdK ?mem_fjoin ?fsvalP. Qed.
 
 Lemma finLattice_funE L (S : {finLattice L}) (f : T -> T):
@@ -1346,11 +1308,11 @@ Section FinTBLatticeStructure.
 Context {T: choiceType} (L : {preLattice T}) (S : {finLattice L}) (x0 : S).
 
 Definition finbot := [`mem_fbot S].
-Lemma finbot_mixin : BPOrder.mixin_of S finbot.
+Lemma finbot_mixin : RelOrder.BPOrder.mixin_of S finbot.
 Proof. move=> x; exact/le0f/fsvalP. Qed.
 
 Definition fintop := [`mem_ftop S].
-Lemma fintop_mixin : TPOrder.mixin_of S fintop.
+Lemma fintop_mixin : RelOrder.TPOrder.mixin_of S fintop.
 Proof. move=> x; exact/lef1/fsvalP. Qed.
 
 Local Canonical bPOrder := BPOrder finle finlt finbot finbot_mixin.
@@ -1372,7 +1334,7 @@ End FinTBLatticeStructure.
 Module Exports.
 Notation finbot := finbot.
 Notation fintop := fintop.
-Coercion tbLattice : finLattice >-> TBLattice.order.
+Coercion tbLattice : finLattice >-> RelOrder.TBLattice.order.
 Canonical bMeetOrder.
 Canonical tMeetOrder.
 Canonical tbMeetOrder.
@@ -1421,11 +1383,11 @@ move=> r; rewrite (big_val a) /vop /vx0 /fun2_val.
 Qed.*)
 
 Goal forall (r : seq I),
-  val (\big[meet S / top S]_(i <- r | P i) F i) =
+  val (\big[RelOrder.meet S / RelOrder.top S]_(i <- r | P i) F i) =
   \big[\fmeet_S / \ftop_S]_(i <- r | P i) val (F i).
 Proof.
 move=> r0; rewrite big_val_foo /=.
-have ->: fsval (top S) = \ftop_S by [].
+have ->: fsval (RelOrder.top S) = \ftop_S by [].
 rewrite (eq_big_op (fun x => x \in S) \fmeet_S) ?mem_ftop //.
 - move=> ????; exact:fsvalP.
 - by move=> x y xS yS; rewrite /val_fun2 !insubdK ?mem_fmeet.
@@ -1543,11 +1505,11 @@ Qed.
 Lemma umeetE L (S : {finLattice L}) a : a \in S -> umeet S a = a.
 Proof.
 move=> aS; apply: (@rle_anti _ L); rewrite fmeet_inf_seq //=.
-suff : ((\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) \in S) &&
-  le L a (\big[\fmeet_S/ \ftop_S]_(i <- S | le L a i) i) by
+suff : ((\big[\fmeet_S/ \ftop_S]_(i <- S | RelOrder.le L a i) i) \in S) &&
+  RelOrder.le L a (\big[\fmeet_S/ \ftop_S]_(i <- S | RelOrder.le L a i) i) by
   case/andP.
 rewrite big_seq_cond.
-rewrite (@big_stable _ _ _ (fun i => (i \in S) && (le L a i))) //.
+rewrite (@big_stable _ _ _ (fun i => (i \in S) && (RelOrder.le L a i))) //.
 - move=> x y /andP [xS alex] /andP [yS aley].
   by rewrite mem_fmeet //= lefI ?alex ?aley.
 - by rewrite mem_ftop lef1.
@@ -1639,7 +1601,7 @@ Proof. rewrite dual_itv_fset_eq -dual_premeet; exact: premeet_itvE. Qed.
 
 Lemma closed_itv L (S:{finLattice L}) a b:
   [&& premeet_closed L (interval S a b),
-      premeet_closed [preLattice of rdual_rel <=:L] (interval S a b) &
+      premeet_closed L^~pl (interval S a b) &
       interval S a b != fset0].
 Proof.
 apply/and3P; split.
@@ -1790,8 +1752,7 @@ Lemma dual_itv_r L (S : {finLattice L}) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_(S^~s).
 Proof.  by apply/val_inj/Interval.dual_itv_fset_eq. Qed.
 
-Definition dual_itv :=
-  (@dual_itv_r, fun L => @dual_itv_r [preLattice of rdual_rel <=:L]).
+Definition dual_itv := (@dual_itv_r, fun L => @dual_itv_r L^~pl).
 
 Lemma mem_itvL L (S : {finLattice L}) (x y : T) :
   x \in S -> x <=_L y -> x \in [< x; y >]_S.
@@ -1919,7 +1880,7 @@ Proof. by exact/val_inj. Qed.
 Lemma fbot_dual_r (L : {preLattice T}) (S : {finLattice L}) :
   \fbot_(S^~s) = \ftop_S.
 Proof. by []. Qed.
-Notation dualize := (fun f => (@f, fun L => @f [preLattice of rdual_rel <=:L])).
+Notation dualize := (fun f => (@f, fun L => @f L^~pl)).
 
 Definition fbot_dual := dualize fbot_dual_r.
 
@@ -1934,7 +1895,7 @@ Lemma ind_decr (S : {finLattice L}) (x : T) :
 Proof.
 move=> x_in_S PS.
 rewrite -[S]dualK -dual_itv fbot_dual.
-apply: (ind_incr (P := fun S' : finLattice [preLattice of rdual_rel <=:L] => P S'^~s)) => //.
+apply: (ind_incr (P := fun S' : finLattice L^~pl => P S'^~s)) => //.
 - by move=> S' x' ??; rewrite dual_itv; apply: P_decr.
 - by rewrite dualK.
 Qed.
@@ -2784,7 +2745,7 @@ Context (T : choiceType) (L : {preLattice T}) (S : {finLattice L}).
 Definition atomistic_r (a : S) :=
   [exists A : {fset S},
        [forall x in A, atom S (val x)]
-    && (a == (\big[join S/bottom S]_(x in A) x))].
+    && (a == \big[RelOrder.join S/RelOrder.bottom S]_(x in A) x)].
 
 Definition atomistic (a : T) :=
   if @idP (a \in S) is  ReflectT h then atomistic_r [` h] else false.
@@ -2792,7 +2753,7 @@ Definition atomistic (a : T) :=
 Definition coatomistic_r (a : S) :=
   [exists A : {fset S},
        [forall x in A, coatom S (val x)]
-    && (a == (\big[meet S/top S]_(x in A) x))].
+    && (a == \big[RelOrder.meet S/RelOrder.top S]_(x in A) x)].
 
 Definition coatomistic (a : T) :=
   if @idP (a \in S) is  ReflectT h then coatomistic_r [` h] else false.
