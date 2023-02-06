@@ -285,6 +285,7 @@ Lemma premeetEdual (S : {fset T}) (x y : T) :
 Proof. by []. Qed.
 
 End DualPreLattice.
+End DualPreLattice.
 
 Notation dual_premeet := (@premeet (Order.dual_display _) _).
 Notation dual_prejoin := (@prejoin (Order.dual_display _) _).
@@ -1908,8 +1909,6 @@ case/and3P => _ ylebot _; apply/negP => /atomP[].
 by rewrite (le_gtF ylebot).
 Qed.
 End IndIncr.
-
-About ind_incr.
 
 (* TODO: this is where things stop working *)
 
