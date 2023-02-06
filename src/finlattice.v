@@ -463,6 +463,10 @@ Lemma in_finLatticeE {disp : Order.disp_t} {T : prelatticeType disp}
   (S : {finLattice T}) x : (x \in S) = (x \in elements S).
 Proof. by []. Qed.
 
+Lemma finLattice_eqP {disp : Order.disp_t} {T : prelatticeType disp}
+  (S S' : {finLattice T}): S = S' <-> S =i S'.
+Proof. split; [by move=>->|by move=> ?; apply/val_inj/fsetP]. Qed.
+
 Definition inE := (@in_finLatticeE, inE).
 
 (*
