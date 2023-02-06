@@ -167,6 +167,7 @@ End ClassDef.
 Module Exports.
 Coercion base : class_of >-> Order.POrder.class_of.
 Coercion mixin : class_of >-> mixin_of.
+Coercion class : type >-> class_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
