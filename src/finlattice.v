@@ -141,11 +141,11 @@ Record class_of (T : Type) := Class {
   mixin : mixin_of base;
 }.
 
+Unset Primitive Projections.
 Local Coercion base : class_of >-> Order.POrder.class_of.
 
 Structure type (disp : Order.disp_t) := Pack { sort; _ : class_of sort }.
 
-Unset Primitive Projections.
 
 Local Coercion sort : type >-> Sortclass.
 
@@ -1560,6 +1560,9 @@ rewrite !inE; apply/and3P; split => //.
 - by rewrite lefIl ?mem_fjoin ?lefUl ?mem_umeet ?mem_djoin.
 Qed.
 
+Definition itv_prop0_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
+  interval S a b != fset0 := @itv_prop0 disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
+
 Lemma intervalE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x :
   a \in S -> b \in S -> a <= b ->
   x \in interval S a b = (x \in S) && (a <= x <= b).
@@ -1645,6 +1648,10 @@ apply/premeet_closedP=> /= ????.
 by rewrite -premeet_itvE // itv_premeet_closed.
 Qed.
 
+Definition itv_closed_meet_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
+  is_premeet_closed (interval S a b) := 
+  @itv_closed_meet disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
+
 Lemma itv_closed_join {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
   is_prejoin_closed (interval S a b).
 Proof. 
@@ -1652,6 +1659,9 @@ apply/prejoin_closedP=> /= ????.
 by rewrite -prejoin_itvE // itv_prejoin_closed.
 Qed.
 
+Definition itv_closed_join_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
+  is_prejoin_closed (interval S a b) := 
+  @itv_closed_join disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
 
 Definition FinLatInterval {disp} {T : prelatticeType disp} (S: {finLattice T}) a b :
   {finLattice T} :=
@@ -1932,35 +1942,30 @@ Variable (S : {finLattice [prelatticeType of T^d]}).
 Lemma fbot_dual_r (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}) :
   \fbot_(S^~s) = \ftop_S.
 Proof. by []. Qed.
+Notation dualize := (fun f => (@f, fun d' (L : prelatticeType d') => @f (Order.dual_display d') [prelatticeType of L^d])).
+
+Definition fbot_dual := dualize fbot_dual_r.
 
 Context {disp : Order.disp_t} {T : prelatticeType disp}.
-Variable (P : {finLattice T} -> Prop).
+(* Variable (P : {finLattice T} -> Prop). *)
 
-Hypothesis (P_decr : forall S, forall x,
-  coatom S x -> P S -> P [<\fbot_S; x>]_S).
+(* Hypothesis (P_decr : forall S, forall x,
+  coatom S x -> P S -> P [<\fbot_S; x>]_S). *)
 
-Lemma ind_decr (S : {finLattice T}) (x : T) :
+Let eta_T := @PreLattice.Pack disp T (PreLattice.class T).
+Lemma eta_TP: eta_T = T.
+Proof. rewrite /eta_T; by case:T. Qed.
+
+Lemma ind_decr (P : {finLattice T} -> Prop) (P_decr : forall S, forall x,
+coatom S x -> P S -> P [<\fbot_S; x>]_S) (S : {finLattice T}) (x : T):
   x \in S -> P S -> P [<\fbot_S; x>]_S.
 Proof.
-rewrite -[[<_;_>]__]dualK.
-rewrite [([<_;_>]__)^~s]dual_itv.
-have ->: \fbot_S = \ftop_(S^~s) by [].
-move=> xS PS.
-pose P' := (fun S' : {finLattice T^d} => P S'^~s).
-have:= @ind_incr _ _ P' _ S^~s x xS PS; apply. 
-move=> S' x'; rewrite /P' dual_itv -fbot_dual_r=> atom_S' PS'.
-have:= @P_decr S'^~s x' atom_S' PS'.
-congr P; exact/val_inj. 
-Qed.
-
-(* move=> x_in_S PS.
+elim/eq_ind: T/eta_TP in P P_decr S x *.
+move=> x_in_S PS.
 rewrite -[S]dualK -dual_itv fbot_dual.
-apply: (ind_incr (P := fun S' : finLattice L^~pl => P S'^~s)) => //.
-rewrite fbot_dual_r.
-apply: (ind_incr (P := fun S' : finLattice [preLattice of dual_rel <=:L] => P S'^~s)) => //.
-- by move=> S' x' ??; rewrite dual_itv; apply: P_decr.
-- by rewrite dualK.
-Qed. *)
+apply: (ind_incr (P := fun S' : {finLattice T^d} => P S'^~s)) => //.
+by move=> S' x' ??; rewrite dual_itv; apply: P_decr.
+Qed.
 
 End IndDecr.
 
