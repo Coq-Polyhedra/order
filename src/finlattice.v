@@ -1852,7 +1852,7 @@ case/boolP: (S' == fset0).
   apply/atomP; rewrite yS lt_neqAle boty eq_sym ynbot; split => //.
   move=> z zS botltz; apply: contraT; rewrite negbK => zlty.
   (* QC : TODO : minset still use relorder structures, so we need to unfold Order.lt here *)
-  suff/miny: z \in S' by move: zlty; rewrite /Order.lt /= => ->.
+  suff/miny: z \in S' by rewrite [z <_T y]zlty.
   rewrite in_fsetD intervalE ?le0f ?zS ?mem_fbot //= ?inE.
   rewrite negb_or eq_sym (lt_eqF botltz).
   have zltx := (lt_le_trans zlty ylex).
