@@ -643,7 +643,7 @@ by move=> x y z; apply: finle_anti;
   rewrite ?finjoin_sup ?finjoinAl ?finjoinAr ?in_fsetE ?eq_refl ?orbT.
 Qed.
 
-Lemma lefinjoin : forall x y : S, rdual_rel finle x y = (finjoin x y == x).
+Lemma lefinjoin : forall x y : S, dual_rel finle x y = (finjoin x y == x).
 Proof.
 move=> x y; apply/idP/eqP => [leyx | <-]; last by exact: finjoin_maxr.
 by apply/finle_anti; rewrite finjoin_maxl finjoin_sup ?finlexx.
