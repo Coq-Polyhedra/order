@@ -126,14 +126,14 @@ Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
     premeet S x y <= x /\ premeet S x y <= y;
   premeet_inf    : forall S x y z, x \in S -> y \in S -> z \in S ->
     z <= x -> z <= y -> z <= premeet S x y;
-  premeet_incr   : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
-    premeet S x y <= premeet S' x y;
+  premeet_incr   : forall S U x y, S `<=` U -> x \in S -> y \in S ->
+    premeet U x y \in S -> premeet S x y <= premeet U x y;
   prejoin_max    : forall S x y, x \in S -> y \in S ->
     prejoin S x y >= x /\ prejoin S x y >= y;
   prejoin_sumeet : forall S x y z, x \in S -> y \in S -> z \in S ->
     z >= x -> z >= y -> z >= prejoin S x y;
-  prejoin_decr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
-    prejoin S x y >= prejoin S' x y
+  prejoin_decr : forall S U x y, S `<=` U -> x \in S -> y \in S ->
+    prejoin U x y \in S -> prejoin S x y >= prejoin U x y
 }.
 
 Record class_of (T : Type) := Class {
@@ -229,9 +229,10 @@ Lemma premeet_inf S:
   {in S & &, forall x y z, z <= x -> z <= y -> z <= premeet S x y}.
 Proof. exact: PreLattice.premeet_inf. Qed.
 
-Lemma premeet_incr S S': S `<=` S' ->
-  {in S &, forall x y, premeet S x y <= premeet S' x y}.
-Proof. move=> ?????; exact: PreLattice.premeet_incr. Qed.
+Lemma premeet_incr S U: S `<=` U ->
+  {in S &, forall x y, premeet U x y \in S ->
+  premeet S x y <= premeet U x y}.
+Proof. move=> ??????; exact: PreLattice.premeet_incr. Qed.
 
 Lemma prejoin_max S:
   {in S &, forall x y, x <= prejoin S x y /\ y <= prejoin S x y}.
@@ -249,9 +250,10 @@ Lemma prejoin_sumeet S:
   {in S & &, forall x y z, x <= z -> y <= z -> prejoin S x y <= z}.
 Proof. exact: PreLattice.prejoin_sumeet. Qed.
 
-Lemma prejoin_decr S S': S `<=` S' ->
-  {in S &, forall x y, prejoin S' x y <= prejoin S x y}.
-Proof. move=> ?????; exact: PreLattice.prejoin_decr. Qed.
+Lemma prejoin_decr S U: S `<=` U ->
+  {in S &, forall x y, 
+  prejoin U x y \in S -> prejoin U x y <= prejoin S x y}.
+Proof. move=> ??????; exact: PreLattice.prejoin_decr. Qed.
 
 End PreLatticeTheory.
 
@@ -299,8 +301,10 @@ Lemma mpremeet_inf S x y z :
   x \in S -> y \in S -> z \in S -> z <= x -> z <= y -> z <= mpremeet S x y.
 Proof. by move=> xS yS zS; rewrite lexI => -> ->. Qed.
 
-Lemma mpremeet_incr S S' x y :
-  S `<=` S' -> x \in S -> y \in S -> mpremeet S x y <= mpremeet S' x y.
+Lemma mpremeet_incr S U x y :
+  S `<=` U -> x \in S -> y \in S -> 
+  mpremeet U x y \in S ->
+  mpremeet S x y <= mpremeet U x y.
 Proof. by []. Qed.
 
 Lemma mprejoin_max S x y :
@@ -311,14 +315,15 @@ Proof. by move=> xS yS; split; apply/meetsP_seq => ?? /andP []. Qed.
 Lemma mprejoin_sumeet S x y z :
   x \in S -> y \in S -> z \in S ->
   x <= z -> y <= z -> mprejoin S x y <= z.
-Proof. by move=> xS yS zS xlez ylez; apply: meet_inf_seq => //; apply/andP. Qed.
+Proof. by move=> xS yS zS xlez ylez; apply: meets_inf_seq => //; apply/andP. Qed.
 
-Lemma mprejoin_decr S S' x y :
-  S `<=` S' -> x \in S -> y \in S ->
-  mprejoin S' x y <= mprejoin S x y.
+Lemma mprejoin_decr S U x y :
+  S `<=` U -> x \in S -> y \in S ->
+  mprejoin U x y \in S ->
+  mprejoin U x y <= mprejoin S x y.
 Proof.
-move=> /fsubsetP Ssub xS yS; apply/meetsP_seq => z zS /andP [xlez ylez].
-apply: meet_inf_seq; rewrite ?xlez ?ylez //.
+move=> /fsubsetP Ssub xS yS _; apply/meetsP_seq => z zS /andP [xlez ylez].
+apply: meets_inf_seq; rewrite ?xlez ?ylez //.
 exact: Ssub.
 Qed.
 
@@ -1301,10 +1306,6 @@ Lemma fjoin_sumeet_seq {disp} {T : prelatticeType disp} (S: {finLattice T})
      F x <= \big[prejoin S / \fbot_S]_(i <- r | P i) F i.
 Proof. exact: (@fmeet_inf_seq _ _ S^~s). Qed.
 
-Lemma fmeetsP {disp} {T : prelatticeType disp} (S : {finLattice T}) (P : pred T) (F : T -> T) x :
-  {in S, forall y, P y -> x <= F y} -> x <= \big[premeet S / \ftop_S]_(y <- S | P y) F y.
-Admitted.
-
 Lemma fjoin_meets {disp} {T : prelatticeType disp} (S: {finLattice T}) x y :
   x \in S -> y \in S ->
   prejoin S x y = \big[premeet S / \ftop_S]_(i <- S | (x <= i) && (y <= i)) i.
@@ -1312,12 +1313,14 @@ Proof.
 move=> xS yS; apply/le_anti/andP; split; last first.
 - apply/fmeet_inf_seq; rewrite ?mem_fjoin //.
   by apply/andP; split; rewrite ?lefUl ?lefUr.
-- by apply/fmeetsP=> ???; rewrite leUf.
+- set B := BigOp.bigop _ _ _.
+  suff: (B \in S) /\ (prejoin S x y <= B) by case.
+  rewrite /B big_seq_cond; apply big_rec.
+  + split; [exact: mem_ftop|exact/lef1/mem_fjoin].
+  + move=> i j /and3P [iS xi yi] [jS j1].
+    split; [exact/mem_fmeet|apply/premeet_inf=> //; first exact:mem_fjoin].
+    exact/prejoin_sumeet.
 Qed.
-
-Lemma fjoinsP {disp} {T : prelatticeType disp} (S : {finLattice T}) (P : pred T) (F : T -> T) x :
-  {in S, forall y, P y -> F y <= x} -> \big[prejoin S / \fbot_S]_(y <- S | P y) F y <= x.
-Proof. exact: (@fmeetsP _ _ S^~s). Qed.
 
 Lemma fmeet_joins {disp} {T : prelatticeType disp} (S: {finLattice T}) x y :
   x \in S -> y \in S ->
@@ -1408,7 +1411,7 @@ Goal forall (r : seq I),
   val (\meet_(i <- r | P i) F i) =
   \big[premeet S / \ftop_S]_(i <- r | P i) val (F i).
 Proof.
-move=> r0; rewrite big_val_foo.
+move=> r0; rewrite big_val2.
 have ->: val (@Order.top _ S) = \ftop_S :> T by [].
 apply: (eq_big_op (fun x => x \in S)); rewrite ?mem_ftop //.
 - move=> ????; exact: fsvalP.
@@ -1602,7 +1605,8 @@ move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
 apply/le_anti/andP; split.
 - by apply: premeet_inf=> //; first exact: itv_premeet_closed;
     rewrite premeet_min.
-- apply: premeet_incr=> //; apply/fsubsetP=> ?; exact: itv_subset.
+- apply: premeet_incr=> //; first (apply/fsubsetP=> ?; exact: itv_subset).
+  exact: itv_premeet_closed.
 Qed.
 
 Lemma itv_prejoin_closed {disp} {T : prelatticeType disp} (S : {finLattice T}) x y a b:
@@ -1631,7 +1635,7 @@ Qed. *)
 Lemma itv_closed_meet {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
   is_premeet_closed (interval S a b).
 Proof. 
-apply/premeet_closedP=> /= ????. 
+apply/premeet_closedP=> /= ????.
 by rewrite -premeet_itvE // itv_premeet_closed.
 Qed.
 
