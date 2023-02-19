@@ -1988,7 +1988,7 @@ Hypothesis (P_incr : forall (S: {finLattice T}), forall x,
 Hypothesis (P_decr : forall (S:{finLattice T}), forall x,
   coatom S x -> P S -> P [<\fbot_S; x>]_S).
 
-Lemma ind_id (S : {finLattice T}) (x y : T) :
+Lemma itv_induction (S : {finLattice T}) (x y : T) :
   x \in S -> y \in S -> x <= y -> P S -> P [<x; y>]_S.
 Proof.
 move=> xS yS xley PS; have h: P [< x; \ftop_S >]_S by apply: ind_incr.
