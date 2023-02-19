@@ -494,7 +494,7 @@ Proof. by []. Qed.
 
 End FinLatticeDual.
 
-Notation "S ^~s" := (dual_finLattice S) (at level 8, format "S ^~s").
+Notation "S ^fd" := (dual_finLattice S) (at level 8, format "S ^fd").
 
 (* TODO: Module FinLatticeStructure *)
 (* use a lifting function :
@@ -721,7 +721,7 @@ Qed.
 
 Lemma mem_fjoin (disp : Order.disp_t) (T : prelatticeType disp) (S: {finLattice T}) :
   {in S &, forall x y, prejoin S x y \in S}.
-Proof. exact: mem_fmeet S^~s. Qed.
+Proof. exact: mem_fmeet S^fd. Qed.
 
 Lemma finLattice_prop0 (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}): S != fset0 :> {fset _}.
 Proof. by case: S. Qed.
@@ -738,7 +738,7 @@ Lemma finLattice_joinE (disp : Order.disp_t) (T : prelatticeType disp) (S : {fin
   fsval (Order.join x y) = prejoin S (fsval x) (fsval y).
 Proof. by move=> x y; rewrite insubdK ?mem_fjoin ?fsvalP. Qed.
 
-(*Goal forall L, forall S : {finLattice L}, forall x y, join S x y = meet (S^~s) x y.
+(*Goal forall L, forall S : {finLattice L}, forall x y, join S x y = meet (S^fd) x y.
 Proof. by move=> L S x y; apply/val_inj; rewrite !insubdK ?mem_fmeet ?fsvalP.*)
 
 Section FMeetTheory.
@@ -894,110 +894,110 @@ Section FJoinTheory.
 Context {disp : Order.disp_t} {T : prelatticeType disp}.
 
 Lemma fjoinC (S : {finLattice T}) : {in S &, commutative (prejoin S)}.
-Proof. exact: (@fmeetC _ _ S^~s). Qed.
+Proof. exact: (@fmeetC _ _ S^fd). Qed.
 
 Lemma lefUr (S: {finLattice T}) : {in S &, forall x y, x <= prejoin S y x}.
-Proof. exact: (@leIfr _ _ S^~s). Qed.
+Proof. exact: (@leIfr _ _ S^fd). Qed.
 
 Lemma lefUl (S : {finLattice T}) : {in S &, forall x y, x <= prejoin S x y}.
-Proof. exact: (@leIfl _ _ S^~s). Qed.
+Proof. exact: (@leIfl _ _ S^fd). Qed.
 
 Lemma leUf (S : {finLattice T}) : {in S & &, forall x y z,
   (prejoin S y z <= x) = (y <= x) && (z <= x)}.
-Proof. exact: (@lefI _ _ S^~s). Qed.
+Proof. exact: (@lefI _ _ S^fd). Qed.
 
 Lemma fjoinA (S : {finLattice T}) : {in S & &, associative (prejoin S)}.
-Proof. exact: (@fmeetA _ _ S^~s). Qed.
+Proof. exact: (@fmeetA _ _ S^fd). Qed.
 
 Lemma fjoinxx (S : {finLattice T}) : {in S, idempotent (prejoin S)}.
-Proof. exact: (@fmeetxx _ _ S^~s). Qed.
+Proof. exact: (@fmeetxx _ _ S^fd). Qed.
 
 Lemma leEfjoin (S : {finLattice T}) :
   {in S &, forall x y, (x <= y) = (prejoin S y x == y)}.
 Proof.
-move=> ????; exact: (@leEfmeet _ _ S^~s).
+move=> ????; exact: (@leEfmeet _ _ S^fd).
 Qed.
 
 Lemma fjoinAC (S : {finLattice T}) :
   {in S & &, right_commutative (prejoin S)}.
-Proof. exact: (@fmeetAC _ _ S^~s). Qed.
+Proof. exact: (@fmeetAC _ _ S^fd). Qed.
 
 Lemma fjoinCA (S : {finLattice T}) :
   {in S & &, left_commutative (prejoin S)}.
-Proof. exact: (@fmeetCA _ _ S^~s). Qed.
+Proof. exact: (@fmeetCA _ _ S^fd). Qed.
 
 Lemma fjoinACA (S : {finLattice T}) x y z t :
   x \in S -> y \in S -> z \in S -> t \in S ->
   prejoin S (prejoin S x y) (prejoin S z t) =
   prejoin S (prejoin S x z) (prejoin S y t).
-Proof. exact: (@fmeetACA _ _ S^~s). Qed.
+Proof. exact: (@fmeetACA _ _ S^fd). Qed.
 
 Lemma fjoinKU (S: {finLattice T}) :
   {in S &, forall x y, prejoin S x (prejoin S x y) = prejoin S x y}.
-Proof. exact: (@fmeetKI _ _ S^~s). Qed.
+Proof. exact: (@fmeetKI _ _ S^fd). Qed.
 
 Lemma fjoinUK (S : {finLattice T}) :
   {in S &, forall x y, prejoin S (prejoin S x y) y = prejoin S x y}.
-Proof. exact: (@fmeetIK _ _ S^~s). Qed.
+Proof. exact: (@fmeetIK _ _ S^fd). Qed.
 
 Lemma fjoinKUC (S : {finLattice T}) :
   {in S &, forall x y, prejoin S x (prejoin S y x) = prejoin S x y}.
-Proof. exact: (@fmeetKIC _ _ S^~s). Qed.
+Proof. exact: (@fmeetKIC _ _ S^fd). Qed.
 
 Lemma fjoinUKC (S : {finLattice T}) :
   {in S &, forall x y, prejoin S (prejoin S y x) y = prejoin S x y}.
-Proof. exact: (@fmeetIKC _ _ S^~s). Qed.
+Proof. exact: (@fmeetIKC _ _ S^fd). Qed.
 
 Lemma leUfl (S: {finLattice T}) :
   {in S & &, forall x y z, x <= y -> x <= prejoin S y z}.
-Proof. exact: (@lefIl _ _ S^~s). Qed.
+Proof. exact: (@lefIl _ _ S^fd). Qed.
 
 Lemma leUfr (S : {finLattice T}) :
   {in S & &, forall x y z, x <= z -> x <= prejoin S y z}.
-Proof. exact: (@lefIr _ _ S^~s). Qed.
+Proof. exact: (@lefIr _ _ S^fd). Qed.
 
 Lemma lefU2 (S : {finLattice T}) :
   {in S & &, forall x y z, (x <= y) || (x <= z) ->
   x <= prejoin S y z}.
-Proof. exact: (@leIf2 _ _ S^~s). Qed.
+Proof. exact: (@leIf2 _ _ S^fd). Qed.
 
 Lemma fjoin_idPr (S : {finLattice T}) {x y}: x \in S -> y \in S ->
   reflect (prejoin S y x = x) (y <= x).
-Proof. exact: (@fmeet_idPr _ _ S^~s). Qed.
+Proof. exact: (@fmeet_idPr _ _ S^fd). Qed.
 
 Lemma fjoin_idPl (S: {finLattice T}) {x y} : x \in S -> y \in S ->
   reflect (prejoin S x y = x) (y <= x).
-Proof. exact: (@fmeet_idPl _ _ S^~s). Qed.
+Proof. exact: (@fmeet_idPl _ _ S^fd). Qed.
 
 Lemma fjoin_l (S : {finLattice T}) :
   {in S &, forall x y, y <= x -> prejoin S x y = x}.
-Proof. exact: (@fmeet_l _ _ S^~s). Qed.
+Proof. exact: (@fmeet_l _ _ S^fd). Qed.
 
 Lemma fjoin_r (S : {finLattice T}) :
   {in S &, forall x y, x <= y -> prejoin S x y = y}.
-Proof. exact: (@fmeet_r _ _ S^~s). Qed.
+Proof. exact: (@fmeet_r _ _ S^fd). Qed.
 
 Lemma leUfidl (S: {finLattice T}) :
   {in S &, forall x y, (prejoin S x y <= x) = (y <= x)}.
-Proof. exact: (@lefIidl _ _ S^~s). Qed.
+Proof. exact: (@lefIidl _ _ S^fd). Qed.
 
 Lemma leUfidr (S : {finLattice T}) :
   {in S &, forall x y, (prejoin S y x <= x) = (y <= x)}.
-Proof. exact: (@lefIidr _ _ S^~s). Qed.
+Proof. exact: (@lefIidr _ _ S^fd). Qed.
 
 Lemma eq_fjoinl (S : {finLattice T}) :
   {in S &, forall x y, (prejoin S x y == x) = (y <= x)}.
-Proof. exact: (@eq_fmeetl _ _ S^~s). Qed.
+Proof. exact: (@eq_fmeetl _ _ S^fd). Qed.
 
 Lemma eq_fjoinr (S : {finLattice T}) :
   {in S &, forall x y, (prejoin S x y == y) = (x <= y)}.
-Proof. exact: (@eq_fmeetr _ _ S^~s). Qed.
+Proof. exact: (@eq_fmeetr _ _ S^fd). Qed.
 
 Lemma leUf2 (S: {finLattice T}) x y z t :
   x \in S -> y \in S -> z \in S -> t \in S ->
   x <= z -> y <= t -> prejoin S x y <= prejoin S z t.
 Proof.
-move=> ????; exact: (@lefI2 _ _ S^~s).
+move=> ????; exact: (@lefI2 _ _ S^fd).
 Qed.
 
 End FJoinTheory.
@@ -1030,19 +1030,19 @@ Context {disp : Order.disp_t} {T : prelatticeType disp}.
 
 Lemma fjoinIK (S : {finLattice T}) :
   {in S &, forall x y, premeet S (prejoin S x y) y = y}.
-Proof. exact: (@fmeetUK _ _ S^~s). Qed.
+Proof. exact: (@fmeetUK _ _ S^fd). Qed.
 
 Lemma fjoinIKC (S : {finLattice T}) :
   {in S &, forall x y, premeet S (prejoin S y x) y = y}.
-Proof. exact: (@fmeetUKC _ _ S^~s). Qed.
+Proof. exact: (@fmeetUKC _ _ S^fd). Qed.
 
 Lemma fjoinKIC (S : {finLattice T}) :
   {in S &, forall x y, premeet S x (prejoin S y x) = x}.
-Proof. exact: (@fmeetKUC _ _ S^~s). Qed.
+Proof. exact: (@fmeetKUC _ _ S^fd). Qed.
 
 Lemma fjoinKI (S : {finLattice T}) :
   {in S &, forall x y, premeet S x (prejoin S x y) = x}.
-Proof. exact: (@fmeetKU _ _ S^~s). Qed.
+Proof. exact: (@fmeetKU _ _ S^fd). Qed.
 
 End FJoin.
 End FMeetJoinTheory.
@@ -1065,7 +1065,7 @@ Lemma mem_bigfjoin (S: {finLattice L})
   x \in r -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
   \big[prejoin S / x]_(i <- r | P i) F i \in S.
 Proof.
-exact: (@mem_bigfmeet _ S^~s).
+exact: (@mem_bigfmeet _ S^fd).
 Qed.
 
 (* TODO : new lemma names *)
@@ -1103,14 +1103,14 @@ Lemma fjoin_sumeet_seq (S : {finLattice L})
   (r : seq T) (P : {pred T}) (F : T -> T) x :
   x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
   \big[prejoin S / F x]_(i <- r | P i) F i >=_L F x.
-Proof. exact : (@fmeet_inf_seq _ S^~s). Qed.
+Proof. exact : (@fmeet_inf_seq _ S^fd). Qed.
 
 Lemma fjoin_min_seq (S : {finLattice L})
   (r : seq T) (P : {pred T}) (F : T -> T) x u:
   x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
   F x >=_L u -> u \in S ->
   \big[prejoin S / F x]_(i <- r | P i) F i >=_L u.
-Proof. exact: (@fmeet_max_seq _ S^~s). Qed.
+Proof. exact: (@fmeet_max_seq _ S^fd). Qed.
 
 End FBigTheory.*)
 
@@ -1178,7 +1178,7 @@ Qed.
 
 Lemma ftop_def {disp} {T : prelatticeType disp} (S : {finLattice T}) x0 :
   x0 \in S -> \ftop_S = \big[prejoin S/x0]_(x <- S) x.
-Proof. exact: (@fbot_def _ _ S^~s). Qed.
+Proof. exact: (@fbot_def _ _ S^fd). Qed.
 
 Lemma mem_fbot {disp} {T : prelatticeType disp} (S : {finLattice T}) : \fbot_S \in S.
 Proof.
@@ -1188,7 +1188,7 @@ by apply/big_stable => //; apply/mem_fmeet.
 Qed.
 
 Lemma mem_ftop {disp} {T : prelatticeType disp} (S : {finLattice T}) : \ftop_S \in S.
-Proof. exact: (@mem_fbot _ _ S^~s). Qed.
+Proof. exact: (@mem_fbot _ _ S^fd). Qed.
 
 Lemma fbotE {disp} {T : prelatticeType disp} (S: {finLattice T}) :
   \fbot_S = \big[premeet S / \ftop_S]_(i <- S) i.
@@ -1196,7 +1196,7 @@ Proof. by rewrite (fbot_def (mem_ftop S)). Qed.
 
 Lemma ftopE {disp} {T : prelatticeType disp} (S: {finLattice T}) :
   \ftop_S = \big[prejoin S / \fbot_S]_(i <- S) i.
-Proof. exact: (@fbotE _ _ S^~s). Qed.
+Proof. exact: (@fbotE _ _ S^fd). Qed.
 
 (* ----------------------------------------------------------------- *)
 
@@ -1217,13 +1217,13 @@ Lemma fjoin0f {disp} {T : prelatticeType disp} (S : {finLattice T}): {in S, left
 Proof. by move=> x xS; apply/eqP; rewrite eq_fjoinr ?le0f ?mem_fbot. Qed.
 
 Lemma lef1 {disp} {T : prelatticeType disp} (S : {finLattice T}) : {in S, forall x, x <= \ftop_S}.
-Proof. move=> ??; exact: (@le0f _ _ S^~s). Qed.
+Proof. move=> ??; exact: (@le0f _ _ S^fd). Qed.
 
 Lemma fmeetf1 {disp} {T : prelatticeType disp} (S : {finLattice T}) : {in S, right_id \ftop_S (premeet S)}.
-Proof. exact: (@fjoinf0 _ _ S^~s). Qed.
+Proof. exact: (@fjoinf0 _ _ S^fd). Qed.
 
 Lemma fmeet1f {disp} {T : prelatticeType disp} (S : {finLattice T}) : {in S, left_id \ftop_S (premeet S)}.
-Proof. exact: (@fjoin0f _ _ S^~s). Qed.
+Proof. exact: (@fjoin0f _ _ S^fd). Qed.
 
 Lemma ltf1 {disp} {T : prelatticeType disp} (S : {finLattice T}) :
   {in S, forall x, (x < \ftop_S) = (x != \ftop_S)}.
@@ -1242,7 +1242,7 @@ Qed.
 
 Lemma fbot_id {disp} {T : prelatticeType disp} (S: {finLattice T}) :
   {in S, forall t, (forall x, x \in S -> x >= t) -> \fbot_S = t}.
-Proof. exact: (@ftop_id _ _ S^~s). Qed.
+Proof. exact: (@ftop_id _ _ S^fd). Qed.
 
 Lemma fmeet0f {disp} {T : prelatticeType disp} (S : {finLattice T}) :
   {in S, left_zero \fbot_S (premeet S)}.
@@ -1254,11 +1254,11 @@ Proof. by move=> x xS; apply/eqP; rewrite fmeetC -?leEfmeet ?le0f ?mem_fbot. Qed
 
 Lemma fjoin1f {disp} {T : prelatticeType disp} (S : {finLattice T}) :
   {in S, left_zero \ftop_S (prejoin S)}.
-Proof. exact: (@fmeet0f _ _ S^~s). Qed.
+Proof. exact: (@fmeet0f _ _ S^fd). Qed.
 
 Lemma fjoinf1 {disp} {T : prelatticeType disp} (S : {finLattice T}) :
   {in S, right_zero \ftop_S (prejoin S)}.
-Proof. exact: (@fmeetf0 _ _ S^~s). Qed.
+Proof. exact: (@fmeetf0 _ _ S^fd). Qed.
 
 (* ------------------------------------------------------------------ *)
 
@@ -1279,7 +1279,7 @@ Lemma mem_bigfjoin {disp} {T : prelatticeType disp} (S: {finLattice T})
   (r : seq T) (P : pred T) (F : T -> T):
   {in S, forall y, F y \in S} -> {subset r <= S} ->
   \big[prejoin S / \fbot_S]_(i <- r | P i) F i \in S.
-Proof. exact: (@mem_bigfmeet _ _ S^~s). Qed.
+Proof. exact: (@mem_bigfmeet _ _ S^fd). Qed.
 
 Lemma fmeet_inf_seq {disp} {T : prelatticeType disp} (S: {finLattice T})
   (r: seq T) (P : pred T) (F : T -> T) x :
@@ -1304,7 +1304,7 @@ Lemma fjoin_sumeet_seq {disp} {T : prelatticeType disp} (S: {finLattice T})
   (r : seq T) (P : pred T) (F : T -> T) x :
   {subset r <= S} -> {in S, forall y, F y \in S} -> x \in r -> P x ->
      F x <= \big[prejoin S / \fbot_S]_(i <- r | P i) F i.
-Proof. exact: (@fmeet_inf_seq _ _ S^~s). Qed.
+Proof. exact: (@fmeet_inf_seq _ _ S^fd). Qed.
 
 Lemma fjoin_meets {disp} {T : prelatticeType disp} (S: {finLattice T}) x y :
   x \in S -> y \in S ->
@@ -1325,7 +1325,7 @@ Qed.
 Lemma fmeet_joins {disp} {T : prelatticeType disp} (S: {finLattice T}) x y :
   x \in S -> y \in S ->
   premeet S x y = \big[prejoin S / \fbot_S]_(i <- S | (x >= i) && (y >= i)) i.
-Proof. exact: (@fjoin_meets _ _ S^~s). Qed.
+Proof. exact: (@fjoin_meets _ _ S^fd). Qed.
 
 End BigOpFinLattice.
 End TBFinLatticeTheory.
@@ -1530,7 +1530,7 @@ Definition atom {disp} {T : prelatticeType disp} (S : {finLattice T}) a :=
                ~~[exists x : S, (\fbot_S < val x) && (val x < a)]].
 
 Definition coatom {disp} {T : prelatticeType disp} (S : {finLattice T}) a :=
-  atom S^~s a.
+  atom S^fd a.
 
 Lemma atomP {disp} {T : prelatticeType disp} {S : {finLattice T}} {a} :
   reflect
@@ -1550,7 +1550,7 @@ Lemma coatomP {disp} {T : prelatticeType disp} {S : {finLattice T}} {a} :
     ([/\ a \in S, (a < \ftop_S) &
         forall x, x \in S -> x < \ftop_S -> ~~ (a < x)])
     (coatom S a).
-Proof. exact: (@atomP _ [prelatticeType of T^d] S^~s). Qed.
+Proof. exact: (@atomP _ [prelatticeType of T^d] S^fd). Qed.
 
 Lemma mem_atom {disp} {T : prelatticeType disp} (S : {finLattice T}) x :
   atom S x -> x \in S.
@@ -1605,7 +1605,7 @@ rewrite (@big_stable _ _ _ (fun i => (i \in S) && (a <= i))) //.
 Qed.
 
 Lemma djoinE {disp} {T : prelatticeType disp} (S : {finLattice T}) b : b \in S -> djoin S b = b.
-Proof. exact: (@umeetE _ _ S^~s). Qed.
+Proof. exact: (@umeetE _ _ S^fd). Qed.
 
 Lemma mem_umeet {disp} {T : prelatticeType disp} (S : {finLattice T}) a : umeet S a \in S.
 Proof. exact: mem_bigfmeet. Qed.
@@ -1650,7 +1650,7 @@ Lemma itv_bound {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x:
 Proof. by move => aS bS aleb /intervalP []. Qed.
 
 Lemma dual_itv_fset_eq {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
-  interval S a b = interval S^~s b a :> {fset T^d}.
+  interval S a b = interval S^fd b a :> {fset T^d}.
 Proof.
 apply/eqP/fset_eqP=> x; rewrite !in_fsetE !inE [X in _ && X]andbC.
 by rewrite fmeetC ?mem_umeet ?mem_djoin // fjoinC ?mem_umeet ?mem_djoin.
@@ -1673,7 +1673,7 @@ Proof.
 apply/sublatticeP.
 split; first exact/fsubsetP/itv_subset.
 - move=> ??; exact: itv_premeet_closed.
-- move=> x y; move: (@itv_premeet_closed _ _ S^~s x y b a).
+- move=> x y; move: (@itv_premeet_closed _ _ S^fd x y b a).
   by rewrite -dual_itv_fset_eq dual_fmeetE.
 Qed.
 
@@ -1803,7 +1803,7 @@ move=> aS bS cS dS aleb cled; apply/(sameP idP)/(iffP idP).
 Qed.
 
 Lemma dual_itv_r {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
-  ([<a; b>]_S)^~s = [< b ; a>]_S^~s.
+  ([<a; b>]_S)^fd = [< b ; a>]_S^fd.
 Proof. exact/val_inj/Interval.dual_itv_fset_eq. Qed.
 
 Definition dual_itv :=
@@ -1816,10 +1816,10 @@ Proof. by move=> xS xy; apply/Interval.mem_itv. Qed.
 Lemma mem_itvR {disp} {T : prelatticeType disp} (S : {finLattice T}) (x y : T) :
   y \in S -> x <= y -> y \in [< x; y >]_S.
 Proof.
-by move/(@mem_itvL _ _ (S^~s))/[apply]; rewrite -dual_itv.
+by move/(@mem_itvL _ _ (S^fd))/[apply]; rewrite -dual_itv.
 Qed.
 (* TODO: compare with the previous proof *
- * have -> : S = (S^~s)^~s by exact/val_inj.
+ * have -> : S = (S^fd)^fd by exact/val_inj.
    rewrite -dual_itv => ??; exact: mem_itvL. *)
 
 Lemma mem_0itv {disp} {T : prelatticeType disp} (S : {finLattice T}) (y : T) :
@@ -1829,10 +1829,10 @@ Proof. by move=> yS; rewrite mem_itv ?le0f ?mem_fbot. Qed.
 Lemma mem_itv1 {disp} {T : prelatticeType disp} (S : {finLattice T}) (x : T) :
   x \in S -> \ftop_S \in [< x; \ftop_S >]_S.
 Proof.
-by move/(@mem_0itv _ _ (S^~s)); rewrite -dual_itv.
+by move/(@mem_0itv _ _ (S^fd)); rewrite -dual_itv.
 Qed.
 (* TODO: compare with
- * have -> : S = (S^~s)^~s by exact/val_inj.
+ * have -> : S = (S^fd)^fd by exact/val_inj.
    rewrite -dual_itv => ?. exact: mem_0itv. *)
 
 Lemma itvE0 {disp} {T : prelatticeType disp} (S : {finLattice T}) :
@@ -1846,11 +1846,11 @@ Lemma itvE1 {disp} {T : prelatticeType disp} (S : {finLattice T}):
   {in S &, forall a b, a <= b -> \ftop_([<a; b>]_S) = b}.
 Proof.
 move=> a b /[swap].
-by move/(itvE0 (S := S^~s))/[apply]/[apply]; rewrite -dual_itv.
+by move/(itvE0 (S := S^fd))/[apply]/[apply]; rewrite -dual_itv.
 Qed.
 (* TODO: compare with
  * move=> a b aS bS aleb.
-   have -> : S = (S^~s)^~s by exact/val_inj.
+   have -> : S = (S^fd)^fd by exact/val_inj.
    rewrite -dual_itv; exact : itvE0. *)
 
 Lemma sub_atomic {disp} {T : prelatticeType disp} (S: {finLattice T}) x:
@@ -1884,7 +1884,7 @@ Qed.
 
 Lemma sub_coatomic {disp} {T : prelatticeType disp} (S: {finLattice T}) x:
   x \in S -> x < \ftop_S -> exists2 y, coatom S y & x <= y.
-Proof. exact: (@sub_atomic _ _ S^~s). Qed.
+Proof. exact: (@sub_atomic _ _ S^fd). Qed.
 
 
 (* -------------------------------------------------------------------- *)
@@ -1941,7 +1941,7 @@ End IndIncr.
 Section IndDecr.
 
 Lemma dualK (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}) :
-  (S^~s)^~s = S.
+  (S^fd)^fd = S.
 Proof. by exact/val_inj. Qed.
 
 (*Variable (disp : Order.disp_t) (T : prelatticeType disp).
@@ -1950,7 +1950,7 @@ Variable (S : {finLattice [prelatticeType of T^d]}).
 *)
 
 Lemma fbot_dual_r (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}) :
-  \fbot_(S^~s) = \ftop_S.
+  \fbot_(S^fd) = \ftop_S.
 Proof. by []. Qed.
 Notation dualize := (fun f => (@f, fun d' (L : prelatticeType d') => @f (Order.dual_display d') [prelatticeType of L^d])).
 
@@ -1972,7 +1972,7 @@ coatom S x -> P S -> P [<\fbot_S; x>]_S) (S : {finLattice T}) (x : T):
 Proof.
 elim/eq_ind: T/eta_TP in P P_decr S x * => x_in_S PS.
 rewrite -[S]dualK -dual_itv fbot_dual.
-apply: (ind_incr (P := fun S' : {finLattice T^d} => P S'^~s)) => //.
+apply: (ind_incr (P := fun S' : {finLattice T^d} => P S'^fd)) => //.
 by move=> S' x' ??; rewrite dual_itv; apply: P_decr.
 Qed.
 
