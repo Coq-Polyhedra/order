@@ -2285,9 +2285,8 @@ apply/sublatticeP; split.
 Qed.
 
 Lemma sublattice_misof {S1 U1 U2: {finLattice T}} (f : T -> T):
-  misof U1 U2 f-> sublattice S1 U1-> misof S1 (f @` S1) f.
+  misof U1 U2 f-> sublattice S1 U1-> misof S1 (f @` elements S1) f.
 Proof.
-have ->: f @`S1 = f @`(elements S1) by exact: eq_imfset.
 move=> /[dup] U12 /misofP [[f_meet f_join] f_inj U2_eq].
 move=> /[dup] SU1 /sublatticeP [/fsubsetP SU1_sub sub_meet sub_join].
 move: (misof_sublattice U12 SU1)=> sub_fS1U2.
