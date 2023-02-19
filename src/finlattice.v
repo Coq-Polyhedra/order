@@ -1422,6 +1422,78 @@ Qed.
 End TestTBFinLattice.
 
 (* ================================================================== *)
+Section SubLattice.
+
+Context {disp : Order.disp_t} (T : prelatticeType disp).
+
+Definition sublattice (S U : {fset T}):=
+  [&& (S `<=` U),
+    [forall x : S, [forall y : S, premeet U (val x) (val y) \in S]] & 
+    [forall x : S, [forall y : S, prejoin U (val x) (val y) \in S]]].
+
+Lemma sublatticeP (S U : {fset T}):
+  reflect
+    [/\ (S `<=` U),
+      {in S&, forall x y, premeet U x y \in S} & 
+      {in S&, forall x y, prejoin U x y \in S}]
+  (sublattice S U).
+Proof.
+apply/and3PP; first exact:idP.
+- apply/(iffP idP).
+  + move=> h x y xS yS.
+    by move/forallP: h=> /(_ [`xS]) /forallP /(_ [`yS]).
+  + move=> h; apply/forallP=> x; apply/forallP=> y; apply: h; exact: valP.
+- apply/(iffP idP).
+  + move=> h x y xS yS.
+    by move/forallP: h=> /(_ [`xS]) /forallP /(_ [`yS]).
+  + move=> h; apply/forallP=> x; apply/forallP=> y; apply: h; exact: valP.
+Qed.
+
+Lemma sublattice_fmeet S U:
+  sublattice S U ->
+  {in S &, forall x y, premeet S x y = premeet U x y}.
+Proof.
+move/sublatticeP.
+case=> /[dup] ? /fsubsetP SU premeet_SU _ x y xS yS; apply/le_anti/andP; split.
+- apply/premeet_incr=> //; exact: premeet_SU.
+- apply: premeet_inf=> //; [exact:premeet_SU| | ].
+  + apply/premeet_minl; exact: SU.
+  + apply/premeet_minr; exact: SU.
+Qed.
+
+Lemma sublattice_fjoin S U:
+  sublattice S U ->
+  {in S &, forall x y, prejoin S x y = prejoin U x y}.
+Proof.
+move/sublatticeP.
+case=> /[dup] ? /fsubsetP SU _ prejoin_SU x y xS yS; apply/le_anti/andP; split.
+- apply: prejoin_sumeet=> //; [exact:prejoin_SU| | ].
+  + apply/prejoin_maxl; exact: SU.
+  + apply/prejoin_maxr; exact: SU.
+- apply/prejoin_decr=> //; exact: prejoin_SU.
+Qed.
+
+Context (S U: {fset T}) (sub_SU: sublattice S U) (S_prop0 : S != fset0).
+
+Lemma premeet_closed_sub: is_premeet_closed S.
+Proof.
+apply/premeet_closedP=> x y xS yS.
+rewrite (sublattice_fmeet sub_SU) //.
+case/sublatticeP: sub_SU=> _ + _; exact.
+Qed.
+
+Lemma prejoin_closed_sub: is_prejoin_closed S.
+Proof.
+apply/prejoin_closedP=> x y xS yS.
+rewrite (sublattice_fjoin sub_SU) //.
+case/sublatticeP: sub_SU=> _ _; exact.
+Qed.
+
+Definition sub_FinLattice:= FinLattice (premeet_closed_sub) (prejoin_closed_sub) (S_prop0).
+
+End SubLattice.
+
+(* ================================================================== *)
 Section FinLattice1.
 
 Lemma premeet_closed1 {disp} {T : prelatticeType disp} (a : T) :
@@ -1595,69 +1667,20 @@ apply/and3P; split.
 - by apply:(le_trans _ xleb); rewrite premeet_min.
 Qed.
 
-Lemma premeet_itvE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x y:
-  x \in interval S a b -> y \in interval S a b ->
-  premeet S x y = premeet (interval S a b) x y.
+Lemma itv_sublattice {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
+  sublattice (interval S a b) S.
 Proof.
-move=> x_in y_in.
-move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
-move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
-apply/le_anti/andP; split.
-- by apply: premeet_inf=> //; first exact: itv_premeet_closed;
-    rewrite premeet_min.
-- apply: premeet_incr=> //; first (apply/fsubsetP=> ?; exact: itv_subset).
-  exact: itv_premeet_closed.
+apply/sublatticeP.
+split; first exact/fsubsetP/itv_subset.
+- move=> ??; exact: itv_premeet_closed.
+- move=> x y; move: (@itv_premeet_closed _ _ S^~s x y b a).
+  by rewrite -dual_itv_fset_eq dual_fmeetE.
 Qed.
-
-Lemma itv_prejoin_closed {disp} {T : prelatticeType disp} (S : {finLattice T}) x y a b:
-  x \in interval S a b -> y \in interval S a b ->
-  prejoin S x y \in interval S a b.
-Proof. rewrite dual_itv_fset_eq -premeetEdual; exact: (@itv_premeet_closed _ _ S^~s). Qed.
-
-Lemma prejoin_itvE {disp} {T : prelatticeType disp} (S: {finLattice T}) a b x y:
-  x \in interval S a b -> y \in interval S a b ->
-  prejoin S x y = prejoin (interval S a b) x y.
-Proof. rewrite dual_itv_fset_eq -premeetEdual; exact: (@premeet_itvE _ _ S^~s). Qed.
-
-(* Lemma closed_itv {T0} {cls : PreLattice.class_of T0}
-      (T := PreLattice.Pack Order.disp_tt cls) (S:{finLattice T}) a b :
-  [&& premeet_closed (interval S a b),
-      prejoin_closed (interval S a b) & interval S a b != fset0].
-Proof.
-apply/and3P; split.
-- apply/premeet_closedP => ? ? ? ?.
-  by rewrite -premeet_itvE // itv_premeet_closed.
-- apply/prejoin_closedP => ? ? ? ?.
-  by rewrite -prejoin_itvE // itv_prejoin_closed.
-- exact: itv_prop0.
-Qed. *)
-
-Lemma itv_closed_meet {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
-  is_premeet_closed (interval S a b).
-Proof. 
-apply/premeet_closedP=> /= ????.
-by rewrite -premeet_itvE // itv_premeet_closed.
-Qed.
-
-Definition itv_closed_meet_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
-  is_premeet_closed (interval S a b) := 
-  @itv_closed_meet disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
-
-Lemma itv_closed_join {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
-  is_prejoin_closed (interval S a b).
-Proof. 
-apply/prejoin_closedP=> /= ????. 
-by rewrite -prejoin_itvE // itv_prejoin_closed.
-Qed.
-
-Definition itv_closed_join_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
-  is_prejoin_closed (interval S a b) := 
-  @itv_closed_join disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
 
 Definition FinLatInterval {disp} {T : prelatticeType disp} (S: {finLattice T}) a b :
   {finLattice T} :=
   (* TODO: lock this definition *)
-  FinLattice (itv_closed_meet S a b) (itv_closed_join S a b) (itv_prop0 S a b).
+  sub_FinLattice (itv_sublattice S a b) (itv_prop0 S a b).
 
 End Interval.
 Module Exports.
@@ -1695,13 +1718,9 @@ Proof. by move=> aS aleb; apply: fjoin_sumeet_seq. Qed.
 
 End UmeetDjoin.
 
-Lemma fmeet_itvE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
-  {in [<a; b>]_S &, premeet ([< a ; b >]_S) =2 premeet S}.
-Proof. by move => x y x_in y_in; rewrite -Interval.premeet_itvE. Qed.
-
-Lemma fjoin_itvE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
-  {in [<a; b>]_S &, prejoin ([< a ; b >]_S) =2 prejoin S}.
-Proof. by move => x y x_in y_in; rewrite -Interval.prejoin_itvE. Qed.
+Lemma itv_sublattice {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
+  sublattice [<a;b>]_S S.
+Proof. exact:Interval.itv_sublattice. Qed.
 
 Lemma mem_itv {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x :
   x \in S -> a <= x -> x <= b -> x \in [< a ; b >]_S.
@@ -2054,15 +2073,6 @@ rewrite -fmorph_prejoin ?in_imfset //.
 exact : (mem_fjoin x'S y'S).
 Qed.
 
-(* Lemma finLatImg_finLat :
-  [&& is_prejoin_closed finLatImg,
-  premeet_closed (L^~pl) finLatImg &
-  finLatImg != fset0].
-Proof.
-by rewrite finLatImg_prop0 finLatImg_premeet_closed
-  finLatImg_prejoin_closed.
-Qed. *)
-
 Canonical finLatImg_finLattice : {finLattice T} := 
   FinLattice finLatImg_premeet_closed finLatImg_prejoin_closed finLatImg_prop0.
 
@@ -2089,85 +2099,6 @@ Proof. by case: (fmorphismP f). Qed.
 Lemma codomP (S1 S2 : {finLattice T}) (f : {fmorphism S1}) :
   f @` (S1 : {fset _}) = S2 -> \codom f = S2.
 Proof. move=> ?; exact: val_inj. Qed.
-
-(* ------------------------------------------------------------------- *)
-
-(*Lemma meet_morph_homo L (S: {finLattice T}) f :
-  {in S &, {morph f : x y / premeet L S x y >->
-    premeet L (f @` (S : {fset _})) x y}} ->
-  {in S &, {homo f : x y / x <= y}}.
-Proof.
-move=> f_morph x y xS yS xley.
-suff <-: premeet L (f @` (S : {fset _})) (f x) (f y) = f x by
-  rewrite premeet_minr // in_imfset.
-rewrite -f_morph //; congr f. apply: (@le_anti _ L).
-by rewrite premeet_minl ?premeet_inf.
-Qed.
-
-Lemma meet_morph_mono L (S : {finLattice T}) f :
-  {in S &, {morph f : x y / premeet L S x y >->
-    premeet L (f @` (S : {fset _})) x y}} ->
-  {in S &, injective f} -> {in S &, {mono f : x y / x <= y}}.
-Proof.
-move=> f_morph f_inj x y xS yS.
-apply/(sameP idP)/(iffP idP); first exact: (meet_morph_homo f_morph).
-move=> fxlefy.
-suff: premeet L (f @` (S : {fset _})) (f x) (f y) == (f x).
-- rewrite -f_morph ?(inj_in_eq f_inj) ?(mem_fmeet xS) //.
-  move/eqP => <-; exact: premeet_minr.
-by apply/eqP/(@le_anti _ L); rewrite premeet_minl ?premeet_inf ?in_imfset.
-Qed.
-
-Lemma meet_fmorphism L (S : {finLattice T}) f :
-  {in S &, {morph f : x y / premeet L S x y >->
-    premeet L (f @` (S : {fset _})) x y}} ->
-  {in S &, injective f} -> fmorphism L S f.
-Proof.
-move=> f_morph f_inj; rewrite /(fmorphism _).
-have f_mono := (meet_morph_mono f_morph f_inj).
-split; first exact: f_morph.
-move=> x y xS yS; apply/(@le_anti _ L)/andP; split.
-Admitted.
-
-(*Lemma meet_fmorphism L (S1 S2 : {finLattice T}) (f : T -> T) :
-  {in S1, forall x, f x \in S2} ->
-  {in S1&, {morph f : x y / premeet S1 x y >-> premeet S2 x y}} ->
-  {in S1 & on S2, bijective f} -> fmorphism L S1 S2 f.
-Proof.
-move=> f_im f_morph [g] [g_im fgK gfK].
-have f_mono := (meet_morph_mono f_im f_morph (can_in_inj fgK)).
-split => //.
-+ move=> x y xS yS.
-  apply/(@le_anti _ L)/andP; split.
-  - rewrite -[X in (_ <=__ X)]gfK ?f_mono ?leUf ?g_im ?mem_fjoin ?f_im //.
-    rewrite -f_mono ?g_im ?mem_fjoin ?f_im //.
-    rewrite -[X in _ && X]f_mono ?g_im ?mem_fjoin ?f_im //.
-    by rewrite gfK ?lefUl ?lefUr ?mem_fjoin ?f_im.
-  - by rewrite leUf ?f_mono ?lefUl ?lefUr ?f_im ?mem_fjoin.
-+ apply/(@le_anti _ L)/andP; split; rewrite ?le0f ?f_im ?mem_fbot //.
-  by rewrite -[X in (_ <=__ X)]gfK ?f_mono ?le0f ?g_im ?mem_fbot.
-+ apply/(@le_anti _ L)/andP; split; rewrite ?lef1 ?f_im ?mem_fbot //.
-  by rewrite -[X in (X <=__ _)]gfK ?f_mono ?lef1 ?g_im ?mem_fbot.
-Qed.*)
-
-Lemma dual_fmorphism L (S : {finLattice T}) (f : T -> T) :
-  fmorphism L S f <-> fmorphism L S^~s f.
-Proof. by split; case; split. Qed.
-
-Lemma join_fmorphism L (S : {finLattice T}) (f : T -> T) :
-  {in S &, {morph f : x y / prejoin L S x y >->
-    prejoin L (f @` (S : {fset _})) x y}} ->
-  {in S &, injective f} -> fmorphism L S f.
-Proof.
-move=> morph_join inj; apply/dual_fmorphism.
-by move: (@meet_fmorphism _ S^~s f) => /(_ morph_join inj) [].
-Qed.*)
-
-(* ----------------------------------------------------------------- *)
-(*Context (L : {preLattice T}) (S : {finLattice T}).
-Context (f g : {fmorphism S on L}).*)
-
-
 
 Lemma fmorph0 (S : {finLattice T}) (f : {fmorphism S}):
   f \fbot_S = \fbot_(\codom f).
@@ -2297,7 +2228,6 @@ case/misofP => f_morph f_inj f_surj.
 by exists (FMorphism f_morph) => //; apply/misofP.
 Qed.
 
-
 Lemma isofP :
   (exists f, [/\ fmorphism S1 f, {in S1&, injective f} & f @` S1 = S2]) <->
   (isof).
@@ -2337,6 +2267,38 @@ rewrite -f_morphU ?mem_ftop //; apply/eqP; congr f.
 by rewrite fjoin1f.
 Qed.
 
+(* QC : elements presence makes proof easier *)
+Lemma misof_sublattice {S1 U1 U2: {finLattice T}} (f : T -> T):
+  misof U1 U2 f-> sublattice S1 U1-> sublattice (f @` elements S1) U2.
+Proof.
+move=> /misofP [-[meet_morph join_morph] f_inj U2_eq].
+case/sublatticeP=> /fsubsetP SU1 meet_S1 join_S1.
+apply/sublatticeP; split.
+- apply/fsubsetP=> ? /imfsetP /= [x xS1 ->].
+  rewrite -U2_eq; apply: in_imfset=> /=; exact: SU1.
+- move=> x y /imfsetP [/= x' x'S1 ->] /imfsetP [/= y' y'S1 ->].
+  rewrite -U2_eq -meet_morph; try exact: SU1.
+  exact/in_imfset/meet_S1.
+- move=> x y /imfsetP [/= x' x'S1 ->] /imfsetP [/= y' y'S1 ->].
+  rewrite -U2_eq -join_morph; try exact: SU1.
+  exact/in_imfset/join_S1.
+Qed.
+
+Lemma sublattice_misof {S1 U1 U2: {finLattice T}} (f : T -> T):
+  misof U1 U2 f-> sublattice S1 U1-> misof S1 (f @` S1) f.
+Proof.
+have ->: f @`S1 = f @`(elements S1) by exact: eq_imfset.
+move=> /[dup] U12 /misofP [[f_meet f_join] f_inj U2_eq].
+move=> /[dup] SU1 /sublatticeP [/fsubsetP SU1_sub sub_meet sub_join].
+move: (misof_sublattice U12 SU1)=> sub_fS1U2.
+apply/misofP; split=> //; first split.
+- move=> x y xS1 yS1; rewrite (sublattice_fmeet SU1) //.
+  by rewrite f_meet ?SU1_sub // U2_eq -(sublattice_fmeet sub_fS1U2) // ?in_imfset.
+- move=> x y xS1 yS1; rewrite (sublattice_fjoin SU1) //.
+  by rewrite f_join ?SU1_sub // U2_eq -(sublattice_fjoin sub_fS1U2) // ?in_imfset.
+- move=> x y xS1 yS1; apply: f_inj; exact: SU1_sub.
+Qed.
+
 Section ItvMorph.
 
 Lemma fmorph_itv (S : {finLattice T}) (f: {fmorphism S}) a b :
@@ -2352,31 +2314,6 @@ apply/(sameP idP)/(iffP idP).
 - case/imfsetP => x' /intervalP.
   case/(_ aS bS aleb) => x'S /andP [ax' x'b] ->.
   rewrite intervalE ?mem_fmorph ?fmorph_homo //.
-Qed.
-
-Lemma itv_isomorph (S1 S2 : {finLattice T})
-  (f : T -> T) a b:
-  a \in S1 -> b \in S1 -> a <= b ->
-  misof S1 S2 f ->
-  misof [<a ; b>]_S1 (f @` ([< a ; b >]_S1 : {fset _})) f.
-Proof.
-move=> aS1 bS1 aleb /misof_fmorph [g].
-case/misofP => _ g_inj g_surj g_eq.
-have g_fset: forall S: {fset _}, f @` S = g @` S
-  by move=> S; apply/fsetP => z; apply/idP/idP => /imfsetP [x xS ->];
-    rewrite -?g_eq ?in_imfset ?g_eq ?in_imfset.
-apply/misofP; split => //; first split.
-- move=> x y x_itv y_itv.
-  rewrite !g_eq g_fset fmorph_itv // !fmeet_itvE //;
-    last 1 [rewrite inE -fmorph_itv // in_imfset |
-            rewrite inE -fmorph_itv // in_imfset]; rewrite //.
-  by apply: fmorphI; rewrite ?(itv_subset x_itv) ?(itv_subset y_itv).
-- move=> x y x_itv y_itv.
-  rewrite !g_eq g_fset fmorph_itv // !fjoin_itvE //;
-    last 1 [rewrite inE -fmorph_itv // in_imfset |
-            rewrite inE -fmorph_itv // in_imfset]; rewrite //.
-  by apply: fmorphU; rewrite ?(itv_subset x_itv) ?(itv_subset y_itv).
-- move=> ? ? /itv_subset ? /itv_subset ?; rewrite !g_eq; exact: g_inj.
 Qed.
 
 Lemma fmorph_atom (S1 S2 : {finLattice T})
