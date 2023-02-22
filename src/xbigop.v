@@ -183,7 +183,14 @@ Hypothesis FP: forall i, P (F i).
 Lemma big_val (r : seq I) (Q : pred I) :
   \big[op / x0]_(i <- r | Q i) F i =
   val (\big[vcop / vx0]_(i <- r | Q i) insubd a (F i)).
-Admitted.
+Proof.
+elim: r=> /=; rewrite ?big_nil // ?val_insubd ?Px0 //.
+move=> h l IH; rewrite !big_cons IH.
+case: ifP=> //= Qh; rewrite !val_insubd FP Pop //.
+  by rewrite /in_mem /= FP.
+rewrite -IH /in_mem /=.
+by apply big_rec=> // i x _; apply: Pop; rewrite /in_mem /= FP.
+Qed.
 
 End BigOpVal1.
 
@@ -200,7 +207,7 @@ Definition val_fun2 (f : S -> S -> S) (x y: T) :=
 
 Context {I : Type} {F : I -> S}.
 
-Lemma big_val_foo (r : seq I) (Q : pred I):
+Lemma big_val2 (r : seq I) (Q : pred I):
   val (\big[op / x0]_(i <- r | Q i) F i) = 
   \big[val_fun2 op / val x0]_(i <- r | Q i) val (F i).
 Proof.
