@@ -153,7 +153,7 @@ Qed.
 
 End BigOpSubMorph.
 
-Section BigOpVal1.
+(*Section BigOpVal1.
 
 Context {T: Type} {P : pred T} {S : subType P} (a : S).
 Definition fun_val (f : T -> T) (x : S) := insubd a (f (val x)).
@@ -185,7 +185,7 @@ Lemma big_val (r : seq I) (Q : pred I) :
   val (\big[vcop / vx0]_(i <- r | Q i) insubd a (F i)).
 Admitted.
 
-End BigOpVal1.
+End BigOpVal1.*)
 
 Section BigOpVal2.
 
@@ -201,7 +201,7 @@ Definition val_fun2 (f : S -> S -> S) (x y: T) :=
 Context {I : Type} {F : I -> S}.
 
 Lemma big_val_foo (r : seq I) (Q : pred I):
-  val (\big[op / x0]_(i <- r | Q i) F i) = 
+  val (\big[op / x0]_(i <- r | Q i) F i) =
   \big[val_fun2 op / val x0]_(i <- r | Q i) val (F i).
 Proof.
 elim : r; rewrite ?big_nil //.

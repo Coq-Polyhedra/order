@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect finmap.
 Require Import xbigop extra_misc.
 
@@ -8,37 +9,37 @@ Unset Printing Implicit Defensive.
 Local Open Scope fset_scope.
 Local Open Scope order_scope.
 
-Import RelOrder.Theory Order.LTheory.
+Import Order.LTheory.
 
 (* -------------------------------------------------------------------- *)
 Section FsetOrderTheory.
 
-Context {T : choiceType} (L : {pOrder T}).
+Context (disp : Order.disp_t) (T : porderType disp).
 
 Implicit Types (K : {fset T}).
 
 Lemma ex_min_elt K : K != fset0 ->
-  exists2 m, m \in K & forall x, x \in K -> ~~ (x <_L m).
+  exists2 m, m \in K & forall x, x \in K -> ~~ (x < m).
 Proof.
 elim/fset_ind: K => //= [x S _ _ _]; elim/fset_ind: S => /= [|y S _ ih].
 - exists x; first by rewrite !in_fsetE eqxx.
-  by move=> y; rewrite !in_fsetE orbF => /eqP->; rewrite rltxx.
-case: ih => m m_in_xS min_m; exists (if y <_L m then y else m).
+  by move=> y; rewrite !in_fsetE orbF => /eqP->; rewrite ltxx.
+case: ih => m m_in_xS min_m; exists (if y < m then y else m).
 - case: ifP => _; first by rewrite !in_fsetE eqxx !Monoid.simpm.
   by rewrite fsetUCA in_fsetU m_in_xS orbT.
 move=> z; rewrite fsetUCA in_fsetU in_fset1 => /orP[].
-- by move/eqP=> ->; case: ifP =>[|/negbT//]; rewrite rltxx.
+- by move/eqP=> ->; case: ifP =>[|/negbT//]; rewrite ltxx.
 move=> z_in_xS; case: ifPn => [le_ym|leN_ym].
-- by apply: contra (min_m _ z_in_xS) => /rlt_trans; apply.
+- by apply: contra (min_m _ z_in_xS) => /lt_trans; apply.
 - by apply: min_m.
 Qed.
 
 Definition minset K :=
-  [fset x in K | [forall y : K, ~~(fsval y <_L x)]].
+  [fset x in K | [forall y : K, ~~(fsval y < x)]].
 
 Lemma mem_minsetP K x : x \in K ->
   reflect
-    (forall y, y \in K -> ~~ (y <_L x))
+    (forall y, y \in K -> ~~ (y < x))
     (x \in minset K).
 Proof.
 move=> xK; apply: (iffP idP).
@@ -48,7 +49,7 @@ move=> xK; apply: (iffP idP).
 Qed.
 
 Lemma mem_minsetE K x :
-  x \in minset K -> x \in K /\ (forall y, y \in K -> ~~ (y <_L x)).
+  x \in minset K -> x \in K /\ (forall y, y \in K -> ~~ (y < x)).
 Proof.
 move=> min_x; have xK: x \in K by move: min_x; rewrite !inE => /andP[].
 by split=> //; apply/mem_minsetP.
@@ -62,6 +63,7 @@ Qed.
 
 End FsetOrderTheory.
 
+(*
 (* -------------------------------------------------------------------- *)
 (* TODO: move this section to relorder.v                                *)
 (* -------------------------------------------------------------------- *)
@@ -109,7 +111,7 @@ Lemma leW_mono_in_as :
   {in D &, {mono f : x y / x <_r  y >-> x < y}}.
 Proof. exact: anti_mono_in. Qed.
 
-End POrderMonotonyTheoryCodom.
+End POrderMonotonyTheoryCodom.*)
 
 (* -------------------------------------------------------------------- *)
 Module PreLattice.
@@ -1630,24 +1632,24 @@ Qed. *)
 
 Lemma itv_closed_meet {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
   is_premeet_closed (interval S a b).
-Proof. 
-apply/premeet_closedP=> /= ????. 
+Proof.
+apply/premeet_closedP=> /= ????.
 by rewrite -premeet_itvE // itv_premeet_closed.
 Qed.
 
 Definition itv_closed_meet_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
-  is_premeet_closed (interval S a b) := 
+  is_premeet_closed (interval S a b) :=
   @itv_closed_meet disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
 
 Lemma itv_closed_join {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
   is_prejoin_closed (interval S a b).
-Proof. 
-apply/prejoin_closedP=> /= ????. 
+Proof.
+apply/prejoin_closedP=> /= ????.
 by rewrite -prejoin_itvE // itv_prejoin_closed.
 Qed.
 
 Definition itv_closed_join_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
-  is_prejoin_closed (interval S a b) := 
+  is_prejoin_closed (interval S a b) :=
   @itv_closed_join disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
 
 Definition FinLatInterval {disp} {T : prelatticeType disp} (S: {finLattice T}) a b :
@@ -2059,7 +2061,7 @@ by rewrite finLatImg_prop0 finLatImg_premeet_closed
   finLatImg_prejoin_closed.
 Qed. *)
 
-Canonical finLatImg_finLattice : {finLattice T} := 
+Canonical finLatImg_finLattice : {finLattice T} :=
   FinLattice finLatImg_premeet_closed finLatImg_prejoin_closed finLatImg_prop0.
 
 End FinLatticeImg.
@@ -2478,9 +2480,9 @@ rewrite big_map [RHS]big_seq_cond; apply:congr_big=> // i; apply/idP/idP.
   by rewrite xi yi=> /eqP -> /eqP ->; rewrite !eq_refl.
 - case/and4P=> iS1 _; rewrite iS1 /=.
   rewrite -2?(eq_fmeetl (S:=S2)) -?f_meetmorph ?inE -?f_surj ?in_imfset //.
-  move/eqP/f_inj=> /(_ (mem_fmeet xS1 iS1) xS1) <-. 
+  move/eqP/f_inj=> /(_ (mem_fmeet xS1 iS1) xS1) <-.
   move/eqP/f_inj=> /(_ (mem_fmeet yS1 iS1) yS1) <-.
-  by rewrite !leIfr. 
+  by rewrite !leIfr.
 Qed.
 
 
