@@ -9,12 +9,12 @@ Unset Printing Implicit Defensive.
 Local Open Scope fset_scope.
 Local Open Scope order_scope.
 
-Import Order.LTheory.
+Import Order Order.LTheory.
 
 (* -------------------------------------------------------------------- *)
 Section FsetOrderTheory.
 
-Context (disp : Order.disp_t) (T : porderType disp).
+Context (disp : disp_t) (T : porderType disp).
 
 Implicit Types (K : {fset T}).
 
@@ -114,16 +114,16 @@ Proof. exact: anti_mono_in. Qed.
 End POrderMonotonyTheoryCodom.*)
 
 (* -------------------------------------------------------------------- *)
-Module PreLattice.
-Section ClassDef.
+(*Module PreLattice.*)
+(*Section ClassDef.*)
 
 Set Primitive Projections.
 
-Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
-                (T := Order.POrder.Pack Order.disp_tt b) := Mixin {
-  witness : T;
-  premeet : {fset T} -> T -> T -> T;
-  prejoin : {fset T} -> T -> T -> T;
+#[key="T", primitive]
+HB.mixin Record isPreLattice (d : disp_t) T of POrder d T := {
+  witness        : T;
+  premeet        : {fset T} -> T -> T -> T;
+  prejoin        : {fset T} -> T -> T -> T;
   premeet_min    : forall S x y, x \in S -> y \in S ->
     premeet S x y <= x /\ premeet S x y <= y;
   premeet_inf    : forall S x y z, x \in S -> y \in S -> z \in S ->
@@ -132,70 +132,20 @@ Record mixin_of (T0 : Type) (b : Order.POrder.class_of T0)
     premeet S x y <= premeet S' x y;
   prejoin_max    : forall S x y, x \in S -> y \in S ->
     prejoin S x y >= x /\ prejoin S x y >= y;
-  prejoin_sumeet : forall S x y z, x \in S -> y \in S -> z \in S ->
+  prejoin_sup : forall S x y z, x \in S -> y \in S -> z \in S ->
     z >= x -> z >= y -> z >= prejoin S x y;
   prejoin_decr : forall S S' x y, S `<=` S' -> x \in S -> y \in S ->
     prejoin S x y >= prejoin S' x y
-}.
+  }.
 
-Record class_of (T : Type) := Class {
-  base : Order.POrder.class_of T;
-  mixin : mixin_of base;
-}.
+#[short(type=prelatticeType)]
+HB.structure Definition PreLattice (d : disp_t) :=
+  {T of isPreLattice d T & POrder d T}.
 
-Unset Primitive Projections.
-Local Coercion base : class_of >-> Order.POrder.class_of.
-
-Structure type (disp : Order.disp_t) := Pack { sort; _ : class_of sort }.
-
-
-Local Coercion sort : type >-> Sortclass.
-
-Variables (T : Type) (disp : Order.disp_t) (cT : type disp).
-
-Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
-Definition clone c of phant_id class c := @Pack disp T c.
-Definition clone_with disp' c of phant_id class c := @Pack disp' T c.
-
-Definition pack :=
-  fun bT b & phant_id (@Order.POrder.class disp bT) b =>
-  fun m => Pack disp (@Class T b m).
-
-Definition eqType := @Equality.Pack cT class.
-Definition choiceType := @Choice.Pack cT class.
-Definition porderType := @Order.POrder.Pack disp cT class.
-End ClassDef.
-
-Module Exports.
-Coercion base : class_of >-> Order.POrder.class_of.
-Coercion mixin : class_of >-> mixin_of.
-Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
-Coercion choiceType : type >-> Choice.type.
-Coercion porderType : type >-> Order.POrder.type.
-Canonical eqType.
-Canonical choiceType.
-Canonical porderType.
-Notation prelatticeType := type.
-Notation PrelatticeType T m := (@pack T _ _ _ id m).
-Notation "[ 'prelatticeType' 'of' T 'for' cT ]" := (@clone T _ cT _ id)
-  (at level 0, format "[ 'prelatticeType'  'of'  T  'for'  cT ]") : form_scope.
-Notation "[ 'prelatticeType' 'of' T 'for' cT 'with' disp ]" :=
-  (@clone_with T _ cT disp _ id)
-  (at level 0, format "[ 'prelatticeType'  'of'  T  'for'  cT  'with'  disp ]") :
-  form_scope.
-Notation "[ 'prelatticeType' 'of' T ]" := [prelatticeType of T for _]
-  (at level 0, format "[ 'prelatticeType'  'of'  T ]") : form_scope.
-Notation "[ 'prelatticeType' 'of' T 'with' disp ]" :=
-  [prelatticeType of T for _ with disp]
-  (at level 0, format "[ 'prelatticeType'  'of'  T  'with' disp ]") : form_scope.
-End Exports.
-
-End PreLattice.
-Export PreLattice.Exports.
-
+(* NOT PORTED *)
+(*
 Section PreLatticeDef.
-Context {disp : Order.disp_t} {T : prelatticeType disp}.
+Context {d : disp_t} {T : prelatticeType d}.
 Definition witness : T := PreLattice.witness (PreLattice.class T).
 Definition premeet : {fset T} -> T -> T -> T :=
   PreLattice.premeet (PreLattice.class T).
@@ -203,41 +153,51 @@ Definition prejoin : {fset T} -> T -> T -> T :=
   PreLattice.prejoin (PreLattice.class T).
 End PreLatticeDef.
 
-Notation dual_premeet := (@premeet (Order.dual_display _) _).
-Notation dual_prejoin := (@prejoin (Order.dual_display _) _).
+ *)
+
+Notation dual_premeet := (@premeet (dual_display _) _).
+Notation dual_prejoin := (@prejoin (dual_display _) _).
 Notation "premeet^d" := dual_premeet.
 Notation "prejoin^d" := dual_prejoin.
 
+Section DualPreLattice.
+
+HB.instance Definition _ (d : disp_t) (T : prelatticeType d) :=
+  isPreLattice.Build (dual_display d) T^d witness prejoin_max prejoin_sup prejoin_decr premeet_min premeet_inf premeet_incr.
+
+End DualPreLattice.
+
+Module Import PreLatticeTheory.
 Section PreLatticeTheory.
 
-Context {disp : Order.disp_t} {T : prelatticeType disp}.
+Context {d : disp_t} {T : prelatticeType d}.
 Implicit Type (S : {fset T}) (x y : T).
 
-Lemma premeet_minlr S:
+(*Lemma premeet_minlr S:
   {in S &, forall x y, premeet S x y <= x /\ premeet S x y <= y}.
-Proof. exact: PreLattice.premeet_min. Qed.
+Proof. exact: premeet_min. Qed.*)
 
 Lemma premeet_minl S:
   {in S &, forall x y, premeet S x y <= x}.
-Proof. by move=> x y xS yS; case: (premeet_minlr xS yS). Qed.
+Proof. by move=> x y xS yS; case: (premeet_min _ _ _ xS yS). Qed.
 
 Lemma premeet_minr S:
   {in S &, forall x y, premeet S x y <= y}.
-Proof. by move=> x y xS yS; case: (premeet_minlr xS yS). Qed.
+Proof. by move=> x y xS yS; case: (premeet_min _ _ _ xS yS). Qed.
 
 Definition premeet_min := (premeet_minl, premeet_minr).
 
 Lemma premeet_inf S:
   {in S & &, forall x y z, z <= x -> z <= y -> z <= premeet S x y}.
-Proof. exact: PreLattice.premeet_inf. Qed.
+Proof. exact: premeet_inf. Qed.
 
 Lemma premeet_incr S S': S `<=` S' ->
   {in S &, forall x y, premeet S x y <= premeet S' x y}.
-Proof. move=> ?????; exact: PreLattice.premeet_incr. Qed.
+Proof. move=> ?????; exact: premeet_incr. Qed.
 
 Lemma prejoin_max S:
   {in S &, forall x y, x <= prejoin S x y /\ y <= prejoin S x y}.
-Proof. exact: PreLattice.prejoin_max. Qed.
+Proof. exact: prejoin_max. Qed.
 
 Lemma prejoin_maxl S:
   {in S &, forall x y, x <= prejoin S x y}.
@@ -247,46 +207,30 @@ Lemma prejoin_maxr S:
   {in S &, forall x y, y <= prejoin S x y}.
 Proof. by move=> x y xS yS; case: (prejoin_max xS yS). Qed.
 
-Lemma prejoin_sumeet S:
+Lemma prejoin_sup S:
   {in S & &, forall x y z, x <= z -> y <= z -> prejoin S x y <= z}.
-Proof. exact: PreLattice.prejoin_sumeet. Qed.
+Proof. exact: prejoin_sup. Qed.
 
 Lemma prejoin_decr S S': S `<=` S' ->
   {in S &, forall x y, prejoin S' x y <= prejoin S x y}.
-Proof. move=> ?????; exact: PreLattice.prejoin_decr. Qed.
-
-End PreLatticeTheory.
-
-Section DualPreLattice.
-
-Context {disp : Order.disp_t} (T : prelatticeType disp).
-
-Definition dual_preLatticeMixin :=
-  @PreLattice.Mixin _ (Order.POrder.class [porderType of T^d]) witness
-                    (@prejoin _ T) (@premeet _ T)
-                    (@PreLattice.prejoin_max _ _ (PreLattice.class T))
-                    (@PreLattice.prejoin_sumeet _ _ (PreLattice.class T))
-                    (@PreLattice.prejoin_decr _ _ (PreLattice.class T))
-                    (@PreLattice.premeet_min _ _ (PreLattice.class T))
-                    (@PreLattice.premeet_inf _ _ (PreLattice.class T))
-                    (@PreLattice.premeet_incr _ _ (PreLattice.class T)).
-
-Canonical dual_preLatticeType := PrelatticeType T^d dual_preLatticeMixin.
-
-Lemma prejoinEdual (S : {fset T}) (x y : T) :
-  prejoin^d (S : {fset T^d}) x y = premeet S x y.
-Proof. by []. Qed.
+Proof. move=> ?????; exact: prejoin_decr. Qed.
 
 Lemma premeetEdual (S : {fset T}) (x y : T) :
   premeet^d (S : {fset T^d}) x y = prejoin S x y.
 Proof. by []. Qed.
 
-End DualPreLattice.
+Lemma prejoinEdual (S : {fset T}) (x y : T) :
+  prejoin^d (S : {fset T^d}) x y = premeet S x y.
+Proof. by []. Qed.
+
+End PreLatticeTheory.
+End PreLatticeTheory.
+
 
 (* ================================================================== *)
 Section MeetToPreLattice.
 
-Context {disp : Order.disp_t} {T : tMeetSemilatticeType disp}.
+Context {d : disp_t} {T : tMeetSemilatticeType d}.
 
 Definition mpremeet & {fset T} := @Order.meet _ T.
 
@@ -310,34 +254,31 @@ Lemma mprejoin_max S x y :
   x <= mprejoin S x y /\ y <= mprejoin S x y.
 Proof. by move=> xS yS; split; apply/meetsP_seq => ?? /andP []. Qed.
 
-Lemma mprejoin_sumeet S x y z :
+Lemma mprejoin_sup S x y z :
   x \in S -> y \in S -> z \in S ->
   x <= z -> y <= z -> mprejoin S x y <= z.
-Proof. by move=> xS yS zS xlez ylez; apply: meet_inf_seq => //; apply/andP. Qed.
+Proof. move=> xS yS zS xlez ylez; apply: meets_inf_seq =>//.
+  by apply/andP. Qed.
 
 Lemma mprejoin_decr S S' x y :
   S `<=` S' -> x \in S -> y \in S ->
   mprejoin S' x y <= mprejoin S x y.
 Proof.
 move=> /fsubsetP Ssub xS yS; apply/meetsP_seq => z zS /andP [xlez ylez].
-apply: meet_inf_seq; rewrite ?xlez ?ylez //.
+apply: meets_inf_seq; rewrite ?xlez ?ylez //.
 exact: Ssub.
 Qed.
 
-Definition tMeetSemilatticeType_prelattice :=
-  @PreLattice.Mixin _ (Order.POrder.class T) Order.top
-                    _ _ mpremeet_min mpremeet_inf mpremeet_incr
-                    mprejoin_max mprejoin_sumeet mprejoin_decr.
-
-(* FIXME: introduce a tag for T (non-forgetful inheritance) *)
-Canonical tMeetSemilattice_prelatticeType :=
-  PrelatticeType T tMeetSemilatticeType_prelattice.
+HB.instance Definition _ :=
+  isPreLattice.Build d T \top mpremeet_min mpremeet_inf mpremeet_incr
+    mprejoin_max mprejoin_sup mprejoin_decr.
 
 End MeetToPreLattice.
 
+(* STOP HERE *)
 Section JoinToPreLattice.
 
-Context {disp : Order.disp_t} {T : bJoinSemilatticeType disp}.
+Context {d : disp_t} {T : bJoinSemilatticeType d}.
 
 Definition bJoinSemilatticeType_prelattice :=
   @tMeetSemilatticeType_prelattice _ [tMeetSemilatticeType of T^d].
@@ -572,7 +513,7 @@ Lemma finjoin_sup : forall x y z, finle x z -> finle y z ->
   finle (finjoin x y) z.
 Proof.
 move=> x y z; rewrite /finle insubdK ?mem_join ?fsvalP //.
-apply: prejoin_sumeet; exact: fsvalP.
+apply: prejoin_sup; exact: fsvalP.
 Qed.
 
 (* ------------------------------------------------------------------ *)
@@ -1096,7 +1037,7 @@ rewrite big_seq_cond; apply: (big_rec (fun y => (y <=_L u) && (y \in S))).
   by rewrite lefIr ?mem_fmeet ?FS //.
 Qed.
 
-Lemma fjoin_sumeet_seq (S : {finLattice L})
+Lemma fjoin_sup_seq (S : {finLattice L})
   (r : seq T) (P : {pred T}) (F : T -> T) x :
   x \in r -> P x -> {in S, forall y, F y \in S} -> {in r, forall y, y \in S} ->
   \big[prejoin S / F x]_(i <- r | P i) F i >=_L F x.
@@ -1297,7 +1238,7 @@ rewrite (big_mem_sub _ _ _ filtS _ FxS) ?lefIl
 - exact: mem_fmeet.
 Qed.
 
-Lemma fjoin_sumeet_seq {disp} {T : prelatticeType disp} (S: {finLattice T})
+Lemma fjoin_sup_seq {disp} {T : prelatticeType disp} (S: {finLattice T})
   (r : seq T) (P : pred T) (F : T -> T) x :
   {subset r <= S} -> {in S, forall y, F y \in S} -> x \in r -> P x ->
      F x <= \big[prejoin S / \fbot_S]_(i <- r | P i) F i.
@@ -1515,7 +1456,7 @@ apply/andP; split.
 - apply : lefIl => //;
     [exact: mem_bigfmeet |exact: mem_bigfjoin |exact: fmeet_inf_seq].
 - apply : leUfr => //;
-    [exact: mem_bigfmeet |exact: mem_bigfjoin |exact: fjoin_sumeet_seq].
+    [exact: mem_bigfmeet |exact: mem_bigfjoin |exact: fjoin_sup_seq].
 Qed.
 
 Lemma umeetE {disp} {T : prelatticeType disp} (S : {finLattice T}) a : a \in S -> umeet S a = a.
@@ -1591,7 +1532,7 @@ rewrite !in_fsetE => /and3P[xS alex xleb] /and3P[yS aley yleb].
 apply/and3P; split.
 - exact: mem_fmeet.
 - by apply/premeet_inf=> //; apply/mem_fmeet; rewrite ?mem_umeet ?mem_djoin.
-- by apply:(le_trans _ xleb); rewrite premeet_min.
+- by apply:(le_trans _ xleb); rewrite premeet_minlr.
 Qed.
 
 Lemma premeet_itvE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x y:
@@ -1603,7 +1544,7 @@ move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
 move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
 apply/le_anti/andP; split.
 - by apply: premeet_inf=> //; first exact: itv_premeet_closed;
-    rewrite premeet_min.
+    rewrite premeet_minlr.
 - apply: premeet_incr=> //; apply/fsubsetP=> ?; exact: itv_subset.
 Qed.
 
@@ -1689,7 +1630,7 @@ Proof. by move=> bS aleb; apply: fmeet_inf_seq. Qed.
 
 Lemma le_djoin {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
   a \in S -> a <= b -> djoin S b >= a.
-Proof. by move=> aS aleb; apply: fjoin_sumeet_seq. Qed.
+Proof. by move=> aS aleb; apply: fjoin_sup_seq. Qed.
 
 End UmeetDjoin.
 
@@ -2576,7 +2517,7 @@ suff ->: prejoin L fmorph_img (f x') (f y') =
   prejoin L S2 (f x') (f y') by [].
 apply/(le_anti L)/andP; split; last apply: prejoin_decr;
   rewrite ?fmorph_img_sub ?in_imfset //.
-by apply: prejoin_sumeet;
+by apply: prejoin_sup;
   rewrite ?in_imfset ?prejoin_maxl ?prejoin_maxr ?mem_fmorph.
 Qed.
 
