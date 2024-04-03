@@ -117,9 +117,7 @@ End POrderMonotonyTheoryCodom.*)
 (*Module PreLattice.*)
 (*Section ClassDef.*)
 
-Set Primitive Projections.
-
-#[key="T", primitive]
+#[key="T" (*, primitive*)]
 HB.mixin Record isPreLattice (d : disp_t) T of POrder d T := {
   witness        : T;
   premeet        : {fset T} -> T -> T -> T;
@@ -223,14 +221,36 @@ Lemma prejoinEdual (S : {fset T}) (x y : T) :
   prejoin^d (S : {fset T^d}) x y = premeet S x y.
 Proof. by []. Qed.
 
+Definition is_premeet_closed (S : {fset T}) :=
+  [forall x : S, [forall y : S, premeet S (fsval x) (fsval y) \in S]].
+
+Definition is_prejoin_closed (S : {fset T}) :=
+  [forall x : S, [forall y : S, prejoin S (fsval x) (fsval y) \in S]].
+
+(*TODO : Change S by a predicate*)
+Lemma premeet_closedP (S : {fset T}) :
+  reflect (forall x y, x \in S -> y \in S -> premeet S x y \in S)
+          (is_premeet_closed S).
+Proof.
+apply: (iffP idP) => [+ x y xS yS|].
+- by move/forallP/(_ [`xS])/forallP/(_ [`yS]).
+- by move=> premeet_closedH; do 2 apply/forallP => ?; exact: premeet_closedH.
+Qed.
+
 End PreLatticeTheory.
+
+Lemma prejoin_closedP  {d : disp_t} {T : prelatticeType d} (S : {fset T}) :
+  reflect (forall x y, x \in S -> y \in S -> prejoin S x y \in S)
+          (is_prejoin_closed S).
+Proof. exact: (@premeet_closedP _ T^d). Qed.
+
 End PreLatticeTheory.
 
 
 (* ================================================================== *)
 Section MeetToPreLattice.
 
-Context {d : disp_t} {T : tMeetSemilatticeType d}.
+Context (d : disp_t) (T : tMeetSemilatticeType d).
 
 Definition mpremeet & {fset T} := @Order.meet _ T.
 
@@ -269,81 +289,61 @@ apply: meets_inf_seq; rewrite ?xlez ?ylez //.
 exact: Ssub.
 Qed.
 
+Definition meet_prelattice : Type := T.
+HB.instance Definition _ := POrder.on meet_prelattice.
+(* TODO: do we also want tMeetsemilatticetype structure? *)
 HB.instance Definition _ :=
-  isPreLattice.Build d T \top mpremeet_min mpremeet_inf mpremeet_incr
+  isPreLattice.Build d meet_prelattice \top mpremeet_min mpremeet_inf mpremeet_incr
     mprejoin_max mprejoin_sup mprejoin_decr.
 
 End MeetToPreLattice.
 
-(* STOP HERE *)
 Section JoinToPreLattice.
 
-Context {d : disp_t} {T : bJoinSemilatticeType d}.
+Context (d : disp_t) (T : bJoinSemilatticeType d).
 
-Definition bJoinSemilatticeType_prelattice :=
-  @tMeetSemilatticeType_prelattice _ [tMeetSemilatticeType of T^d].
-(* FIXME: introduce a tag for T (non-forgetful inheritance) *)
-Canonical bJoinSemilattice_prelatticeType :=
-  [prelatticeType of T for PrelatticeType T^d bJoinSemilatticeType_prelattice].
+Definition join_prelattice : Type := T.
+HB.instance Definition _ :=
+  PreLattice.copy join_prelattice (meet_prelattice T^d)^d.
 
 End JoinToPreLattice.
 
 (* ========================================================================== *)
 
-Definition is_premeet_closed
-  {disp : Order.disp_t} {T : prelatticeType disp} (S : {fset T}) :=
-  [forall x : S, [forall y : S, premeet S (fsval x) (fsval y) \in S]].
-
-Definition is_prejoin_closed
-  {disp : Order.disp_t} {T : prelatticeType disp} (S : {fset T}) :=
-  [forall x : S, [forall y : S, prejoin S (fsval x) (fsval y) \in S]].
-
-(*TODO : Change S by a predicate*)
-Lemma premeet_closedP
-  {disp : Order.disp_t} {T : prelatticeType disp} (S : {fset T}) :
-  reflect (forall x y, x \in S -> y \in S -> premeet S x y \in S)
-          (is_premeet_closed S).
-Proof.
-apply: (iffP idP) => [+ x y xS yS|].
-- by move/forallP/(_ [`xS])/forallP/(_ [`yS]).
-- by move=> premeet_closedH; do 2 apply/forallP => ?; exact: premeet_closedH.
-Qed.
-
-Lemma prejoin_closedP
-  {disp : Order.disp_t} {T : prelatticeType disp} (S : {fset T}) :
-  reflect (forall x y, x \in S -> y \in S -> prejoin S x y \in S)
-          (is_prejoin_closed S).
-Proof. exact: (@premeet_closedP _ [prelatticeType of T^d]). Qed.
-
-Module FinLattice.
-Section ClassDef.
-
-Set Primitive Projections.
-Record finLattice_ (T0 : Type) (b : PreLattice.class_of T0)
-                   (T := PreLattice.Pack Order.disp_tt b) := FinLattice {
-  elements_ : {fset T};
+#[key=elements_]
+HB.mixin Record isFinLattice d (T : prelatticeType d) (elements_ : {fset T}) := {
   premeet_closed : is_premeet_closed elements_;
   prejoin_closed : is_prejoin_closed elements_;
   fl_inhabited : elements_ != fset0;
 }.
-Unset Primitive Projections.
 
-Context {disp : Order.disp_t} {T : prelatticeType disp}.
+#[short(type=finLattice)]
+HB.structure Definition FinLattice d T := {S of isFinLattice d T S}.
 
-Definition finLattice (_ : phant T) : Type :=
-  @finLattice_ T (PreLattice.class T).
+Notation elements := FinLattice.sort.
 
-Context (phT : phant T).
+Section FinLatticeSubType.
 
-Definition elements (S : finLattice phT) : {fset T} := elements_ S.
+Variables (d : disp_t) (T : prelatticeType d).
 
 Definition pred_finLattice (S : {fset T}) : bool :=
   [&& is_premeet_closed S, is_prejoin_closed S & S != fset0].
 
-Definition sub_finLattice (S : {fset T}) (w : pred_finLattice S) :
-  finLattice phT :=
-  @FinLattice _ _ S (proj1 (andP w))
+Section FinLatticeSubType_.
+
+Variables (S : {fset T}) (w : pred_finLattice S).
+
+#[local]
+HB.instance Definition _ :=
+  isFinLattice.Build _ _ S (proj1 (andP w))
     (proj1 (andP (proj2 (andP w)))) (proj2 (andP (proj2 (andP w)))).
+
+Definition sub_finLattice : finLattice T := S.
+
+End FinLatticeSubType_.
+
+(*@FinLattice _ _ S (proj1 (andP w))
+    (proj1 (andP (proj2 (andP w)))) (proj2 (andP (proj2 (andP w)))).*)
 
 Lemma finLattice_rec (K : finLattice phT -> Type) :
   (forall (x : {fset T}) (Px : pred_finLattice x), K (sub_finLattice Px)) ->
