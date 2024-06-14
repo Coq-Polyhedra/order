@@ -237,6 +237,24 @@ apply: (iffP idP) => [+ x y xS yS|].
 - by move=> premeet_closedH; do 2 apply/forallP => ?; exact: premeet_closedH.
 Qed.
 
+Lemma premeetP (S : {fset T}) :
+  {in S & &, forall x y z, (x <= premeet S y z) = (x <= y) && (x <= z)}.
+Proof.
+move=> x y z xS yS zS; apply/idP/andP => [x_le_meetyz|[]]; last first.
+  exact: premeet_inf.
+split; apply: le_trans x_le_meetyz _; first exact: premeet_minl.
+exact: premeet_minr.
+Qed.
+
+Lemma prejoinP (S : {fset T}) :
+  {in S & &, forall x y z, (prejoin S x y <= z) = (x <= z) && (y <= z)}.
+Proof.
+move=> x y z xS yS zS; apply/idP/andP => [joinxy_le_z|[]]; last first.
+  exact: prejoin_sup.
+split; apply: le_trans joinxy_le_z; first exact: prejoin_maxl.
+exact: prejoin_maxr.
+Qed.
+
 End PreLatticeTheory.
 
 Lemma prejoin_closedP  {d : disp_t} {T : prelatticeType d} (S : {fset T}) :
@@ -459,131 +477,28 @@ Proof. by move=> y x z; rewrite /finle; exact: le_trans. Qed.
 Lemma finlt_def : forall (x y : S), finlt x y = (y != x) && finle x y.
 Proof. by move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
 
-HB.howto porderType.
-
 HB.instance Definition _ :=
-  Le_isPOrder.Build disp (elements S) finlexx finle_anti finle_trans.
+  isPOrder.Build disp (elements S) finlt_def finlexx finle_anti finle_trans.
+(* HB.instance Definition _ := *)
+(*   Le_isPOrder.Build disp (elements S) finlexx finle_anti finle_trans. *)
+
+Lemma finleE : <=%O = (fun x y : S => val x <= val y). Proof. by []. Qed.
+Lemma finltE : <%O = (fun x y : S => val x < val y).   Proof. by []. Qed.
 
 (* --------------------------------------------------------------- *)
 
-Definition finmeet (x y : S) := fun2_val witness (premeet S) x y.
-Definition finjoin (x y : S) := fun2_val witness (prejoin S) x y.
+Definition finmeet (x y : S) := insubd witness (premeet S (val x) (val y)).
+Definition finjoin (x y : S) := insubd witness (prejoin S (val x) (val y)).
 
-Lemma finmeet_minl : forall x y, finle (finmeet x y) x.
-Proof. by move=> x y; rewrite /finle insubdK ?mem_meet ?premeet_minl ?fsvalP. Qed.
+Lemma finmeetP (x y z : S) : (x <= finmeet y z) = (x <= y) && (x <= z).
+Proof. by rewrite finleE insubdK ?mem_meet ?premeetP // ?fsvalP. Qed.
 
-Lemma finmeet_minr : forall x y, finle (finmeet x y) y.
-Proof. by move=> x y; rewrite /finle insubdK ?mem_meet ?premeet_minr ?fsvalP. Qed.
+Lemma finjoinP (x y z : S) : (finjoin x y <= z) = (x <= z) && (y <= z).
+Proof. by rewrite finleE insubdK ?mem_join ?prejoinP // ?fsvalP. Qed.
 
-Lemma finmeet_inf : forall x y z, finle z x -> finle z y ->
-  finle z (finmeet x y).
-Proof.
-move=> x y z; rewrite /finle insubdK ?mem_meet ?fsvalP //.
-apply: premeet_inf; exact: fsvalP.
-Qed.
-
-Lemma finjoin_maxl : forall x y, finle x (finjoin x y).
-Proof.
-move=> x y; rewrite /finle insubdK ?mem_join ?fsvalP //.
-apply: prejoin_maxl; exact: fsvalP.
-Qed.
-
-Lemma finjoin_maxr : forall x y, finle y (finjoin x y).
-Proof.
-move=> x y; rewrite /finle insubdK ?mem_join ?fsvalP //.
-apply: prejoin_maxr; exact: fsvalP.
-Qed.
-
-Lemma finjoin_sup : forall x y z, finle x z -> finle y z ->
-  finle (finjoin x y) z.
-Proof.
-move=> x y z; rewrite /finle insubdK ?mem_join ?fsvalP //.
-apply: prejoin_sup; exact: fsvalP.
-Qed.
-
-(* ------------------------------------------------------------------ *)
-
-Lemma finmeetC : commutative finmeet.
-Proof.
-by move=> x y; apply/finle_anti;
-  rewrite !finmeet_inf ?finmeet_minl ?finmeet_minr.
-Qed.
-
-Lemma finmeetAl : forall (x y z t : S), t \in [fset x; y; z] ->
-  finle (finmeet x (finmeet y z)) t.
-Proof.
-move=> x y z t; rewrite !in_fsetE -orbA; case/or3P => /eqP ->.
-+ exact: finmeet_minl.
-+ exact/(finle_trans _ (finmeet_minl y z))/finmeet_minr.
-+ exact/(finle_trans _ (finmeet_minr y z))/finmeet_minr.
-Qed.
-
-Lemma finmeetAr : forall (x y z t : S), t \in [fset x; y; z] ->
-  finle (finmeet (finmeet x y) z) t.
-Proof.
-move=> x y z t; rewrite !in_fsetE -orbA; case/or3P => /eqP ->.
-+ exact/(finle_trans _ (finmeet_minl x y))/finmeet_minl.
-+ exact/(finle_trans _ (finmeet_minr x y))/finmeet_minl.
-+ exact:finmeet_minr.
-Qed.
-
-Lemma finmeetA : associative finmeet.
-Proof.
-by move=> x y z; apply: finle_anti;
-rewrite !finmeet_inf ?finmeetAr ?finmeetAl ?in_fsetE ?eq_refl ?orbT.
-Qed.
-
-Lemma lefinmeet : forall x y : S, finle x y = (finmeet x y == x).
-Proof.
-move=> x y; apply/idP/eqP => [lexy | <-]; last exact: finmeet_minr.
-by apply/finle_anti; rewrite finmeet_minl finmeet_inf ?finlexx.
-Qed.
-
-(* ----------------------------------------------------------------- *)
-
-Lemma finjoinC : commutative finjoin.
-Proof.
-by move=> x y; apply: finle_anti;
-  rewrite !finjoin_sup ?finjoin_maxl ?finjoin_maxr.
-Qed.
-
-Lemma finjoinAl : forall (x y z t : S), t \in [fset x; y; z] ->
-  finle t (finjoin x (finjoin y z)).
-Proof.
-move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
-- exact: finjoin_maxl.
-- exact/(finle_trans (finjoin_maxl y z))/finjoin_maxr.
-- exact/(finle_trans (finjoin_maxr y z))/finjoin_maxr.
-Qed.
-
-Lemma finjoinAr : forall (x y z t : S), t \in [fset x; y; z] ->
-  finle t (finjoin (finjoin x y) z).
-Proof.
-move=> x y z t; rewrite !in_fsetE; case/orP => [/orP []|] /eqP ->.
-- exact/(finle_trans (finjoin_maxl x y))/finjoin_maxl.
-- exact/(finle_trans (finjoin_maxr x y))/finjoin_maxl.
-- exact:finjoin_maxr.
-Qed.
-
-Lemma finjoinA : associative finjoin.
-Proof.
-by move=> x y z; apply: finle_anti;
-  rewrite ?finjoin_sup ?finjoinAl ?finjoinAr ?in_fsetE ?eq_refl ?orbT.
-Qed.
-
-Lemma lefinjoin : forall x y : S, dual_rel finle x y = (finjoin x y == x).
-Proof.
-move=> x y; apply/idP/eqP => [leyx | <-]; last by exact: finjoin_maxr.
-by apply/finle_anti; rewrite finjoin_maxl finjoin_sup ?finlexx.
-Qed.
-
-(* TODO: Would using MeetJoinMixin be better? *)
-Definition fin_meetMixin := MeetMixin finmeetC finmeetA lefinmeet.
-Definition fin_joinMixin := JoinMixin finjoinC finjoinA lefinjoin.
-
-Local Canonical fin_meetSemilatticeType := MeetSemilatticeType S fin_meetMixin.
-Local Canonical fin_joinSemilatticeType := JoinSemilatticeType S fin_joinMixin.
-Local Canonical fin_latticeType := [latticeType of S].
+HB.instance Definition _ :=
+  @POrder_MeetJoin_isLattice.Build disp (elements S)
+    finmeet finjoin finmeetP finjoinP.
 
 End FinLatticeStructure.
 Module Exports.
