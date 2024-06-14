@@ -222,10 +222,10 @@ Lemma prejoinEdual (S : {fset T}) (x y : T) :
 Proof. by []. Qed.
 
 Definition is_premeet_closed (S : {fset T}) :=
-  [forall x : S, [forall y : S, premeet S (fsval x) (fsval y) \in S]].
+  [forall x : S, forall y : S, premeet S (fsval x) (fsval y) \in S].
 
 Definition is_prejoin_closed (S : {fset T}) :=
-  [forall x : S, [forall y : S, prejoin S (fsval x) (fsval y) \in S]].
+  [forall x : S, forall y : S, prejoin S (fsval x) (fsval y) \in S].
 
 (*TODO : Change S by a predicate*)
 Lemma premeet_closedP (S : {fset T}) :
@@ -320,7 +320,9 @@ HB.mixin Record isFinLattice d (T : prelatticeType d) (elements_ : {fset T}) := 
 #[short(type=finLattice)]
 HB.structure Definition FinLattice d T := {S of isFinLattice d T S}.
 
-Notation elements := FinLattice.sort.
+Notation elements := (@FinLattice.sort _ _).
+
+(* Check fun d (T : prelatticeType d) (S : finLattice T) => elements S : {fset T}. *)
 
 Section FinLatticeSubType.
 
@@ -344,55 +346,39 @@ End FinLatticeSubType_.
 
 (*@FinLattice _ _ S (proj1 (andP w))
     (proj1 (andP (proj2 (andP w)))) (proj2 (andP (proj2 (andP w)))).*)
-
-Lemma finLattice_rec (K : finLattice phT -> Type) :
+Lemma finLattice_rec (K : finLattice T -> Type) :
   (forall (x : {fset T}) (Px : pred_finLattice x), K (sub_finLattice Px)) ->
-  forall u : finLattice phT, K u.
+  forall u : finLattice T, K u.
 Proof.
-move=> HK [S HS1 HS2 HS3].
+move=> HK [S [[HS1 HS2 HS3]]].
 have HS: pred_finLattice S by apply/and3P.
-by congr (K (FinLattice _ _ _)): (HK S HS); apply: bool_irrelevance.
+congr K: (HK S HS); congr FinLattice.Pack; congr FinLattice.Class.
+by congr isFinLattice.Axioms_; apply: bool_irrelevance.
 Qed.
 
+HB.instance Definition _ :=
+  @isSub.Build {fset T} _ (finLattice T) elements sub_finLattice finLattice_rec vrefl_rect.
+
+(*
 Local Canonical finLattice_subType :=
-  SubType (finLattice phT) elements sub_finLattice finLattice_rec vrefl_rect.
+  SubType (finLattice phT) elements sub_finLattice finLattice_rec vrefl_rect. *)
 
-Definition finLattice_eqMixin := [eqMixin of finLattice phT by <:].
-Local Canonical finLattice_eqType := EqType (finLattice phT) finLattice_eqMixin.
+HB.instance Definition _ := [Choice of finLattice T by <:].
 
-Definition finLattice_choiceMixin := [choiceMixin of finLattice phT by <:].
-Local Canonical finLattice_choiceType :=
-  ChoiceType (finLattice phT) finLattice_choiceMixin.
-
-Definition mem_finLattice (S: finLattice phT) : {pred T} :=
+Definition mem_finLattice (S: finLattice T) : {pred T} :=
   pred_of_finset (elements S).
-Local Canonical finLattice_predType := PredType mem_finLattice.
+Canonical finLattice_predType := PredType mem_finLattice.
 
-Local Canonical finLattice_finPredType :=
-  mkFinPredType (finLattice phT) elements
+Canonical finLattice_finPredType :=
+  mkFinPredType (finLattice T) elements
     (fun S => fset_uniq (elements S)) (fun _ _ => erefl).
+End FinLatticeSubType.
 
-End ClassDef.
-
-Module Exports.
-Notation finLattice := finLattice.
-Notation FinLattice := FinLattice.
-Notation elements := elements.
-Coercion elements : finLattice >-> finset_of.
-Canonical finLattice_subType.
-Canonical finLattice_eqType.
-Canonical finLattice_choiceType.
-Canonical finLattice_predType.
-Canonical finLattice_finPredType.
 Notation "{ 'finLattice' T }" :=
-  (@finLattice _ _ (Phant T)) (at level 0, format "{ 'finLattice'  T }").
-End Exports.
-
-End FinLattice.
-Export FinLattice.Exports.
+  (@finLattice _ T) (at level 0, format "{ 'finLattice'  T }").
 
 Lemma in_finLatticeE {disp : Order.disp_t} {T : prelatticeType disp}
-  (S : {finLattice T}) x : (x \in S) = (x \in elements S).
+  (S : {finLattice T}) (x : T) : (x \in S) = (x \in (S : {fset T})).
 Proof. by []. Qed.
 
 Lemma finLattice_eqP {disp : Order.disp_t} {T : prelatticeType disp}
@@ -417,12 +403,11 @@ Section FinLatticeDual.
 
 Context {disp : Order.disp_t} {T : prelatticeType disp} (S : {finLattice T}).
 
-(* FIXME: introduce a key *)
-Canonical dual_finLattice : {finLattice T^d} :=
-  @FinLattice.FinLattice _
-    (PreLattice.class [prelatticeType of T^d]) _
-    (FinLattice.prejoin_closed S) (FinLattice.premeet_closed S)
-    (FinLattice.fl_inhabited S).
+Definition dual_finLattice : {fset T^d} := S.
+
+HB.instance Definition _ :=
+  @isFinLattice.Build (dual_display disp) T^d dual_finLattice
+    (@prejoin_closed _ _ S) (@premeet_closed _ _ S) (@fl_inhabited _ _ S).
 
 Lemma dual_fjoinE: prejoin dual_finLattice = premeet S.
 Proof. by []. Qed.
@@ -447,15 +432,15 @@ Section FinLatticeStructure.
 Context {disp : Order.disp_t} {T : prelatticeType disp} (S : {finLattice T}).
 
 Lemma finLattice_prop0 : S != fset0 :> {fset _}.
-Proof. by case: S. Qed.
+Proof. exact: fl_inhabited. Qed.
 
 Definition witness := [`xchooseP (fset0Pn S finLattice_prop0)].
 
 Lemma mem_meet : {in S &, forall x y, premeet S x y \in S}.
-Proof. by case: S => S0 ? ? ?; apply/premeet_closedP. Qed.
+Proof. exact/premeet_closedP/premeet_closed. Qed.
 
 Lemma mem_join : {in S &, forall x y, prejoin S x y \in S}.
-Proof. by case: S => S0 ? ? ?; apply/prejoin_closedP. Qed.
+Proof. exact/prejoin_closedP/prejoin_closed. Qed.
 
 (* ------------------------------------------------------------------ *)
 
@@ -474,10 +459,10 @@ Proof. by move=> y x z; rewrite /finle; exact: le_trans. Qed.
 Lemma finlt_def : forall (x y : S), finlt x y = (y != x) && finle x y.
 Proof. by move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
 
-Definition finle_mixin :=
-  LePOrderMixin finlt_def finlexx finle_anti finle_trans.
+HB.howto porderType.
 
-Local Canonical fin_porderType := POrderType disp S finle_mixin.
+HB.instance Definition _ :=
+  Le_isPOrder.Build disp (elements S) finlexx finle_anti finle_trans.
 
 (* --------------------------------------------------------------- *)
 
