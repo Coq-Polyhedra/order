@@ -477,6 +477,7 @@ Proof. by move=> y x z; rewrite /finle; exact: le_trans. Qed.
 Lemma finlt_def : forall (x y : S), finlt x y = (y != x) && finle x y.
 Proof. by move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
 
+#[export]
 HB.instance Definition _ :=
   isPOrder.Build disp (elements S) finlt_def finlexx finle_anti finle_trans.
 (* HB.instance Definition _ := *)
@@ -496,12 +497,15 @@ Proof. by rewrite finleE insubdK ?mem_meet ?premeetP // ?fsvalP. Qed.
 Lemma finjoinP (x y z : S) : (finjoin x y <= z) = (x <= z) && (y <= z).
 Proof. by rewrite finleE insubdK ?mem_join ?prejoinP // ?fsvalP. Qed.
 
+#[export]
 HB.instance Definition _ :=
   @POrder_MeetJoin_isLattice.Build disp (elements S)
     finmeet finjoin finmeetP finjoinP.
 
 End FinLatticeStructure.
+
 Module Exports.
+HB.reexport FinLatticeStructure.
 Arguments finle {disp T S} x y.
 Arguments finlt {disp T S} x y.
 Arguments finmeet {disp T S} x y.
@@ -510,19 +514,18 @@ Notation finle := finle.
 Notation finlt := finlt.
 Notation finmeet := finmeet.
 Notation finjoin := finjoin.
-(* FIXME: non-uniform coercion *)
 (* FIXME: these instances should be reimplemented as builders *)
-Coercion fin_porderType : finLattice >-> Order.POrder.type.
-Coercion fin_meetSemilatticeType : finLattice >-> Order.MeetSemilattice.type.
-Coercion fin_joinSemilatticeType : finLattice >-> Order.JoinSemilattice.type.
-Coercion fin_latticeType : finLattice >-> Order.Lattice.type.
-Canonical fin_porderType.
-Canonical fin_meetSemilatticeType.
-Canonical fin_joinSemilatticeType.
-Canonical fin_latticeType.
+Coercion finmap_fset_sub_type__canonical__Order_POrder :
+  finLattice >-> porderType.
+Coercion finmap_fset_sub_type__canonical__Order_MeetSemilattice :
+  finLattice >-> meetSemilatticeType.
+Coercion finmap_fset_sub_type__canonical__Order_JoinSemilattice :
+  finLattice >-> joinSemilatticeType.
+Coercion finmap_fset_sub_type__canonical__Order_Lattice :
+  finLattice >-> latticeType.
 End Exports.
 End FinLatticeStructure.
-Import FinLatticeStructure.Exports.
+HB.export FinLatticeStructure.Exports.
 
 (* ========================================================================= *)
 
@@ -552,17 +555,14 @@ Proof. by []. Qed. *)
 
 Lemma mem_fmeet (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}) :
   {in S &, forall x y, premeet S x y \in S}.
-Proof.
-case: S => S premeet_closed ?? x y; rewrite !inE /=.
-exact/premeet_closedP.
-Qed.
+Proof. by move=> x y; apply/premeet_closedP/premeet_closed. Qed.
 
 Lemma mem_fjoin (disp : Order.disp_t) (T : prelatticeType disp) (S: {finLattice T}) :
   {in S &, forall x y, prejoin S x y \in S}.
 Proof. exact: mem_fmeet S^~s. Qed.
 
 Lemma finLattice_prop0 (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}): S != fset0 :> {fset _}.
-Proof. by case: S. Qed.
+Proof. exact: fl_inhabited. Qed.
 
 Lemma finLattice_leE (disp : Order.disp_t) (T : prelatticeType disp) (S : {finLattice T}) : forall x y : S,
   x <= y = (fsval x <= fsval y).
@@ -962,8 +962,7 @@ Section FPick.
 Context {T : choiceType}.
 
 (* TODO: move it *)
-Definition fpick (S : {fset T}) :=
-  omap val (@pick [finType of S] xpredT).
+Definition fpick (S : {fset T}) := omap val (@pick S xpredT).
 
 Variant fpick_spec (S : {fset T}) : option T -> Type :=
 | FPick0 of S = fset0 : fpick_spec S None
