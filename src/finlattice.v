@@ -9,12 +9,12 @@ Unset Printing Implicit Defensive.
 Local Open Scope fset_scope.
 Local Open Scope order_scope.
 
-Import Order Order.LTheory.
+Import Order.LTheory.
 
 (* -------------------------------------------------------------------- *)
 Section FsetOrderTheory.
 
-Context (disp : disp_t) (T : porderType disp).
+Context (disp : Order.disp_t) (T : porderType disp).
 
 Implicit Types (K : {fset T}).
 
@@ -118,7 +118,7 @@ End POrderMonotonyTheoryCodom.*)
 (*Section ClassDef.*)
 
 #[key="T" (*, primitive*)]
-HB.mixin Record isPreLattice (d : disp_t) T of POrder d T := {
+HB.mixin Record isPreLattice (d : Order.disp_t) T of Order.POrder d T := {
   witness        : T;
   premeet        : {fset T} -> T -> T -> T;
   prejoin        : {fset T} -> T -> T -> T;
@@ -137,8 +137,8 @@ HB.mixin Record isPreLattice (d : disp_t) T of POrder d T := {
   }.
 
 #[short(type=prelatticeType)]
-HB.structure Definition PreLattice (d : disp_t) :=
-  {T of isPreLattice d T & POrder d T}.
+HB.structure Definition PreLattice (d : Order.disp_t) :=
+  {T of isPreLattice d T & Order.POrder d T}.
 
 (* NOT PORTED *)
 (*
@@ -153,22 +153,22 @@ End PreLatticeDef.
 
  *)
 
-Notation dual_premeet := (@premeet (dual_display _) _).
-Notation dual_prejoin := (@prejoin (dual_display _) _).
+Notation dual_premeet := (@premeet (Order.dual_display _) _).
+Notation dual_prejoin := (@prejoin (Order.dual_display _) _).
 Notation "premeet^d" := dual_premeet.
 Notation "prejoin^d" := dual_prejoin.
 
 Section DualPreLattice.
 
-HB.instance Definition _ (d : disp_t) (T : prelatticeType d) :=
-  isPreLattice.Build (dual_display d) T^d witness prejoin_max prejoin_sup prejoin_decr premeet_min premeet_inf premeet_incr.
+HB.instance Definition _ (d : Order.disp_t) (T : prelatticeType d) :=
+  isPreLattice.Build (Order.dual_display d) T^d witness prejoin_max prejoin_sup prejoin_decr premeet_min premeet_inf premeet_incr.
 
 End DualPreLattice.
 
 Module Import PreLatticeTheory.
 Section PreLatticeTheory.
 
-Context {d : disp_t} {T : prelatticeType d}.
+Context {d : Order.disp_t} {T : prelatticeType d}.
 Implicit Type (S : {fset T}) (x y : T).
 
 (*Lemma premeet_minlr S:
@@ -257,7 +257,7 @@ Qed.
 
 End PreLatticeTheory.
 
-Lemma prejoin_closedP  {d : disp_t} {T : prelatticeType d} (S : {fset T}) :
+Lemma prejoin_closedP  {d : Order.disp_t} {T : prelatticeType d} (S : {fset T}) :
   reflect (forall x y, x \in S -> y \in S -> prejoin S x y \in S)
           (is_prejoin_closed S).
 Proof. exact: (@premeet_closedP _ T^d). Qed.
@@ -268,7 +268,7 @@ End PreLatticeTheory.
 (* ================================================================== *)
 Section MeetToPreLattice.
 
-Context (d : disp_t) (T : tMeetSemilatticeType d).
+Context (d : Order.disp_t) (T : tMeetSemilatticeType d).
 
 Definition mpremeet & {fset T} := @Order.meet _ T.
 
@@ -308,7 +308,7 @@ exact: Ssub.
 Qed.
 
 Definition meet_prelattice : Type := T.
-HB.instance Definition _ := POrder.on meet_prelattice.
+HB.instance Definition _ := Order.POrder.on meet_prelattice.
 (* TODO: do we also want tMeetsemilatticetype structure? *)
 HB.instance Definition _ :=
   isPreLattice.Build d meet_prelattice \top mpremeet_min mpremeet_inf mpremeet_incr
@@ -318,7 +318,7 @@ End MeetToPreLattice.
 
 Section JoinToPreLattice.
 
-Context (d : disp_t) (T : bJoinSemilatticeType d).
+Context (d : Order.disp_t) (T : bJoinSemilatticeType d).
 
 Definition join_prelattice : Type := T.
 HB.instance Definition _ :=
@@ -344,7 +344,7 @@ Notation elements := (@FinLattice.sort _ _).
 
 Section FinLatticeSubType.
 
-Variables (d : disp_t) (T : prelatticeType d).
+Variables (d : Order.disp_t) (T : prelatticeType d).
 
 Definition pred_finLattice (S : {fset T}) : bool :=
   [&& is_premeet_closed S, is_prejoin_closed S & S != fset0].
@@ -424,7 +424,7 @@ Context {disp : Order.disp_t} {T : prelatticeType disp} (S : {finLattice T}).
 Definition dual_finLattice : {fset T^d} := S.
 
 HB.instance Definition _ :=
-  @isFinLattice.Build (dual_display disp) T^d dual_finLattice
+  @isFinLattice.Build (Order.dual_display disp) T^d dual_finLattice
     (@prejoin_closed _ _ S) (@premeet_closed _ _ S) (@fl_inhabited _ _ S).
 
 Lemma dual_fjoinE: prejoin dual_finLattice = premeet S.
@@ -479,7 +479,7 @@ Proof. by move=> x y; rewrite /finle /finlt lt_def; congr (_ && _). Qed.
 
 #[export]
 HB.instance Definition _ :=
-  isPOrder.Build disp (elements S) finlt_def finlexx finle_anti finle_trans.
+  Order.isPOrder.Build disp (elements S) finlt_def finlexx finle_anti finle_trans.
 (* HB.instance Definition _ := *)
 (*   Le_isPOrder.Build disp (elements S) finlexx finle_anti finle_trans. *)
 
@@ -499,7 +499,7 @@ Proof. by rewrite finleE insubdK ?mem_join ?prejoinP // ?fsvalP. Qed.
 
 #[export]
 HB.instance Definition _ :=
-  @POrder_MeetJoin_isLattice.Build disp (elements S)
+  @Order.POrder_MeetJoin_isLattice.Build disp (elements S)
     finmeet finjoin finmeetP finjoinP.
 
 End FinLatticeStructure.
@@ -1178,66 +1178,22 @@ Definition finbot := [`mem_fbot S].
 Lemma finle0x : forall x, finbot <= x.
 Proof. move=> x; exact/le0f/fsvalP. Qed.
 
-Definition finBottomMixin := BottomMixin finle0x.
+#[export] HB.instance Definition _ := Order.hasBottom.Build disp S finle0x.
 
 Definition fintop := [`mem_ftop S].
 Lemma finlex1 : forall x, x <= fintop.
 Proof. move=> x; exact/lef1/fsvalP. Qed.
 
-Definition finTopMixin := TopMixin finlex1.
-
-Local Canonical bPOrderType := BPOrderType S finBottomMixin.
-Local Canonical tPOrderType := TPOrderType S finTopMixin.
-Local Canonical bMeetSemilatticeType := [bMeetSemilatticeType of S].
-Local Canonical tMeetSemilatticeType := [tMeetSemilatticeType of S].
-Local Canonical tbMeetSemilatticeType := [tbMeetSemilatticeType of S].
-Local Canonical bJoinSemilatticeType := [bJoinSemilatticeType of S].
-Local Canonical tJoinSemilatticeType := [tJoinSemilatticeType of S].
-Local Canonical tbJoinSemilatticeType := [tbJoinSemilatticeType of S].
-Local Canonical bLatticeType := [bLatticeType of S].
-Local Canonical tLatticeType := [tLatticeType of S].
-Local Canonical tbLatticeType := [tbLatticeType of S].
-
-Local Canonical finPOrderType := [finPOrderType of S].
-Local Canonical finBPOrderType := [finBPOrderType of S].
-Local Canonical finTPOrderType := [finTPOrderType of S].
-Local Canonical finMeetSemilatticeType := [finMeetSemilatticeType of S].
-Local Canonical finBMeetSemilatticeType := [finBMeetSemilatticeType of S].
-Local Canonical finJoinSemilatticeType := [finJoinSemilatticeType of S].
-Local Canonical finTJoinSemilatticeType := [finTJoinSemilatticeType of S].
-Local Canonical finLatticeType := [finLatticeType of S].
-Local Canonical finTBLatticeType := [finTBLatticeType of S].
+#[export] HB.instance Definition _ := Order.hasTop.Build disp S finlex1.
 
 End FinTBLatticeStructure.
 Module Exports.
-Notation finbot := finbot.
-Notation fintop := fintop.
-Coercion tbLatticeType : finLattice >-> Order.TBLattice.type.
-Canonical bPOrderType.
-Canonical tPOrderType.
-Canonical bMeetSemilatticeType.
-Canonical tMeetSemilatticeType.
-Canonical tbMeetSemilatticeType.
-Canonical bJoinSemilatticeType.
-Canonical tJoinSemilatticeType.
-Canonical tbJoinSemilatticeType.
-Canonical bLatticeType.
-Canonical tLatticeType.
-Canonical tbLatticeType.
-
-Canonical finPOrderType.
-Canonical finBPOrderType.
-Canonical finTPOrderType.
-Canonical finMeetSemilatticeType.
-Canonical finBMeetSemilatticeType.
-Canonical finJoinSemilatticeType.
-Canonical finTJoinSemilatticeType.
-Canonical finLatticeType.
-Canonical finTBLatticeType.
+HB.reexport FinTBLatticeStructure.
+(*Coercion finmap_fset_sub_type__canonical__Order_FinTBLattice : finLattice >-> Order.FinTBLattice.type.*)
 End Exports.
-
 End FinTBLatticeStructure.
-Import FinTBLatticeStructure.Exports.
+
+HB.export FinTBLatticeStructure.Exports.
 
 Section TestTBFinLattice.
 
@@ -1274,20 +1230,20 @@ Qed.
 
 Lemma prejoin_closed1 {disp} {T : prelatticeType disp} (a : T) :
   is_prejoin_closed [fset a].
-Proof. exact: (@premeet_closed1 _ [prelatticeType of T^d]). Qed.
+Proof. exact: (@premeet_closed1 _ T^d). Qed.
+
+Lemma fl_inhabited1 (T : choiceType) (a : T) : [fset a] != fset0.
+Proof. by rewrite -cardfs_gt0 cardfs1. Qed.
 
 Context {disp : Order.disp_t} {T : prelatticeType disp} (a : T).
 
-(* Lemma is_lat1 : [&& premeet_closed [fset a],
-                    prejoin_closed [fset a] & [fset a] != fset0].
-Proof. by rewrite premeet_closed1 prejoin_closed1 -cardfs_eq0 cardfs1. Qed. *)
-
-Program Definition lat1 := FinLattice (premeet_closed1 a) (prejoin_closed1 a) _.
-Next Obligation. by rewrite -cardfs_gt0 cardfs1. Qed.
+HB.instance Definition _ := isFinLattice.Build disp _ [fset a] (premeet_closed1 a)
+                             (prejoin_closed1 a) (fl_inhabited1 a).
 
 End FinLattice1.
 
-Notation "[ 'finlattice' a 'for' T ]" := (@lat1 _ T a).
+(*Notation "[ 'finlattice' a 'for' T ]" := (@lat1 _ T a).*)
+
 
 (* ==================================================================== *)
 Section Atom.
@@ -1317,7 +1273,7 @@ Lemma coatomP {disp} {T : prelatticeType disp} {S : {finLattice T}} {a} :
     ([/\ a \in S, (a < \ftop_S) &
         forall x, x \in S -> x < \ftop_S -> ~~ (a < x)])
     (coatom S a).
-Proof. exact: (@atomP _ [prelatticeType of T^d] S^~s). Qed.
+Proof. exact: (@atomP _ T^d S^~s). Qed.
 
 Lemma mem_atom {disp} {T : prelatticeType disp} (S : {finLattice T}) x :
   atom S x -> x \in S.
@@ -1389,8 +1345,10 @@ rewrite !inE; apply/and3P; split => //.
 - by rewrite lefIl ?mem_fjoin ?lefUl ?mem_umeet ?mem_djoin.
 Qed.
 
+(*
 Definition itv_prop0_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
   interval S a b != fset0 := @itv_prop0 disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
+ *)
 
 Lemma intervalE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x :
   a \in S -> b \in S -> a <= b ->
@@ -1431,7 +1389,7 @@ rewrite !in_fsetE => /and3P[xS alex xleb] /and3P[yS aley yleb].
 apply/and3P; split.
 - exact: mem_fmeet.
 - by apply/premeet_inf=> //; apply/mem_fmeet; rewrite ?mem_umeet ?mem_djoin.
-- by apply:(le_trans _ xleb); rewrite premeet_minlr.
+- by apply:(le_trans _ xleb); rewrite premeet_min.
 Qed.
 
 Lemma premeet_itvE {disp} {T : prelatticeType disp} (S : {finLattice T}) a b x y:
@@ -1443,7 +1401,7 @@ move: (x_in); rewrite in_fsetE // => /and3P[xS alex xleb].
 move: (y_in); rewrite in_fsetE // => /and3P[yS aley yleb].
 apply/le_anti/andP; split.
 - by apply: premeet_inf=> //; first exact: itv_premeet_closed;
-    rewrite premeet_minlr.
+    rewrite premeet_min.
 - apply: premeet_incr=> //; apply/fsubsetP=> ?; exact: itv_subset.
 Qed.
 
@@ -1477,9 +1435,11 @@ apply/premeet_closedP=> /= ????.
 by rewrite -premeet_itvE // itv_premeet_closed.
 Qed.
 
+(*
 Definition itv_closed_meet_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
   is_premeet_closed (interval S a b) :=
   @itv_closed_meet disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
+ *)
 
 Lemma itv_closed_join {disp} {T : prelatticeType disp} (S: {finLattice T}) a b:
   is_prejoin_closed (interval S a b).
@@ -1488,24 +1448,26 @@ apply/prejoin_closedP=> /= ????.
 by rewrite -prejoin_itvE // itv_prejoin_closed.
 Qed.
 
+(*
 Definition itv_closed_join_ {disp} {T : prelatticeType disp} (S : {finLattice T}) a b:
   is_prejoin_closed (interval S a b) :=
   @itv_closed_join disp (@PreLattice.Pack disp T (PreLattice.class T)) S a b.
+ *)
 
-Definition FinLatInterval {disp} {T : prelatticeType disp} (S: {finLattice T}) a b :
-  {finLattice T} :=
-  (* TODO: lock this definition *)
-  FinLattice (itv_closed_meet S a b) (itv_closed_join S a b) (itv_prop0 S a b).
+#[export] HB.instance Definition _ disp (T : prelatticeType disp) (S: {finLattice T}) a b :=
+  isFinLattice.Build disp _ (interval S a b) (itv_closed_meet S a b)
+    (itv_closed_join S a b) (itv_prop0 S a b).
 
 End Interval.
 Module Exports.
-Notation " [< a ; b >]_ S " := (@FinLatInterval _ _ S a b)
+HB.reexport Interval.
+Notation " [< a ; b >]_ S " := (interval S a b)
   (at level 8, S at level 8, format "[<  a ;  b  >]_ S").
 Notation umeet := umeet.
 Notation djoin := djoin.
 End Exports.
 End Interval.
-Import Interval.Exports.
+HB.export Interval.Exports.
 
 Section IntervalTheory.
 
@@ -1623,10 +1585,12 @@ Qed.
 
 Lemma dual_itv_r {disp} {T : prelatticeType disp} (S : {finLattice T}) a b :
   ([<a; b>]_S)^~s = [< b ; a>]_S^~s.
-Proof. exact/val_inj/Interval.dual_itv_fset_eq. Qed.
+Proof.
+by apply/val_inj => /=; rewrite Interval.dual_itv_fset_eq.
+Qed.
 
 Definition dual_itv :=
-  (@dual_itv_r, fun {disp} {T : prelatticeType disp} => @dual_itv_r _ [prelatticeType of T^d]).
+  (@dual_itv_r, fun {disp} {T : prelatticeType disp} => @dual_itv_r _ T^d).
 
 Lemma mem_itvL {disp} {T : prelatticeType disp} (S : {finLattice T}) (x y : T) :
   x \in S -> x <= y -> x \in [< x; y >]_S.
@@ -1665,7 +1629,7 @@ Lemma itvE1 {disp} {T : prelatticeType disp} (S : {finLattice T}):
   {in S &, forall a b, a <= b -> \ftop_([<a; b>]_S) = b}.
 Proof.
 move=> a b /[swap].
-by move/(itvE0 (S := S^~s))/[apply]/[apply]; rewrite -dual_itv.
+move/(itvE0 (S := S^~s)). apply. [apply]/[apply]; rewrite -dual_itv.
 Qed.
 (* TODO: compare with
  * move=> a b aS bS aleb.
