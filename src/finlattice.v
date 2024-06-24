@@ -1695,9 +1695,6 @@ elim: n S xS PS => [|n ih] S xS PS.
 case/boolP: (atom S x) => [atom_Sx|atomN_Sx];
   first by move=> _; apply: P_incr.
 case: (x =P \fbot_S) => [-> _ | /eqP neq0_x]; first by rewrite itv_id.
-(*- suff ->: (@Interval.Interval_interval__canonical__finlattice_FinLattice disp T S
-          (@fbot disp T S) (@ftop disp T S)) = S by []. (* TODO: clean *)
-  by apply/val_inj => /=; rewrite itv_id.*)
 - have bot_lt_x: \fbot_S < x by rewrite lt_def neq0_x le0f.
 move=> sz; case: (sub_atomic xS bot_lt_x) =>
   y atom_Sy ylex.
@@ -1709,7 +1706,6 @@ move/ih => /(_ (P_incr atom_Sy PS)).
 rewrite !(itvE0, itvE1) ?mem_ftop ?lef1 //.
 rewrite !mono_itv ?mem_itv1 ?mem_itvL
   ?intervalE ?yS ?mem_ftop ?xS ?ylex ?lef1 //.
-(*simpl. Unset Printing Notations. Set Printing All. rewrite /reverse_coercion.*)
 apply.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // mem_0itv.
