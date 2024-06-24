@@ -1299,6 +1299,8 @@ Definition interval {disp} {T : prelatticeType disp} (S : {finLattice T}) (a b :
   [fset x | x in S &
     premeet S (umeet S a) (djoin S b) <= x <= prejoin S (umeet S a) (djoin S b)].
 
+(*prejoin S (djoin S b) (umeet S a) >= x >= premeet S (djoin S b) (umeet S a)*)
+
 (* TODO: interval -> itv in the name of lemmas
  *
  *)
@@ -1627,9 +1629,12 @@ Qed.
 
 Lemma itvE1 {disp} {T : prelatticeType disp} (S : {finLattice T}):
   {in S &, forall a b, a <= b -> \ftop_([<a; b>]_S) = b}.
-Proof.
-move=> a b /[swap].
-move/(itvE0 (S := S^~s)). apply. [apply]/[apply]; rewrite -dual_itv.
+Proof. (* TODO: repair the proof (KS) *)
+move=> a b aS bS.
+move/(itvE0 (S := S^~s) bS aS).
+rewrite -dual_itv.
+rewrite /fbot /dual_finLattice /ftop /premeet /=.
+by rewrite -Interval.dual_itv_fset_eq.
 Qed.
 (* TODO: compare with
  * move=> a b aS bS aleb.
@@ -1650,15 +1655,14 @@ case/boolP: (S' == fset0).
     rewrite mem_itv ?le0f ?(ltW yltx).
   by rewrite !inE (lt_eqF yltx) orbF; move/eqP => ->; rewrite ltxx.
 (* QC : minset_neq0 -> minset_neq0 T *)
-- case/(minset_neq0 T)/fset0Pn => y /mem_minsetE.
+- case/minset_neq0/fset0Pn => y /mem_minsetE.
   rewrite in_fsetD intervalE ?mem_fbot //; [|rewrite le0f //].
   case => /and3P [].
   rewrite !inE negb_or => /andP [ynbot ynx] yS /andP [boty ylex] miny.
   exists y=> //.
   apply/atomP; rewrite yS lt_neqAle boty eq_sym ynbot; split => //.
   move=> z zS botltz; apply: contraT; rewrite negbK => zlty.
-  (* QC : TODO : minset still use relorder structures, so we need to unfold Order.lt here *)
-  suff/miny: z \in S' by rewrite [z <_T y]zlty.
+  suff/miny: z \in S' by rewrite [z < y]zlty.
   rewrite in_fsetD intervalE ?le0f ?zS ?mem_fbot //= ?inE.
   rewrite negb_or eq_sym (lt_eqF botltz).
   have zltx := (lt_le_trans zlty ylex).
@@ -1674,7 +1678,7 @@ Proof. exact: (@sub_atomic _ _ S^~s). Qed.
 Section IndIncr.
 
 Context {disp : Order.disp_t} {T : prelatticeType disp}.
-Variable (P : {finLattice T} -> Prop).
+Variable (P : {fset T} (*{finLattice T}*) -> Prop).
 
 Hypothesis (P_incr : forall S, forall x,
   atom S x -> P S -> P [<x; \ftop_S>]_S).
@@ -1690,9 +1694,11 @@ elim: n S xS PS => [|n ih] S xS PS.
     ?mem_fbot ?xS.
 case/boolP: (atom S x) => [atom_Sx|atomN_Sx];
   first by move=> _; apply: P_incr.
-case: (x =P \fbot_S) => [-> _|/eqP neq0_x];
-  first by rewrite itv_id.
-have bot_lt_x: \fbot_S < x by rewrite lt_def neq0_x le0f.
+case: (x =P \fbot_S) => [-> _ | /eqP neq0_x]; first by rewrite itv_id.
+(*- suff ->: (@Interval.Interval_interval__canonical__finlattice_FinLattice disp T S
+          (@fbot disp T S) (@ftop disp T S)) = S by []. (* TODO: clean *)
+  by apply/val_inj => /=; rewrite itv_id.*)
+- have bot_lt_x: \fbot_S < x by rewrite lt_def neq0_x le0f.
 move=> sz; case: (sub_atomic xS bot_lt_x) =>
   y atom_Sy ylex.
 have yS: y \in S by case/atomP: atom_Sy.
@@ -1703,6 +1709,7 @@ move/ih => /(_ (P_incr atom_Sy PS)).
 rewrite !(itvE0, itvE1) ?mem_ftop ?lef1 //.
 rewrite !mono_itv ?mem_itv1 ?mem_itvL
   ?intervalE ?yS ?mem_ftop ?xS ?ylex ?lef1 //.
+(*simpl. Unset Printing Notations. Set Printing All. rewrite /reverse_coercion.*)
 apply.
 rewrite -ltnS; pose X := \fbot_S |` [< \fbot_S; x >]_S `\ \fbot_S.
 apply: (@leq_trans #|`X|); last by rewrite /X fsetD1K // mem_0itv.
